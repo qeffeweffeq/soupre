@@ -234,6 +234,31 @@ async def scrape_page(url: str, job_id: int, db_engine):
         for src, rel_path in downloaded_media:
             final_markdown = final_markdown.replace(f"({src})", f"({rel_path})")
 
+
+    # Extract videos from markdown
+    import subprocess
+    video_matches = re.findall(r'\[Video\]\((.*?)\)', final_markdown)
+    downloaded_videos = set()
+    videos_dir = os.path.join(job_dir, 'videos')
+    if video_matches:
+        os.makedirs(videos_dir, exist_ok=True)
+        logging.info(f"Attempting to download {len(set(video_matches))} videos using yt-dlp...")
+        for vid_url in set(video_matches):
+            logging.info(f"Downloading video: {vid_url}")
+            try:
+                # Use yt-dlp to download the video
+                yt_dlp_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "venv", "bin", "yt-dlp")
+                
+                # Download best video to videos_dir, wait, vimeo embeds might require referer, yt-dlp usually handles it.
+                # Since Pentagram uses player.vimeo.com, yt-dlp handles it automatically.
+                subprocess.run([yt_dlp_path, "--add-header", f"Referer: {url}", "-o", os.path.join(videos_dir, "%(title)s.%(ext)s"), vid_url], check=True, capture_output=True)
+                downloaded_videos.add(vid_url)
+                logging.info(f"Successfully downloaded video: {vid_url}")
+            except Exception as e:
+                logging.warning(f"Failed to download video {vid_url}: {e}")
+                if isinstance(e, subprocess.CalledProcessError):
+                    logging.warning(f"yt-dlp error: {e.stderr.decode('utf-8', errors='ignore')}")
+
     with open(abs_markdown_path, 'w', encoding='utf-8') as f:
         f.write(final_markdown)
         

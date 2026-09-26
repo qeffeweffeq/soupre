@@ -102,6 +102,18 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return ""
 
         processed_elements.add(element)
+        
+        video_md = ""
+        if hasattr(element, 'get'):
+            vid_attr = element.get('data-media-video') or element.get('data-media-autoplayvideo')
+            if vid_attr:
+                import re, html
+                decoded = html.unescape(vid_attr)
+                src_match = re.search(r'src=["\']([^"\']+)["\']', decoded)
+                if src_match:
+                    vid_src = src_match.group(1)
+                    vid_src = vid_src.split('?')[0]
+                    video_md = f"\n\n[Video]({vid_src})\n\n"
 
         if getattr(element, 'name', None) and should_skip_element(element):
             return ""
@@ -112,7 +124,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(text) if text.strip() else ''
 
         # Skip form elements and inputs
-        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'iframe', 'noscript']:
+        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript']:
             return ""
 
         # Skip elements with certain classes/IDs that indicate non-content
@@ -170,7 +182,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(element.get_text(separator=" "))
 
         # Process images with better handling
-        elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))):
+        elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and (element.has_attr('data-media-video') or element.has_attr('data-media-autoplayvideo') or (element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))))):
             src = get_best_image(element)
             alt = element.get('alt', '') if element.name == 'img' else ''
             
@@ -191,13 +203,13 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
                 if element.name != 'img':
                     # For divs with background image, we still want to process their children text!
                     children_md = process_children_recursively(element, base_url, driver, page_dir, processed_elements)
-                    return img_md + children_md
+                    return img_md + video_md + children_md
                     
-                return img_md
+                return img_md + video_md
             
             if element.name != 'img':
-                return process_children_recursively(element, base_url, driver, page_dir, processed_elements)
-            return ""
+                return video_md + process_children_recursively(element, base_url, driver, page_dir, processed_elements)
+            return video_md
 
         # Process lists with proper formatting
         elif element.name == 'ul':
