@@ -6,7 +6,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("../scraper.log"),
+        logging.FileHandler(os.path.join(os.path.dirname(os.path.dirname(__file__)), "scraper.log")),
         logging.StreamHandler()
     ]
 )

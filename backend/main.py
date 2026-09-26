@@ -10,7 +10,7 @@ import os
 os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads", "content"), exist_ok=True)
 os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads", "media"), exist_ok=True)
 
-sqlite_url = "sqlite:////Users/admin/webapps/soupre.db"
+sqlite_url = "sqlite:////Users/admin/webapps/soupre/soupre.db"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
 @asynccontextmanager
