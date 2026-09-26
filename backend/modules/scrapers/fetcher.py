@@ -45,10 +45,31 @@ async def fetch_url_with_browser(url):
             # Goto URL and wait
             try:
                 # Wait until domcontentloaded or networkidle
-                await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                # Wait until domcontentloaded
+                # Wait until domcontentloaded
+                try:
+                    response = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                    html_check = await page.content()
+                except Exception as e:
+                    logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
+                    await page.wait_for_load_state('networkidle', timeout=15000)
+                    html_check = await page.content()
+                    
+                # Check for SiteGround / Cloudflare bot challenges
+                if "Checking the site connection security" in html_check or "sg-captcha" in html_check or "cloudflare" in html_check.lower() or len(html_check) < 15000:
+                    logger.info("[Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...")
+                    try:
+                        # Wait up to 10 seconds for the challenge to resolve and page to reload
+                        await page.wait_for_function(
+                            "() => !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", 
+                            timeout=15000
+                        )
+                        # Wait an additional 3 seconds for the actual DOM to settle after redirect
+                        await asyncio.sleep(3)
+                        await page.wait_for_load_state('domcontentloaded')
+                    except Exception as e:
+                        logger.warning(f"[Browser] Bot challenge wait timed out or failed: {e}")
                 
-                # Scroll a bit to trigger lazy loading
-                for _ in range(5):
                     await page.mouse.wheel(0, 500)
                     await asyncio.sleep(0.5)
                 
