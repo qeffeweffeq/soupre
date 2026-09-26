@@ -106,8 +106,8 @@ async def scrape_page(url: str, job_id: int, db_engine):
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     job_dir = os.path.join(base_dir, "_downloads", folder_name)
-    media_dir = os.path.join(job_dir, "media")
-    content_dir = os.path.join(job_dir, "content")
+    media_dir = job_dir
+    content_dir = job_dir
     
     os.makedirs(media_dir, exist_ok=True)
     os.makedirs(content_dir, exist_ok=True)
@@ -154,8 +154,8 @@ async def scrape_page(url: str, job_id: int, db_engine):
     final_markdown = f"# {page_title}\n\n{md_table}\n\n---\n\n{raw_markdown}"
     
     abs_markdown_path = os.path.join(content_dir, f"{safe_title}.md")
-    db_markdown_path = f"../_downloads/{folder_name}/content/{safe_title}.md"
-    db_screenshot_path = f"../_downloads/{folder_name}/media/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+    db_markdown_path = f"../_downloads/{folder_name}/{safe_title}.md"
+    db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
     
     # Extract all image URLs from markdown
     import re

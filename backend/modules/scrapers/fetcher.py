@@ -78,7 +78,7 @@ async def fetch_url_with_browser(url):
                 
                 # Take screenshot for the UI
                 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-                temp_media_dir = os.path.join(base_dir, "_downloads", "media")
+                temp_media_dir = os.path.join(base_dir, "_downloads")
                 os.makedirs(temp_media_dir, exist_ok=True)
                 
                 cookies_list = await context.cookies()
