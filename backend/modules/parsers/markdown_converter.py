@@ -18,6 +18,9 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         processed_elements.add(element)
 
+        if getattr(element, 'name', None) and should_skip_element(element):
+            return ""
+
         # Skip empty elements
         if element.name is None:
             text = element.string if element.string else ''
@@ -313,7 +316,7 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     """Convert page content to markdown with improved formatting and error handling"""
     # Start building markdown content
     title = soup.title.string if soup.title else "Untitled Page"
-    markdown_content = f"# {title}\n\nURL: {url}\n\n"
+    markdown_content = ""
 
     # Add screenshot reference to the markdown
     # markdown_content += f"![Page Screenshot](screenshot.png)\n\n"
