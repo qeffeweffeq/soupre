@@ -1,0 +1,537 @@
+2026-09-26 23:37:28,776 - INFO - Human-like delay: waiting 3.01s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:37:31,787 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:37:35,776 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:37:35,813 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:37:36,250 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).
+2026-09-26 23:38:06,080 - INFO - Starting scrape job #1 for https://hotelmarinetta.it/
+2026-09-26 23:38:06,080 - INFO - Human-like delay: waiting 3.85s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:38:09,932 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:38:13,451 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:38:13,493 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:38:13,869 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).
+2026-09-26 23:38:13,885 - INFO - Scrape job #1 completed successfully.
+2026-09-26 23:39:28,554 - INFO - Starting scrape job #2 for https://hotelmarinetta.it/
+2026-09-26 23:39:28,554 - INFO - Human-like delay: waiting 3.88s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:39:32,436 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:39:35,802 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:39:35,828 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:39:36,204 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:39:36,227 - INFO - Scrape job #2 completed successfully.
+2026-09-26 23:40:01,096 - INFO - Starting scrape job #3 for https://hotelmarinetta.it/
+2026-09-26 23:40:01,096 - INFO - Human-like delay: waiting 2.87s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:40:03,967 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:40:07,520 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:40:07,561 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:40:07,940 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:40:07,959 - INFO - Scrape job #3 completed successfully.
+2026-09-26 23:41:29,915 - INFO - Human-like delay: waiting 3.2s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:41:33,117 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:41:36,924 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:42:20,248 - INFO - Human-like delay: waiting 2.71s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:42:22,960 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:42:26,345 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:42:26,380 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:42:26,805 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:45:55,120 - INFO - Starting scrape job #4 for https://hotelmarinetta.it/
+2026-09-26 23:45:55,120 - INFO - Human-like delay: waiting 2.49s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:45:57,612 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:46:01,130 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:46:01,171 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:46:01,590 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:46:01,607 - INFO - Scrape job #4 completed successfully.
+2026-09-26 23:47:27,751 - INFO - Human-like delay: waiting 3.08s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:47:30,832 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:47:34,400 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:47:34,436 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:47:34,816 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:48:57,534 - INFO - Starting scrape job #5 for https://en.wikipedia.org/wiki/Web_scraping
+2026-09-26 23:48:57,535 - INFO - Human-like delay: waiting 3.96s before fetching https://en.wikipedia.org/wiki/Web_scraping...
+2026-09-26 23:49:01,496 - INFO - [Browser] Fetching page: https://en.wikipedia.org/wiki/Web_scraping
+2026-09-26 23:49:05,422 - INFO - [Browser] Successfully rendered https://en.wikipedia.org/wiki/Web_scraping
+2026-09-26 23:49:05,444 - WARNING - Playwright failed or hit bot challenge for https://en.wikipedia.org/wiki/Web_scraping. Falling back to standard HTTP request...
+2026-09-26 23:49:05,768 - INFO - Fallback request successful for https://en.wikipedia.org/wiki/Web_scraping (235477 bytes)
+2026-09-26 23:49:08,949 - INFO - Scrape job #5 completed successfully.
+2026-09-26 23:49:12,146 - INFO - Starting scrape job #6 for https://www.hotelhermitage.it/
+2026-09-26 23:49:12,146 - INFO - Human-like delay: waiting 1.64s before fetching https://www.hotelhermitage.it/...
+2026-09-26 23:49:13,787 - INFO - [Browser] Fetching page: https://www.hotelhermitage.it/
+2026-09-26 23:49:18,519 - INFO - [Browser] Successfully rendered https://www.hotelhermitage.it/
+2026-09-26 23:49:22,895 - INFO - Scrape job #6 completed successfully.
+2026-09-26 23:52:00,523 - INFO - Human-like delay: waiting 1.82s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:52:02,345 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:52:05,942 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:52:05,974 - WARNING - Playwright failed or hit bot challenge for https://hotelmarinetta.it/. Falling back to standard HTTP request...
+2026-09-26 23:52:06,364 - ERROR - Fallback fetch also failed for https://hotelmarinetta.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:52:32,305 - INFO - Human-like delay: waiting 2.77s before fetching https://goldenresidenceclub.it/en/...
+2026-09-26 23:52:35,076 - INFO - [Browser] Fetching page: https://goldenresidenceclub.it/en/
+2026-09-26 23:52:38,461 - INFO - [Browser] Successfully rendered https://goldenresidenceclub.it/en/
+2026-09-26 23:52:38,500 - WARNING - Playwright failed or hit bot challenge for https://goldenresidenceclub.it/en/. Falling back to standard HTTP request...
+2026-09-26 23:52:38,878 - ERROR - Fallback fetch also failed for https://goldenresidenceclub.it/en/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:54:51,363 - INFO - Human-like delay: waiting 4.12s before fetching https://goldenresidenceclub.it/en/...
+2026-09-26 23:54:55,484 - INFO - [Browser] Fetching page: https://goldenresidenceclub.it/en/
+2026-09-26 23:54:59,405 - INFO - [Browser] Successfully rendered https://goldenresidenceclub.it/en/
+2026-09-26 23:55:03,782 - INFO - Starting scrape job #1 for https://goldenresidenceclub.it/
+2026-09-26 23:55:03,782 - INFO - Human-like delay: waiting 2.98s before fetching https://goldenresidenceclub.it/...
+2026-09-26 23:55:06,763 - INFO - [Browser] Fetching page: https://goldenresidenceclub.it/
+2026-09-26 23:55:07,700 - ERROR - [Browser] Error rendering https://goldenresidenceclub.it/: Page.content: Unable to retrieve content because the page is navigating and changing the content.
+2026-09-26 23:55:07,713 - WARNING - Playwright failed or hit bot challenge for https://goldenresidenceclub.it/. Falling back to standard HTTP request...
+2026-09-26 23:55:08,135 - ERROR - Fallback fetch also failed for https://goldenresidenceclub.it/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:55:08,158 - INFO - Scrape job #1 completed successfully.
+2026-09-26 23:55:20,971 - INFO - Starting scrape job #2 for https://hotelmarinetta.it/
+2026-09-26 23:55:20,971 - INFO - Human-like delay: waiting 1.99s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:55:22,963 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:55:23,881 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-26 23:55:28,079 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-26 23:55:46,991 - INFO - Scrape job #2 completed successfully.
+2026-09-26 23:57:48,559 - INFO - Human-like delay: waiting 3.41s before fetching https://goldenresidenceclub.it/en/...
+2026-09-26 23:57:51,970 - INFO - [Browser] Fetching page: https://goldenresidenceclub.it/en/
+2026-09-26 23:57:53,838 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-26 23:57:58,107 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-26 23:57:58,113 - INFO - Human-like delay: waiting 2.85s before fetching https://hotelmarinetta.it/...
+2026-09-26 23:58:00,964 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 23:58:01,797 - INFO - [Browser] Successfully rendered https://goldenresidenceclub.it/en/
+2026-09-26 23:58:01,826 - WARNING - Playwright failed or hit bot challenge for https://goldenresidenceclub.it/en/. Falling back to standard HTTP request...
+2026-09-26 23:58:01,870 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-26 23:58:02,214 - ERROR - Fallback fetch also failed for https://goldenresidenceclub.it/en/: Fallback request also returned a suspiciously small page (likely a bot challenge).. Proceeding with original Playwright content...
+2026-09-26 23:58:02,550 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-26 23:58:04,190 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-26 23:58:05,372 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:03:10,630 - INFO - Starting scrape job #3 for https://hotelmarinetta.it/
+2026-09-27 00:03:10,630 - INFO - Human-like delay: waiting 2.7s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:03:13,332 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:03:14,594 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:03:18,721 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:03:37,364 - INFO - Scrape job #3 completed successfully.
+2026-09-27 00:07:15,140 - INFO - Starting scrape job #4 for https://hotelmarinetta.it/
+2026-09-27 00:07:15,140 - INFO - Human-like delay: waiting 2.17s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:07:17,311 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:07:18,558 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:07:19,268 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:07:24,135 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-27 00:07:25,167 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:07:25,258 - ERROR - Job failed: cannot access local variable 'urlparse' where it is not associated with a value
+2026-09-27 00:07:25,262 - INFO - Scrape job #4 completed successfully.
+2026-09-27 00:07:57,924 - INFO - Starting scrape job #5 for https://hotelmarinetta.it/
+2026-09-27 00:07:57,924 - INFO - Human-like delay: waiting 3.7s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:08:01,625 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:08:02,937 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:08:07,376 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:08:07,718 - INFO - Attempting to download 5 images using Playwright...
+2026-09-27 00:08:15,364 - INFO - Scrape job #5 completed successfully.
+2026-09-27 00:09:26,007 - INFO - Human-like delay: waiting 2.09s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:09:28,099 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:09:29,203 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:09:32,904 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:09:32,933 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:09:33,173 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:10:16,116 - INFO - Human-like delay: waiting 1.85s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:10:17,968 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:10:19,179 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:10:19,963 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:10:22,785 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-27 00:10:24,024 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:10:24,351 - INFO - Attempting to download 5 images using Playwright...
+2026-09-27 00:27:33,967 - INFO - Starting scrape job #6 for https://www.pentagram.com/work/gush
+2026-09-27 00:27:33,967 - INFO - Human-like delay: waiting 4.28s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:27:38,249 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:27:39,467 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:27:43,194 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:27:43,217 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:27:43,453 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:27:43,719 - INFO - Scrape job #6 completed successfully.
+2026-09-27 00:28:41,669 - INFO - Starting scrape job #7 for https://hotelmarinetta.it/
+2026-09-27 00:28:41,669 - INFO - Human-like delay: waiting 3.15s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:28:44,820 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:28:45,988 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:28:46,774 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:28:49,732 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-27 00:28:50,722 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:28:50,979 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,981 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,982 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,989 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,990 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,994 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,995 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,996 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,996 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,997 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:50,998 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,007 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,014 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,017 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,064 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,065 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:28:51,076 - INFO - Attempting to download 17 images using Playwright...
+2026-09-27 00:28:55,768 - INFO - Starting scrape job #8 for https://www.pentagram.com/work/gush
+2026-09-27 00:28:55,768 - INFO - Human-like delay: waiting 3.79s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:28:59,559 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:29:00,928 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:29:02,836 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Img-Home-01.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:03,002 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Img-Home-02.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:03,247 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Img-Home-03.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:03,484 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Vector.png: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:03,868 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2026/05/GSTC-HAVR250178-Park-Hotel-Marinetta_Vireo-2048x1138.png: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:04,168 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/03-Phm-Pool.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:04,363 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Marinetta-Wellness-05.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:04,538 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Marinetta-Wellness-02.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:05,130 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Marinetta-Wellness-03.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:05,146 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:29:05,213 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:29:05,335 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Marinetta-Wellness-01.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:05,521 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:29:05,548 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/OmbraDellaSera-08.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:05,836 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/OmbraDellaSera-10.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:06,068 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,068 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,068 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,069 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,069 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,078 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/OmbraDellaSera-09.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:06,244 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,244 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,244 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,246 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,249 - ERROR - Error in html_to_markdown: cannot access local variable 'urljoin' where it is not associated with a value
+2026-09-27 00:29:06,256 - INFO - Attempting to download 26 images using Playwright...
+2026-09-27 00:29:06,305 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/OmbraDellaSera-07.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:06,510 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/OmbraDellaSera-04.jpg: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:06,743 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/PORCreO-01.png.webp: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:07,019 - WARNING - Failed to download https://hotelmarinetta.it/wp-content/uploads/2025/05/Coesione-Italia-Fascia-Loghi_01-2048x203.png: Response.body: Protocol error (Network.getResponseBody): No resource with given identifier found
+Response body is not available for a response that was navigated away from. Read response.body() before triggering any navigation.
+2026-09-27 00:29:07,070 - INFO - Scrape job #7 completed successfully.
+2026-09-27 00:29:18,796 - INFO - Scrape job #8 completed successfully.
+2026-09-27 00:29:21,808 - INFO - Starting scrape job #9 for https://hotelmarinetta.it/
+2026-09-27 00:29:21,808 - INFO - Human-like delay: waiting 3.78s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:29:25,588 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:29:26,516 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:29:27,220 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:29:32,598 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-27 00:29:33,746 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:29:34,101 - INFO - Attempting to download 17 images using Playwright...
+2026-09-27 00:29:38,048 - INFO - Scrape job #9 completed successfully.
+2026-09-27 00:29:47,497 - INFO - Starting scrape job #10 for https://www.pentagram.com/work/gush
+2026-09-27 00:29:47,497 - INFO - Human-like delay: waiting 3.86s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:29:51,357 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:29:52,121 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:29:55,858 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:29:55,883 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:29:56,122 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:29:56,376 - INFO - Attempting to download 26 images using Playwright...
+2026-09-27 00:30:01,625 - INFO - Scrape job #10 completed successfully.
+2026-09-27 00:31:42,831 - INFO - Starting scrape job #11 for https://hotelmarinetta.it/
+2026-09-27 00:31:42,832 - INFO - Human-like delay: waiting 3.93s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:31:46,763 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:31:47,949 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:31:52,007 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:31:52,355 - INFO - Attempting to download 17 images using Playwright...
+2026-09-27 00:31:56,139 - INFO - Scrape job #11 completed successfully.
+2026-09-27 00:36:00,261 - INFO - Starting scrape job #12 for https://www.pentagram.com/work/gush
+2026-09-27 00:36:00,261 - INFO - Human-like delay: waiting 4.34s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:36:04,602 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:36:06,263 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:36:09,995 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:36:10,022 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:36:10,255 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:36:10,522 - INFO - Attempting to download 26 images using Playwright...
+2026-09-27 00:36:15,936 - INFO - Scrape job #12 completed successfully.
+2026-09-27 00:36:56,172 - INFO - Starting scrape job #13 for https://www.pentagram.com/work/gush
+2026-09-27 00:36:56,172 - INFO - Human-like delay: waiting 3.42s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:36:59,594 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:37:00,815 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:37:04,549 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:37:04,578 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:37:04,813 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:37:05,072 - INFO - Attempting to download 26 images using Playwright...
+2026-09-27 00:37:17,418 - INFO - Scrape job #13 completed successfully.
+2026-09-27 00:42:00,555 - INFO - Starting scrape job #14 for https://www.pentagram.com/work/gush
+2026-09-27 00:42:00,555 - INFO - Human-like delay: waiting 2.8s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:42:03,356 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:42:04,669 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:42:08,401 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:42:08,431 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:42:08,672 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:42:08,904 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,905 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,906 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,906 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,906 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,907 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,908 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,908 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,909 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,910 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,911 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,911 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,912 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,912 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,913 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,913 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,915 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,915 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,916 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,916 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,916 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,917 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,918 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,919 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,919 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,919 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,920 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,920 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,922 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,922 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,922 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,924 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,924 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,925 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,925 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,926 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,926 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,927 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,927 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,928 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,928 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,929 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,929 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,930 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,930 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,931 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,931 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,932 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,933 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,934 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,934 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,935 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,935 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,937 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,937 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,937 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,937 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,938 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,939 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,939 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,940 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,940 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,941 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,941 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,943 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,943 - ERROR - Error in html_to_markdown: name 'video_md' is not defined
+2026-09-27 00:42:08,959 - INFO - Scrape job #14 completed successfully.
+2026-09-27 00:43:12,530 - INFO - Starting scrape job #15 for https://www.pentagram.com/work/gush
+2026-09-27 00:43:12,530 - INFO - Human-like delay: waiting 1.59s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:43:14,121 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:43:15,345 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:43:19,067 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:43:19,096 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:43:19,351 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:43:19,613 - INFO - Attempting to download 66 images using Playwright...
+2026-09-27 00:43:39,327 - INFO - Scrape job #15 completed successfully.
+2026-09-27 00:44:57,233 - INFO - Starting scrape job #16 for https://www.pentagram.com/work/gush
+2026-09-27 00:44:57,234 - INFO - Human-like delay: waiting 1.64s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:44:58,875 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:45:00,007 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:45:03,706 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:45:03,732 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:45:03,969 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:45:04,233 - INFO - Attempting to download 66 images using Playwright...
+2026-09-27 00:45:13,505 - INFO - Attempting to download 14 videos using yt-dlp...
+2026-09-27 00:45:13,505 - INFO - Downloading video: https://player.vimeo.com/video/879955642
+2026-09-27 00:45:13,509 - WARNING - Failed to download video https://player.vimeo.com/video/879955642: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,509 - INFO - Downloading video: https://player.vimeo.com/video/879955773
+2026-09-27 00:45:13,511 - WARNING - Failed to download video https://player.vimeo.com/video/879955773: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,511 - INFO - Downloading video: https://player.vimeo.com/video/879955660
+2026-09-27 00:45:13,514 - WARNING - Failed to download video https://player.vimeo.com/video/879955660: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,514 - INFO - Downloading video: https://player.vimeo.com/video/879955570
+2026-09-27 00:45:13,515 - WARNING - Failed to download video https://player.vimeo.com/video/879955570: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,516 - INFO - Downloading video: https://player.vimeo.com/video/879955755
+2026-09-27 00:45:13,517 - WARNING - Failed to download video https://player.vimeo.com/video/879955755: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,517 - INFO - Downloading video: https://player.vimeo.com/video/879955801
+2026-09-27 00:45:13,519 - WARNING - Failed to download video https://player.vimeo.com/video/879955801: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,519 - INFO - Downloading video: https://player.vimeo.com/video/879955782
+2026-09-27 00:45:13,521 - WARNING - Failed to download video https://player.vimeo.com/video/879955782: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,521 - INFO - Downloading video: https://player.vimeo.com/video/879955746
+2026-09-27 00:45:13,523 - WARNING - Failed to download video https://player.vimeo.com/video/879955746: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,523 - INFO - Downloading video: https://player.vimeo.com/video/879955672
+2026-09-27 00:45:13,526 - WARNING - Failed to download video https://player.vimeo.com/video/879955672: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,526 - INFO - Downloading video: https://player.vimeo.com/video/879955583
+2026-09-27 00:45:13,528 - WARNING - Failed to download video https://player.vimeo.com/video/879955583: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,528 - INFO - Downloading video: https://player.vimeo.com/video/879955812
+2026-09-27 00:45:13,530 - WARNING - Failed to download video https://player.vimeo.com/video/879955812: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,531 - INFO - Downloading video: https://player.vimeo.com/video/879955691
+2026-09-27 00:45:13,532 - WARNING - Failed to download video https://player.vimeo.com/video/879955691: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,532 - INFO - Downloading video: https://player.vimeo.com/video/879955722
+2026-09-27 00:45:13,534 - WARNING - Failed to download video https://player.vimeo.com/video/879955722: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,534 - INFO - Downloading video: https://player.vimeo.com/video/879955631
+2026-09-27 00:45:13,536 - WARNING - Failed to download video https://player.vimeo.com/video/879955631: [Errno 2] No such file or directory: '/Users/admin/webapps/soupre/venv/bin/yt-dlp'
+2026-09-27 00:45:13,542 - INFO - Scrape job #16 completed successfully.
+2026-09-27 00:45:25,153 - INFO - Starting scrape job #17 for https://www.pentagram.com/work/gush
+2026-09-27 00:45:25,153 - INFO - Human-like delay: waiting 1.81s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:45:26,964 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:45:27,720 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:45:31,455 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:45:31,479 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:45:31,713 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:45:31,968 - INFO - Attempting to download 66 images using Playwright...
+2026-09-27 00:45:41,171 - INFO - Attempting to download 14 videos using yt-dlp...
+2026-09-27 00:45:41,171 - INFO - Downloading video: https://player.vimeo.com/video/879955583
+2026-09-27 00:45:44,512 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955583
+2026-09-27 00:45:44,513 - INFO - Downloading video: https://player.vimeo.com/video/879955812
+2026-09-27 00:45:49,946 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955812
+2026-09-27 00:45:49,946 - INFO - Downloading video: https://player.vimeo.com/video/879955672
+2026-09-27 00:45:53,051 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955672
+2026-09-27 00:45:53,051 - INFO - Downloading video: https://player.vimeo.com/video/879955782
+2026-09-27 00:45:56,892 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955782
+2026-09-27 00:45:56,892 - INFO - Downloading video: https://player.vimeo.com/video/879955631
+2026-09-27 00:46:00,959 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955631
+2026-09-27 00:46:00,959 - INFO - Downloading video: https://player.vimeo.com/video/879955691
+2026-09-27 00:46:03,965 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955691
+2026-09-27 00:46:03,965 - INFO - Downloading video: https://player.vimeo.com/video/879955642
+2026-09-27 00:46:07,188 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955642
+2026-09-27 00:46:07,188 - INFO - Downloading video: https://player.vimeo.com/video/879955570
+2026-09-27 00:46:11,528 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955570
+2026-09-27 00:46:11,528 - INFO - Downloading video: https://player.vimeo.com/video/879955746
+2026-09-27 00:46:15,249 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955746
+2026-09-27 00:46:15,249 - INFO - Downloading video: https://player.vimeo.com/video/879955755
+2026-09-27 00:46:18,662 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955755
+2026-09-27 00:46:18,662 - INFO - Downloading video: https://player.vimeo.com/video/879955773
+2026-09-27 00:46:24,753 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955773
+2026-09-27 00:46:24,753 - INFO - Downloading video: https://player.vimeo.com/video/879955801
+2026-09-27 00:46:27,248 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955801
+2026-09-27 00:46:27,249 - INFO - Downloading video: https://player.vimeo.com/video/879955722
+2026-09-27 00:46:31,173 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955722
+2026-09-27 00:46:31,173 - INFO - Downloading video: https://player.vimeo.com/video/879955660
+2026-09-27 00:46:34,010 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955660
+2026-09-27 00:46:34,017 - INFO - Scrape job #17 completed successfully.
+2026-09-27 00:52:57,953 - INFO - Human-like delay: waiting 4.18s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:53:02,134 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:53:03,379 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:53:07,095 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:53:07,124 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:53:07,380 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:53:07,644 - INFO - Attempting to download 66 images using Playwright...
+2026-09-27 00:53:16,552 - INFO - Attempting to download 14 videos using yt-dlp...
+2026-09-27 00:53:16,552 - INFO - Downloading video: https://player.vimeo.com/video/879955672
+2026-09-27 00:53:19,396 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955672
+2026-09-27 00:53:19,396 - INFO - Downloading video: https://player.vimeo.com/video/879955801
+2026-09-27 00:53:21,949 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955801
+2026-09-27 00:53:21,949 - INFO - Downloading video: https://player.vimeo.com/video/879955631
+2026-09-27 00:53:24,720 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955631
+2026-09-27 00:53:24,720 - INFO - Downloading video: https://player.vimeo.com/video/879955722
+2026-09-27 00:53:27,703 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955722
+2026-09-27 00:53:27,703 - INFO - Downloading video: https://player.vimeo.com/video/879955812
+2026-09-27 00:53:31,306 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955812
+2026-09-27 00:53:31,307 - INFO - Downloading video: https://player.vimeo.com/video/879955642
+2026-09-27 00:53:33,771 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955642
+2026-09-27 00:53:33,771 - INFO - Downloading video: https://player.vimeo.com/video/879955660
+2026-09-27 00:53:38,400 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955660
+2026-09-27 00:53:38,400 - INFO - Downloading video: https://player.vimeo.com/video/879955746
+2026-09-27 00:53:41,278 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955746
+2026-09-27 00:53:41,278 - INFO - Downloading video: https://player.vimeo.com/video/879955583
+2026-09-27 00:53:43,823 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955583
+2026-09-27 00:53:43,823 - INFO - Downloading video: https://player.vimeo.com/video/879955782
+2026-09-27 00:53:46,413 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955782
+2026-09-27 00:53:46,413 - INFO - Downloading video: https://player.vimeo.com/video/879955691
+2026-09-27 00:53:48,975 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955691
+2026-09-27 00:53:48,975 - INFO - Downloading video: https://player.vimeo.com/video/879955570
+2026-09-27 00:53:56,789 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955570
+2026-09-27 00:53:56,790 - INFO - Downloading video: https://player.vimeo.com/video/879955755
+2026-09-27 00:53:59,465 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955755
+2026-09-27 00:53:59,465 - INFO - Downloading video: https://player.vimeo.com/video/879955773
+2026-09-27 00:54:05,194 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955773
+2026-09-27 00:56:52,895 - INFO - Starting scrape job #18 for https://www.pentagram.com/work/gush
+2026-09-27 00:56:52,895 - INFO - Human-like delay: waiting 2.17s before fetching https://www.pentagram.com/work/gush...
+2026-09-27 00:56:55,066 - INFO - [Browser] Fetching page: https://www.pentagram.com/work/gush
+2026-09-27 00:56:56,103 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:56:59,826 - INFO - [Browser] Successfully rendered https://www.pentagram.com/work/gush
+2026-09-27 00:56:59,857 - WARNING - Playwright failed or hit bot challenge for https://www.pentagram.com/work/gush. Falling back to standard HTTP request...
+2026-09-27 00:57:00,099 - INFO - Fallback request successful for https://www.pentagram.com/work/gush (293239 bytes)
+2026-09-27 00:57:00,367 - INFO - Attempting to download 66 images using Playwright...
+2026-09-27 00:57:08,827 - INFO - Human-like delay: waiting 3.26s before fetching https://hotelmarinetta.it/...
+2026-09-27 00:57:09,604 - INFO - Attempting to download 14 videos using yt-dlp...
+2026-09-27 00:57:09,605 - INFO - Downloading video: https://player.vimeo.com/video/879955672
+2026-09-27 00:57:12,088 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-27 00:57:12,331 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955672
+2026-09-27 00:57:12,333 - INFO - Downloading video: https://player.vimeo.com/video/879955642
+2026-09-27 00:57:13,032 - INFO - [Browser] Page is navigating (likely bypassing challenge). Waiting...
+2026-09-27 00:57:13,834 - INFO - [Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...
+2026-09-27 00:57:15,229 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955642
+2026-09-27 00:57:15,230 - INFO - Downloading video: https://player.vimeo.com/video/879955570
+2026-09-27 00:57:18,724 - WARNING - [Browser] Bot challenge wait timed out or failed: Page.wait_for_function: TypeError: Cannot read properties of null (reading 'innerText')
+    at eval (eval at predicate (eval at evaluate (:311:30)), <anonymous>:1:22)
+    at predicate (eval at evaluate (:311:30), <anonymous>:13:29)
+    at next (eval at evaluate (:311:30), <anonymous>:29:33)
+    at eval (eval at evaluate (:311:30), <anonymous>:42:13)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2026-09-27 00:57:19,650 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955570
+2026-09-27 00:57:19,650 - INFO - Downloading video: https://player.vimeo.com/video/879955773
+2026-09-27 00:57:20,270 - INFO - [Browser] Successfully rendered https://hotelmarinetta.it/
+2026-09-27 00:57:20,649 - INFO - Attempting to download 17 images using Playwright...
+2026-09-27 00:57:22,470 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955773
+2026-09-27 00:57:22,470 - INFO - Downloading video: https://player.vimeo.com/video/879955722
+2026-09-27 00:57:26,211 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955722
+2026-09-27 00:57:26,211 - INFO - Downloading video: https://player.vimeo.com/video/879955691
+2026-09-27 00:57:30,751 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955691
+2026-09-27 00:57:30,751 - INFO - Downloading video: https://player.vimeo.com/video/879955782
+2026-09-27 00:57:33,258 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955782
+2026-09-27 00:57:33,259 - INFO - Downloading video: https://player.vimeo.com/video/879955755
+2026-09-27 00:57:35,878 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955755
+2026-09-27 00:57:35,878 - INFO - Downloading video: https://player.vimeo.com/video/879955801
+2026-09-27 00:57:38,421 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955801
+2026-09-27 00:57:38,421 - INFO - Downloading video: https://player.vimeo.com/video/879955631
+2026-09-27 00:57:41,328 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955631
+2026-09-27 00:57:41,328 - INFO - Downloading video: https://player.vimeo.com/video/879955660
+2026-09-27 00:57:45,284 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955660
+2026-09-27 00:57:45,285 - INFO - Downloading video: https://player.vimeo.com/video/879955583
+2026-09-27 00:57:47,672 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955583
+2026-09-27 00:57:47,672 - INFO - Downloading video: https://player.vimeo.com/video/879955812
+2026-09-27 00:57:51,024 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955812
+2026-09-27 00:57:51,024 - INFO - Downloading video: https://player.vimeo.com/video/879955746
+2026-09-27 00:57:53,894 - INFO - Successfully downloaded video: https://player.vimeo.com/video/879955746
+2026-09-27 00:57:53,902 - INFO - Scrape job #18 completed successfully.

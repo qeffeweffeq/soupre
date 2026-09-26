@@ -87,7 +87,7 @@ async def scrape_page(url: str, job_id: int, db_engine):
             )
             response.raise_for_status()
             html_content = response.text
-            screenshot_path = "" 
+            # Keep screenshot_path from Playwright so it gets moved into the job directory
             
             if len(html_content) < 10000:
                 raise ValueError("Fallback request also returned a suspiciously small page (likely a bot challenge).")
