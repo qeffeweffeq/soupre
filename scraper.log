@@ -1,0 +1,14 @@
+2026-09-26 21:07:56,062 - INFO - Human-like delay: waiting 2.9s before fetching https://hotelmarinetta.it/...
+2026-09-26 21:07:58,963 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 21:07:59,787 - ERROR - [Browser] Error rendering https://hotelmarinetta.it/: Page.goto: net::ERR_HTTP2_PROTOCOL_ERROR at https://hotelmarinetta.it/
+Call log:
+  - navigating to "https://hotelmarinetta.it/", waiting until "load"
+
+2026-09-26 21:07:59,787 - ERROR - Failed to fetch content for https://hotelmarinetta.it/
+2026-09-26 21:12:19,562 - INFO - Human-like delay: waiting 3.58s before fetching https://hotelmarinetta.it/...
+2026-09-26 21:12:23,143 - INFO - [Browser] Fetching page: https://hotelmarinetta.it/
+2026-09-26 21:12:24,025 - ERROR - [Browser] Error rendering https://hotelmarinetta.it/: Page.goto: net::ERR_HTTP2_PROTOCOL_ERROR at https://hotelmarinetta.it/
+Call log:
+  - navigating to "https://hotelmarinetta.it/", waiting until "load"
+
+2026-09-26 21:12:24,025 - ERROR - Failed to fetch content for https://hotelmarinetta.it/

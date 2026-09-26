@@ -1,0 +1,50 @@
+catalogs:
+  personal:
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    ref: main
+    source: git:https://github.com/qeffeweffeq/_agents.git
+hooks: {}
+mcps: {}
+packs: {}
+skills:
+  agent-workspace-isolation:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/agent-workspace-isolation
+    reason: skill:personal/*
+  architecture:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/architecture
+    reason: skill:personal/*
+  coding-style:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/coding-style
+    reason: skill:personal/*
+  git-workflow:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/git-workflow
+    reason: skill:personal/*
+  github-issue-management:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/github-issue-management
+    reason: skill:personal/*
+  global-naming-conventions:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/global-naming-conventions
+    reason: skill:personal/*
+  web-app-dev:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/web-app-dev
+    reason: skill:personal/*
+  web-design:
+    catalog: personal
+    commit: b7ba0f51aed95915019f47b8c8ccfa4748578203
+    path: skills/web-design
+    reason: skill:personal/*
+version: 1

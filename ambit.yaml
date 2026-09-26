@@ -1,0 +1,11 @@
+version: 1
+catalogs:
+  - name: personal
+    source: git:https://github.com/qeffeweffeq/_agents.git
+    ref: main
+harnesses:
+  - claude
+  - codex
+requires:
+  - skill: personal/* # This installs all standard generic skills from main
+
