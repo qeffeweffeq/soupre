@@ -76,3 +76,5 @@ yarn-error.log*
 # SQLite
 *.sqlite3
 *.db
+scraper.log
+uvicorn.log
