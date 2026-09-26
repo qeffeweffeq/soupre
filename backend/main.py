@@ -57,3 +57,18 @@ def get_jobs(session: Session = Depends(get_session)):
 def get_job_pages(job_id: int, session: Session = Depends(get_session)):
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     return pages
+
+@app.delete("/api/jobs/{job_id}")
+def delete_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        return {"status": "not found"}
+    
+    # Also delete associated pages
+    pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
+    for page in pages:
+        session.delete(page)
+        
+    session.delete(job)
+    session.commit()
+    return {"status": "deleted"}
