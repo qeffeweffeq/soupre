@@ -1,10 +1,51 @@
+from urllib.parse import urljoin
 import re
 from modules.config import logger, UNWANTED_CONTENT_PATTERNS, META_TABLE_LABELS, RAW_URL_PATTERN
 from modules.parsers.html_parser import should_skip_element, should_exclude_image
 from modules.utils.text_utils import clean_text, get_element_attr_as_string
 from modules.utils.file_utils import download_image
-from urllib.parse import urljoin
 
+
+
+
+def get_best_image(element):
+    best_src = None
+    srcset = element.get('data-srcset') or element.get('srcset')
+    if srcset:
+        candidates = []
+        for part in srcset.split(','):
+            part = part.strip()
+            if not part: continue
+            tokens = part.split(' ')
+            url = tokens[0]
+            width = 0
+            if len(tokens) > 1:
+                w_str = tokens[1].replace('w', '').replace('x', '')
+                if w_str.isdigit():
+                    width = int(w_str)
+            candidates.append((width, url))
+        if candidates:
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            best_src = candidates[0][1]
+            
+    if best_src and not best_src.startswith('data:'):
+        return best_src
+        
+    for attr in ['data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
+        val = element.get(attr)
+        if val and not val.startswith('data:'):
+            return val
+            
+    style = element.get('style', '')
+    if 'background-image' in style or 'background' in style:
+        import re
+        match = re.search(r'url\([\'"]?(.*?)[\'"]?\)', style)
+        if match:
+            bg_src = match.group(1)
+            if not bg_src.startswith('data:'):
+                return bg_src
+                
+    return None
 
 def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_elements=None):
     """Convert HTML elements to Markdown with improved formatting"""
@@ -85,27 +126,33 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(element.get_text(separator=" "))
 
         # Process images with better handling
-        elif element.name == 'img':
-            src = element.get('src', '')
-            alt = element.get('alt', '')
-
-            # Skip tiny images, icons, and spacers
-            if element.get('width') and int(element.get('width')) < 50:
-                return ""
-            if element.get('height') and int(element.get('height')) < 50:
-                return ""
-
-            if src:
-                # Skip base64 encoded images
-                if src.startswith('data:'):
+        elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))):
+            src = get_best_image(element)
+            alt = element.get('alt', '') if element.name == 'img' else ''
+            
+            if element.name == 'img':
+                if element.get('width') and str(element.get('width')).isdigit() and int(element.get('width')) < 50:
                     return ""
-
-                # Skip images that should be excluded
+                if element.get('height') and str(element.get('height')).isdigit() and int(element.get('height')) < 50:
+                    return ""
+                    
+            if src:
                 if should_exclude_image(src, alt):
                     return ""
-
-                # Download and save the image
-                return f"![{alt}]({src})\n\n"
+                
+                
+                src = urljoin(base_url, src)
+                img_md = f"![{alt}]({src})\n\n"
+                
+                if element.name != 'img':
+                    # For divs with background image, we still want to process their children text!
+                    children_md = process_children_recursively(element, base_url, driver, page_dir, processed_elements)
+                    return img_md + children_md
+                    
+                return img_md
+            
+            if element.name != 'img':
+                return process_children_recursively(element, base_url, driver, page_dir, processed_elements)
             return ""
 
         # Process lists with proper formatting

@@ -214,9 +214,8 @@ async def scrape_page(url: str, job_id: int, db_engine):
                         rel_path = f"images/{img_filename}"
                         
                         try:
-                            async with page.expect_response(src) as response_info:
-                                await page.goto(src, timeout=10000)
-                            img_resp = await response_info.value
+                            # Use API context fetch instead of DOM navigation
+                            img_resp = await context.request.get(src, timeout=10000)
                             body = await img_resp.body()
                             
                             with open(local_path, 'wb') as img_file:
