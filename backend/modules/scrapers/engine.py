@@ -1,10 +1,11 @@
+from urllib.parse import urlparse
 import asyncio
 import random
 import logging
 import os
 import csv
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
@@ -64,9 +65,10 @@ async def scrape_page(url: str, job_id: int, db_engine):
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
     await asyncio.sleep(delay)
     
-    html_content, screenshot_path = await fetch_url_with_browser(url)
+    html_content, screenshot_path, pw_cookies = await fetch_url_with_browser(url)
     
     # Check if Playwright failed or hit a Cloudflare/Bot challenge
+    pw_cookies = []
     needs_fallback = False
     if not html_content:
         needs_fallback = True
@@ -139,7 +141,7 @@ async def scrape_page(url: str, job_id: int, db_engine):
 
     main_content = soup.find('main') or soup.find('body')
     try:
-        raw_markdown = convert_content_to_markdown(main_content, soup, url, None, media_dir)
+        raw_markdown = convert_content_to_markdown(main_content, soup, url, pw_cookies, media_dir)
     except Exception as e:
         logging.error(f"Error converting to markdown: {e}")
         raw_markdown = str(e)
@@ -155,41 +157,84 @@ async def scrape_page(url: str, job_id: int, db_engine):
     db_markdown_path = f"../_downloads/{folder_name}/content/{safe_title}.md"
     db_screenshot_path = f"../_downloads/{folder_name}/media/{os.path.basename(screenshot_path)}" if screenshot_path else ""
     
-    media_csv_path = os.path.join(media_dir, "media_index.csv")
-    from modules.utils.file_utils import download_image
+    # Extract all image URLs from markdown
+    import re
+    
+    import time
+    
+    # regex to find markdown images ![alt](url)
+    img_matches = re.findall(r'!\[(.*?)\]\((.*?)\)', final_markdown)
     
     downloaded_media = []
     
-    with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Filename", "Alt Text", "Original URL"])
+    # Use playwright to download images to bypass Captcha
+    images_dir = os.path.join(media_dir, 'images')
+    os.makedirs(images_dir, exist_ok=True)
+    
+    if img_matches:
+        logging.info(f"Attempting to download {len(img_matches)} images using Playwright...")
+        from playwright.async_api import async_playwright
+        from playwright_stealth import Stealth
         
-        # Look for images in img tags and tags with background-image styles
-        media_elements = soup.find_all(lambda tag: tag.name == 'img' or (tag.has_attr('style') and ('background-image' in tag['style'] or 'background:' in tag['style'])))
-        
-        for el in media_elements:
-            src = get_best_image(el)
-            if not src:
-                continue
+        async def download_images_pw():
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
+                page = await context.new_page()
+                await Stealth().apply_stealth_async(page)
                 
-            alt = el.get('alt', '') if el.name == 'img' else ''
-            
-            local_path = download_image(src, url, media_dir, None)
-            if local_path:
-                filename = os.path.basename(local_path)
-                # Avoid duplicates
-                if not any(f == filename for f, _, _, _ in downloaded_media):
-                    writer.writerow([filename, alt, src])
-                    downloaded_media.append((filename, alt, local_path, src))
+                # Navigate to base URL to clear Captcha
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                except:
+                    await page.wait_for_load_state('networkidle', timeout=15000)
+                    
+                # Wait for Captcha bypass
+                try:
+                    await page.wait_for_function("() => !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", timeout=15000)
+                    await asyncio.sleep(2)
+                except:
+                    pass
+                    
+                media_csv_path = os.path.join(media_dir, "media_index.csv")
+                with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["Filename", "Alt Text", "Original URL"])
+                    
+                    for alt, src in img_matches:
+                        if src.startswith('data:'):
+                            continue
+                            
+                        img_filename = os.path.basename(urlparse(src).path)
+                        img_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', img_filename)
+                        if not img_filename or '.' not in img_filename:
+                            img_filename = f"image_{int(time.time())}.jpg"
+                            
+                        local_path = os.path.join(images_dir, img_filename)
+                        rel_path = f"images/{img_filename}"
+                        
+                        try:
+                            async with page.expect_response(src) as response_info:
+                                await page.goto(src, timeout=10000)
+                            img_resp = await response_info.value
+                            body = await img_resp.body()
+                            
+                            with open(local_path, 'wb') as img_file:
+                                img_file.write(body)
+                                
+                            writer.writerow([img_filename, alt, src])
+                            downloaded_media.append((src, rel_path))
+                        except Exception as e:
+                            logging.warning(f"Failed to download {src}: {e}")
+                            
+                await browser.close()
                 
-    missing_media_md = ""
-    for filename, alt, local_path, src in downloaded_media:
-        if filename not in final_markdown:
-            missing_media_md += f"\n![{alt}]({local_path})\n"
-            
-    if missing_media_md:
-        final_markdown += "\n\n" + missing_media_md
+        await download_images_pw()
         
+        # Replace URLs in markdown
+        for src, rel_path in downloaded_media:
+            final_markdown = final_markdown.replace(f"({src})", f"({rel_path})")
+
     with open(abs_markdown_path, 'w', encoding='utf-8') as f:
         f.write(final_markdown)
         

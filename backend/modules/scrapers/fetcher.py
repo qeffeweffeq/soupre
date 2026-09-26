@@ -17,6 +17,7 @@ async def fetch_url_with_browser(url):
     logger.info(f"[Browser] Fetching page: {url}")
     
     html_content = ""
+    cookies_list = []
     screenshot_path = ""
     
     # We will use stealth
@@ -80,6 +81,7 @@ async def fetch_url_with_browser(url):
                 temp_media_dir = os.path.join(base_dir, "_downloads", "media")
                 os.makedirs(temp_media_dir, exist_ok=True)
                 
+                cookies_list = await context.cookies()
                 domain = urlparse(url).netloc.replace(".", "_")
                 filename = f"screenshot_{domain}_{int(time.time())}.png"
                 screenshot_path = os.path.join(temp_media_dir, filename)
@@ -95,4 +97,4 @@ async def fetch_url_with_browser(url):
     except Exception as e:
         logger.error(f"[Browser] Error launching browser: {e}")
         
-    return html_content, screenshot_path
+    return html_content, screenshot_path, cookies_list

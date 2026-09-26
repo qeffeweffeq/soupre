@@ -105,9 +105,6 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
                     return ""
 
                 # Download and save the image
-                local_path = download_image(src, base_url, page_dir, driver)
-                if local_path:
-                    return f"![{alt}]({local_path})\n\n"
                 return f"![{alt}]({src})\n\n"
             return ""
 

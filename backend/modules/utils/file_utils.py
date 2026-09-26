@@ -124,7 +124,10 @@ def download_image(src, base_url, page_dir, driver=None):
 
         # Use the driver's cookies if available
         if driver:
-            cookies = driver.get_cookies()
+            try:
+                cookies = driver.get_cookies()
+            except AttributeError:
+                cookies = driver
             s = requests.Session()
             for cookie in cookies:
                 s.cookies.set(cookie['name'], cookie['value'])
