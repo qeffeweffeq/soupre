@@ -330,7 +330,9 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
             'form', '.form', '#form', 'input', 'select', 'button',
             '.menu', '#menu', 'nav', '.nav', '#nav', '.navigation', '#navigation',
             '.footer', '#footer', '.header', '#header', '.sidebar', '#sidebar',
-            '.widget', '.ad', '.advertisement', '.popup', '.modal', '.overlay'
+            '.ad', '.advertisement', '.popup', '.modal', '.overlay',
+            '.elementor-hidden-mobile', '.elementor-hidden-tablet', '.elementor-hidden-phone',
+            '.d-none', '.d-sm-none', '.d-md-none', '.hidden', '[style*="display: none"]', '[style*="display:none"]'
         ]:
             for element in main_content.select(selector):
                 element.decompose()
