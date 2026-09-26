@@ -34,7 +34,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         element_classes = get_element_attr_as_string(element, 'class')
         element_id = get_element_attr_as_string(element, 'id')
 
-        skip_patterns = ['cookie', 'consent', 'popup', 'modal', 'banner', 'widget', 'sidebar',
+        skip_patterns = ['cookie', 'consent', 'popup', 'modal', 'banner', 'sidebar',
                          'footer', 'header', 'menu', 'nav', 'search', 'cart', 'login']
 
         if any(pattern in element_classes.lower() or pattern in element_id.lower() for pattern in skip_patterns):
@@ -210,7 +210,7 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
             for i in range(1, 7):
                 for heading in soup.find_all(f'h{i}'):
                     # Skip headings in navigation, footer, etc.
-                    if should_skip_element(heading, ['nav', 'menu', 'footer', 'header', 'sidebar', 'widget']):
+                    if should_skip_element(heading, ['nav', 'menu', 'footer', 'header', 'sidebar']):
                         continue
 
                     markdown += html_to_markdown(heading, url, driver, page_dir, processed_elements)
@@ -218,7 +218,7 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
             # Process paragraphs
             for p in soup.find_all('p'):
                 # Skip paragraphs in navigation, footer, etc.
-                if should_skip_element(p, ['nav', 'menu', 'footer', 'header', 'sidebar', 'widget', 'cookie']):
+                if should_skip_element(p, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
                     continue
 
                 # Skip very short paragraphs that are likely not content
@@ -381,7 +381,7 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
                 text = tag.get_text(strip=True)
                 if len(text) > 100:  # Only include blocks with meaningful text
                     # Skip if it's in a navigation, footer, etc.
-                    if should_skip_element(tag, ['nav', 'menu', 'footer', 'header', 'sidebar', 'widget', 'cookie']):
+                    if should_skip_element(tag, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
                         continue
 
                     significant_blocks.append(text)

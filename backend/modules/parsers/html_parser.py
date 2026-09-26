@@ -151,8 +151,8 @@ def extract_meta_content(soup):
 
 def should_skip_element(element, skip_patterns=None):
     if skip_patterns is None:
-        skip_patterns = ['nav', 'menu', 'footer', 'header', 'sidebar', 'widget', 'cookie',
-                         'popup', 'modal', 'banner', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone']
+        skip_patterns = ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie',
+                         'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone']
 
     try:
         # Check the element's own class and ID

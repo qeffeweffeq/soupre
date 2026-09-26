@@ -92,8 +92,7 @@ async def scrape_page(url: str, job_id: int, db_engine):
                 
             logging.info(f"Fallback request successful for {url} ({len(html_content)} bytes)")
         except Exception as e:
-            logging.error(f"Fallback fetch also failed for {url}: {e}")
-            return
+            logging.error(f"Fallback fetch also failed for {url}: {e}. Proceeding with original Playwright content...")
         
     soup = BeautifulSoup(html_content, 'html.parser')
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
