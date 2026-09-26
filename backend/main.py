@@ -64,11 +64,29 @@ def delete_job(job_id: int, session: Session = Depends(get_session)):
     if not job:
         return {"status": "not found"}
     
+    import shutil
+    folder_to_delete = None
+    
     # Also delete associated pages
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
+        if not folder_to_delete:
+            path = page.markdown_path or page.screenshot_path
+            if path and "../_downloads/" in path:
+                parts = path.split("/")
+                if len(parts) >= 3:
+                    folder_name = parts[2]
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    folder_to_delete = os.path.join(base_dir, "_downloads", folder_name)
+                    
         session.delete(page)
         
+    if folder_to_delete and os.path.exists(folder_to_delete):
+        try:
+            shutil.rmtree(folder_to_delete)
+        except Exception as e:
+            print(f"Error deleting folder {folder_to_delete}: {e}")
+            
     session.delete(job)
     session.commit()
     return {"status": "deleted"}
