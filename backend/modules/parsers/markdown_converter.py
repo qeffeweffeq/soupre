@@ -10,30 +10,74 @@ from modules.utils.file_utils import download_image
 
 def get_best_image(element):
     best_src = None
-    srcset = element.get('data-srcset') or element.get('srcset')
-    if srcset:
-        candidates = []
-        for part in srcset.split(','):
+    candidates = []
+    
+    # helper to parse srcset
+    def parse_srcset(srcset_str):
+        if not srcset_str: return
+        for part in srcset_str.split(','):
             part = part.strip()
             if not part: continue
             tokens = part.split(' ')
             url = tokens[0]
             width = 0
             if len(tokens) > 1:
-                w_str = tokens[1].replace('w', '').replace('x', '')
-                if w_str.isdigit():
-                    width = int(w_str)
+                w_str = tokens[1].strip().lower()
+                if w_str.endswith('w'):
+                    w_val = w_str[:-1]
+                    if w_val.isdigit():
+                        width = int(w_val)
+                elif w_str.endswith('x'):
+                    w_val = w_str[:-1]
+                    try:
+                        width = int(float(w_val) * 1000)
+                    except:
+                        pass
             candidates.append((width, url))
-        if candidates:
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            best_src = candidates[0][1]
             
-    if best_src and not best_src.startswith('data:'):
-        return best_src
+    # Check the element itself
+    parse_srcset(element.get('data-srcset') or element.get('srcset'))
+    
+    # If it's an img, check its parent picture sources and parent div data-media-url
+    if element.name == 'img':
+        parent = element.parent
+        while parent and parent.name in ['picture', 'div', 'a', 'figure']:
+            if parent.name == 'picture':
+                for source in parent.find_all('source'):
+                    parse_srcset(source.get('data-srcset') or source.get('srcset'))
+            
+            # check data-media-url on parent
+            media_url = parent.get('data-media-url')
+            if media_url and ',' in media_url:
+                urls = media_url.split(',')
+                for u in urls:
+                    u = u.strip()
+                    if u and not u.startswith('data:'):
+                        # crude width estimation from imgix URL for sorting
+                        width = 1000
+                        import re
+                        w_match = re.search(r'[?&]w=(\d+)', u)
+                        if w_match:
+                            width = int(w_match.group(1))
+                        candidates.append((width, u))
+                        
+            parent = parent.parent
+            
+    if candidates:
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        best_src = candidates[0][1]
+        if best_src and not best_src.startswith('data:'):
+            return best_src
         
-    for attr in ['data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
+    for attr in ['data-media-url', 'data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
         val = element.get(attr)
         if val and not val.startswith('data:'):
+            if attr == 'data-media-url' and ',' in val:
+                urls = val.split(',')
+                for u in urls:
+                    u = u.strip()
+                    if u and not u.startswith('data:'):
+                        return u
             return val
             
     style = element.get('style', '')
