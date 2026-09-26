@@ -40,14 +40,14 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         # Process headings with proper spacing
         if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             heading_level = int(element.name[1])
-            heading_text = clean_text(element.get_text())
+            heading_text = clean_text(element.get_text(separator=" "))
             if heading_text:
                 return f"\n\n{'#' * heading_level} {heading_text}\n\n"
             return ""
 
         # Process paragraphs with proper spacing
         elif element.name == 'p':
-            text = clean_text(element.get_text())
+            text = clean_text(element.get_text(separator=" "))
             if text:
                 # Check if paragraph contains only an image or link
                 if element.find('img') and len(element.find_all()) == 1:
@@ -65,11 +65,11 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             if href:
                 # Skip links to javascript, mailto, tel
                 if href.startswith(('javascript:', 'mailto:', 'tel:')):
-                    return clean_text(element.get_text())
+                    return clean_text(element.get_text(separator=" "))
 
                 # Convert relative URLs to absolute
                 href = urljoin(base_url, href)
-                link_text = clean_text(element.get_text())
+                link_text = clean_text(element.get_text(separator=" "))
 
                 # If the link has no text but has an image, process the image
                 if not link_text and element.find('img'):
@@ -79,7 +79,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
                 # Return formatted link if it has text
                 if link_text:
                     return f"[{link_text}]({href})\n\n"
-            return clean_text(element.get_text())
+            return clean_text(element.get_text(separator=" "))
 
         # Process images with better handling
         elif element.name == 'img':
@@ -112,7 +112,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         elif element.name == 'ul':
             md = "\n\n"
             for li in element.find_all('li', recursive=False):
-                li_text = clean_text(li.get_text())
+                li_text = clean_text(li.get_text(separator=" "))
                 if li_text:
                     md += f"* {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
@@ -120,21 +120,21 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         elif element.name == 'ol':
             md = "\n\n"
             for i, li in enumerate(element.find_all('li', recursive=False), 1):
-                li_text = clean_text(li.get_text())
+                li_text = clean_text(li.get_text(separator=" "))
                 if li_text:
                     md += f"{i}. {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
 
         # Process blockquotes
         elif element.name == 'blockquote':
-            lines = element.get_text().strip().split('\n')
+            lines = element.get_text(separator=" ").strip().split('\n')
             if lines:
                 return '\n\n> ' + '\n> '.join(lines) + '\n\n'
             return ""
 
         # Process code blocks
         elif element.name == 'pre' or element.name == 'code':
-            code_text = element.get_text().strip()
+            code_text = element.get_text(separator=" ").strip()
             if code_text:
                 return f"\n\n```\n{code_text}\n```\n\n"
             return ""
@@ -146,6 +146,18 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process divs and other container elements
         elif element.name in ['div', 'section', 'article', 'main', 'aside', 'span']:
+            # Upgrade Elementor/div headings to actual headings
+            element_classes = element.get('class', [])
+            if isinstance(element_classes, list):
+                class_str = ' '.join(element_classes).lower()
+            else:
+                class_str = str(element_classes).lower()
+                
+            if element.name in ['div', 'p', 'span'] and ('heading' in class_str or 'title' in class_str) and len(clean_text(element.get_text(separator=' '))) < 150:
+                heading_text = clean_text(element.get_text(separator=' '))
+                if heading_text:
+                    return f"\n\n## {heading_text}\n\n"
+                    
             return process_children_recursively(element, base_url, driver, page_dir, processed_elements)
 
         # Process other elements
@@ -452,7 +464,7 @@ def process_table(element):
             return ""
 
         # Check if table should be skipped based on labels
-        table_text = element.get_text().lower()
+        table_text = element.get_text(separator=" ").lower()
         if any(label.lower() in table_text for label in META_TABLE_LABELS):
             logger.info(f"Skipping table labeled as metadata: {META_TABLE_LABELS}")
             return ""
@@ -463,7 +475,7 @@ def process_table(element):
             # Create header row
             header_cells = []
             for h in headers:
-                header_text = clean_text(h.get_text())
+                header_text = clean_text(h.get_text(separator=" "))
                 # Escape pipe characters in table cells
                 header_text = header_text.replace('|', '\\|')
                 header_cells.append(header_text)
@@ -478,7 +490,7 @@ def process_table(element):
                 # Create data row
                 data_cells = []
                 for cell in cells:
-                    cell_text = clean_text(cell.get_text())
+                    cell_text = clean_text(cell.get_text(separator=" "))
                     # Escape pipe characters in table cells
                     cell_text = cell_text.replace('|', '\\|')
                     data_cells.append(cell_text)

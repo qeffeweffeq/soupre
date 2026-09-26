@@ -2,28 +2,81 @@ import asyncio
 import random
 import logging
 import os
+import csv
+import re
+from urllib.parse import urlparse, urljoin
+from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
 from database.models import Page
 from .fetcher import fetch_url_with_browser
 from modules.parsers.markdown_converter import convert_content_to_markdown
+from modules.utils.text_utils import sanitize_filename
 
 MIN_DELAY = 1.5
 MAX_DELAY = 4.5
 
+def get_best_image(element):
+    """Extract the highest resolution image URL from an element (img or styled div)."""
+    best_src = None
+    
+    # Try srcset or data-srcset
+    srcset = element.get('data-srcset') or element.get('srcset')
+    if srcset:
+        candidates = []
+        for part in srcset.split(','):
+            part = part.strip()
+            if not part: continue
+            tokens = part.split(' ')
+            url = tokens[0]
+            width = 0
+            if len(tokens) > 1:
+                w_str = tokens[1].replace('w', '').replace('x', '')
+                if w_str.isdigit():
+                    width = int(w_str)
+            candidates.append((width, url))
+        if candidates:
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            best_src = candidates[0][1]
+            
+    if best_src and not best_src.startswith('data:'):
+        return best_src
+        
+    # Try high-res data attributes
+    for attr in ['data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
+        val = element.get(attr)
+        if val and not val.startswith('data:'):
+            return val
+            
+    # Check for background-image in style
+    style = element.get('style', '')
+    if 'background-image' in style or 'background' in style:
+        match = re.search(r'url\([\'"]?(.*?)[\'"]?\)', style)
+        if match:
+            bg_src = match.group(1)
+            if not bg_src.startswith('data:'):
+                return bg_src
+                
+    return None
+
 async def scrape_page(url: str, job_id: int, db_engine):
-    # Sustainable Scraping: Randomized delay to mimic human browsing
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
     await asyncio.sleep(delay)
     
     html_content, screenshot_path = await fetch_url_with_browser(url)
     
+    # Check if Playwright failed or hit a Cloudflare/Bot challenge
+    needs_fallback = False
     if not html_content:
-        logging.warning(f"Playwright failed for {url}. Falling back to standard HTTP request...")
+        needs_fallback = True
+    elif len(html_content) < 50000 or 'robot-suspicion' in html_content or 'cloudflare' in html_content.lower() or 'just a moment' in html_content.lower():
+        needs_fallback = True
+        
+    if needs_fallback:
+        logging.warning(f"Playwright failed or hit bot challenge for {url}. Falling back to standard HTTP request...")
         import requests
         try:
-            # Run blocking requests in a thread to avoid blocking asyncio loop
             response = await asyncio.to_thread(
                 requests.get, 
                 url, 
@@ -32,52 +85,127 @@ async def scrape_page(url: str, job_id: int, db_engine):
             )
             response.raise_for_status()
             html_content = response.text
-            screenshot_path = "" # No screenshot available for fallback
+            screenshot_path = "" 
+            
+            if len(html_content) < 10000:
+                raise ValueError("Fallback request also returned a suspiciously small page (likely a bot challenge).")
+                
             logging.info(f"Fallback request successful for {url} ({len(html_content)} bytes)")
         except Exception as e:
             logging.error(f"Fallback fetch also failed for {url}: {e}")
             return
         
     soup = BeautifulSoup(html_content, 'html.parser')
+    page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
+    safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
     
-    # We pass empty config/driver params to markdown converter for now since we refactored
-    # We may need to adapt convert_content_to_markdown if it explicitly requires Selenium
-    # But looking at websoup code, driver is optional.
-    
-    # Extract main content using BeautifulSoup
-    main_content = soup.find('main') or soup.find('body')
+    domain = urlparse(url).netloc.replace(".", "_")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{timestamp}_{domain}"
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    media_dir = os.path.join(base_dir, "_downloads", "media")
-    content_dir = os.path.join(base_dir, "_downloads", "content")
+    job_dir = os.path.join(base_dir, "_downloads", folder_name)
+    media_dir = os.path.join(job_dir, "media")
+    content_dir = os.path.join(job_dir, "content")
     
+    os.makedirs(media_dir, exist_ok=True)
+    os.makedirs(content_dir, exist_ok=True)
+    
+    if screenshot_path and os.path.exists(screenshot_path):
+        new_screenshot_path = os.path.join(media_dir, os.path.basename(screenshot_path))
+        os.rename(screenshot_path, new_screenshot_path)
+        screenshot_path = new_screenshot_path
+
+    metadata = {
+        "URL": url,
+        "Title": page_title,
+        "Description": "",
+        "Keywords": "",
+        "Scraped At": datetime.now().isoformat()
+    }
+    desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", property="og:description")
+    if desc_tag and desc_tag.get("content"):
+        metadata["Description"] = desc_tag["content"].strip()
+        
+    kw_tag = soup.find("meta", attrs={"name": "keywords"})
+    if kw_tag and kw_tag.get("content"):
+        metadata["Keywords"] = kw_tag["content"].strip()
+
+    metadata_csv_path = os.path.join(content_dir, "metadata.csv")
+    with open(metadata_csv_path, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Key", "Value"])
+        for k, v in metadata.items():
+            writer.writerow([k, v])
+
+    main_content = soup.find('main') or soup.find('body')
     try:
-        markdown_content = convert_content_to_markdown(main_content, soup, url, None, media_dir)
+        raw_markdown = convert_content_to_markdown(main_content, soup, url, None, media_dir)
     except Exception as e:
         logging.error(f"Error converting to markdown: {e}")
-        markdown_content = str(e)
+        raw_markdown = str(e)
         
-    random_id = random.randint(1000, 9999)
-    # We use the absolute path for writing, but relative for DB so frontend works
-    abs_markdown_path = os.path.join(content_dir, f"{job_id}_{random_id}.md")
-    db_markdown_path = f"../_downloads/content/{job_id}_{random_id}.md"
+    md_table = "## Metadata\n\n| Key | Value |\n|---|---|\n"
+    for k, v in metadata.items():
+        v_safe = str(v).replace("|", "\\|")
+        md_table += f"| **{k}** | {v_safe} |\n"
+        
+    final_markdown = f"# {page_title}\n\n{md_table}\n\n---\n\n{raw_markdown}"
     
+    abs_markdown_path = os.path.join(content_dir, f"{safe_title}.md")
+    db_markdown_path = f"../_downloads/{folder_name}/content/{safe_title}.md"
+    db_screenshot_path = f"../_downloads/{folder_name}/media/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+    
+    media_csv_path = os.path.join(media_dir, "media_index.csv")
+    from modules.utils.file_utils import download_image
+    
+    downloaded_media = []
+    
+    with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Filename", "Alt Text", "Original URL"])
+        
+        # Look for images in img tags and tags with background-image styles
+        media_elements = soup.find_all(lambda tag: tag.name == 'img' or (tag.has_attr('style') and ('background-image' in tag['style'] or 'background:' in tag['style'])))
+        
+        for el in media_elements:
+            src = get_best_image(el)
+            if not src:
+                continue
+                
+            alt = el.get('alt', '') if el.name == 'img' else ''
+            
+            local_path = download_image(src, url, media_dir, None)
+            if local_path:
+                filename = os.path.basename(local_path)
+                # Avoid duplicates
+                if not any(f == filename for f, _, _, _ in downloaded_media):
+                    writer.writerow([filename, alt, src])
+                    downloaded_media.append((filename, alt, local_path, src))
+                
+    missing_media_md = ""
+    for filename, alt, local_path, src in downloaded_media:
+        if filename not in final_markdown:
+            missing_media_md += f"\n![{alt}]({local_path})\n"
+            
+    if missing_media_md:
+        final_markdown += "\n\n" + missing_media_md
+        
     with open(abs_markdown_path, 'w', encoding='utf-8') as f:
-        f.write(markdown_content)
+        f.write(final_markdown)
         
     with Session(db_engine) as session:
         page = Page(
             job_id=job_id,
             url=url,
-            title=soup.title.string if soup.title else "Untitled",
+            title=page_title,
             markdown_path=db_markdown_path,
-            screenshot_path=screenshot_path
+            screenshot_path=db_screenshot_path
         )
         session.add(page)
         session.commit()
 
 async def run_scrape_job(job_id: int, target_url: str, db_engine):
-    # Async wrapper
     try:
         await scrape_page(target_url, job_id, db_engine)
         from database.models import ScrapeJob

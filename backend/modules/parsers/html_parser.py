@@ -150,19 +150,9 @@ def extract_meta_content(soup):
 
 
 def should_skip_element(element, skip_patterns=None):
-    """
-    Check if an element should be skipped based on its parent elements' classes and IDs.
-
-    Args:
-        element: The BeautifulSoup element to check
-        skip_patterns: List of patterns to check for in parent classes and IDs
-
-    Returns:
-        bool: True if the element should be skipped, False otherwise
-    """
     if skip_patterns is None:
         skip_patterns = ['nav', 'menu', 'footer', 'header', 'sidebar', 'widget', 'cookie',
-                         'popup', 'modal', 'banner', 'ad-', 'advertisement']
+                         'popup', 'modal', 'banner', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone']
 
     try:
         # Check the element's own class and ID
@@ -213,6 +203,7 @@ def should_skip_element(element, skip_patterns=None):
 
 
 def should_exclude_image(src, alt=''):
+    return False
     """Determine if an image should be excluded from the markdown output"""
     # Convert to lowercase for case-insensitive matching
     src_lower = src.lower()
