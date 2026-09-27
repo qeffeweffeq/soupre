@@ -1,0 +1,10 @@
+{
+  "name": "soupre",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && fish -c 'source venv/bin/activate.fish && uvicorn main:app --reload'",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "npm run dev:backend"
+  }
+}
