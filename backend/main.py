@@ -68,6 +68,7 @@ async def _run_job_with_logging(job_id: int, target_url: str):
     handler = JobQueueHandler(job_id, loop)
     handler.setFormatter(logging.Formatter("%(levelname)s  %(message)s"))
     root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
     root_logger.addHandler(handler)
 
     from modules.scrapers.engine import run_scrape_job
@@ -103,7 +104,7 @@ async def stream_job_logs(job_id: int):
                 continue
 
             if line == _DONE_SENTINEL:
-                yield f"event: done\ndata: done\n\n"
+                yield f"data: __DONE__\n\n"
                 break
 
             # Escape newlines inside the data payload
