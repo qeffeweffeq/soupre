@@ -1,79 +1,38 @@
-# Soupre
+# Soupre Web Archiver
 
-Soupre is a robust, modular web scraping and content extraction application designed to transform complex web pages into clean, highly readable Markdown files while seamlessly downloading all embedded media (high-resolution images, videos).
+Soupre is a sophisticated full-stack web archiving and scraping tool. 
 
-It features a modern dual-stack architecture:
-- **Frontend**: A sleek Next.js (React) web application styled with Tailwind CSS for visualizing and managing scraped content.
-- **Backend**: A high-performance Python (FastAPI/SQLModel) server powered by Playwright and BeautifulSoup.
+## Features
+- **FastAPI Backend**: Uses SQLModel/SQLite for job management and `crawl4ai` for robust web extraction.
+- **Next.js Frontend**: A dynamic, modern dashboard built with Tailwind v4.
+- **Real-time Logging**: Streams live Python extraction logs directly to a beautiful frontend terminal via Server-Sent Events (SSE).
+- **Material Catppuccin UI**: Powered by the abstract `@qfwfq/material-catppuccin-ui` component library for a flawless visual experience.
+- **Smart Dev Server**: Includes a custom `dev_all.py` script that automatically finds open ports, preventing `Address already in use` collisions when running alongside other projects.
 
-## Current State & Key Integrations
+## Getting Started
 
-Soupre has been extensively upgraded with advanced extraction capabilities to handle modern, dynamically loaded, and WAF-protected websites:
+### Prerequisites
+- Node.js (v18+)
+- Python 3.12+
 
-- **WAF & Captcha Bypass**: Built-in Playwright stealth configurations successfully navigate SiteGround "Checking the site connection security" screens, Cloudflare challenges, and other anti-bot measures. The scraper intelligently falls back to HTTP requests if needed, but orchestrates a specialized secondary Playwright context specifically for downloading Captcha-protected media assets.
-- **Maximum Resolution Media Extraction**: Advanced DOM parsing algorithms scan the tree to locate `<picture>` tags, `<source>` elements, and custom data attributes (e.g., `data-media-url`) to extract the absolute highest-resolution image assets available (including retina `2x`/`3x` variants).
-- **Embedded Video Downloading**: Integrates `yt-dlp` to detect Vimeo and YouTube embeds (including hidden Javascript-driven iframes) inside the DOM, automatically downloading the best quality `.mp4` videos directly to your local file system.
-- **Perfectly Flattened Output**: Scraped data is structured beautifully in a single flat directory per job:
-  - `PageTitle.md`: Clean Markdown content.
-  - `images/`: High-resolution images safely fetched and referenced via relative links in the markdown.
-  - `videos/`: Embedded videos downloaded via `yt-dlp`.
-  - `metadata.csv` & `media_index.csv`: CSV indexes of the scraped media.
-- **Real-time Server-Sent Events (SSE)**: The Next.js frontend streams live logs directly from the FastAPI backend using SSE, giving you line-by-line visibility into the scraping progress.
+### Quick Start
+To launch both the backend and frontend simultaneously with dynamic port allocation and full color support:
 
-## Tech Stack
-
-### Frontend
-- **Framework**: Next.js 14+ (App Router)
-- **Styling**: Tailwind CSS
-- **Markdown Rendering**: `react-markdown` + `remark-gfm`
-
-### Backend
-- **Framework**: FastAPI
-- **Database**: SQLite (managed via SQLModel)
-- **Scraping Engine**: Playwright (Async) + `playwright-stealth`, BeautifulSoup4
-- **Media Downloaders**: `yt-dlp` (videos), API Context fetch (images)
-
-## Quick Start
-
-We have configured a root `package.json` with helper scripts to easily launch the application.
-
-To run **both** the frontend and backend concurrently in a single terminal (with color-coded logs):
 ```bash
+# 1. Install frontend dependencies
+cd frontend && npm install
+
+# 2. Setup backend virtual environment
+cd ../backend
+python3 -m venv venv
+source venv/bin/activate.fish
+pip install -r requirements.txt
+
+# 3. Start the smart dev server from the root directory
+cd ..
 npm run dev:all
 ```
+The terminal will display the dynamic ports chosen (usually `3000` for frontend and `8000` for backend).
 
-*(Under the hood, this uses `npx concurrently` to start the Next.js frontend and the FastAPI backend simultaneously, automatically activating the backend's `fish` virtual environment).*
-
-### Running Separately
-
-If you prefer to run the services in separate terminal tabs, you can use these shortcuts from the project root:
-
-**Start only the Backend:**
-```bash
-npm run dev
-# or
-npm run dev:backend
-```
-
-**Start only the Frontend:**
-```bash
-npm run dev:frontend
-```
-
-### Manual Execution
-
-If you ever need to bypass the NPM scripts:
-
-**Backend:**
-```bash
-cd backend
-source venv/bin/activate.fish
-uvicorn main:app --reload
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Development
+If you are developing the UI components, use `npm link @qfwfq/material-catppuccin-ui` inside the `frontend` directory to link the local repository.
