@@ -35,22 +35,39 @@ Soupre has been extensively upgraded with advanced extraction capabilities to ha
 
 ## Quick Start
 
-You can run both the frontend and backend concurrently with a single command from the project root:
+We have configured a root `package.json` with helper scripts to easily launch the application.
 
+To run **both** the frontend and backend concurrently in a single terminal (with color-coded logs):
 ```bash
-npm run dev
+npm run dev:all
 ```
 
-*(This command uses `fish` shell to activate the backend virtual environment and run the FastAPI server via Uvicorn, while also starting the Next.js frontend.)*
+*(Under the hood, this uses `npx concurrently` to start the Next.js frontend and the FastAPI backend simultaneously, automatically activating the backend's `fish` virtual environment).*
+
+### Running Separately
+
+If you prefer to run the services in separate terminal tabs, you can use these shortcuts from the project root:
+
+**Start only the Backend:**
+```bash
+npm run dev
+# or
+npm run dev:backend
+```
+
+**Start only the Frontend:**
+```bash
+npm run dev:frontend
+```
 
 ### Manual Execution
 
-If you prefer to run them separately:
+If you ever need to bypass the NPM scripts:
 
 **Backend:**
 ```bash
 cd backend
-source venv/bin/activate  # or source venv/bin/activate.fish
+source venv/bin/activate.fish
 uvicorn main:app --reload
 ```
 
