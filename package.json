@@ -5,7 +5,7 @@
   "scripts": {
     "dev:backend": "cd backend && fish -c 'source venv/bin/activate.fish && uvicorn main:app --reload --use-colors'",
     "dev:frontend": "cd frontend && FORCE_COLOR=1 npm run dev",
-    "dev:all": "FORCE_COLOR=1 npx concurrently -c \"green,magentaBright\" -n \"backend,frontend\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:all": "python3 dev_all.py",
     "dev": "npm run dev:backend"
   }
 }
