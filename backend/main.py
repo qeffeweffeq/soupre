@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from database.models import SQLModel, ScrapeJob, Page
-from sqlmodel import select, Session
-from agile_sqlite_env import AgileSQLiteEnv
+from sqlmodel import create_engine, Session, select
 from contextlib import asynccontextmanager
 import os
 import asyncio
@@ -14,8 +13,8 @@ from collections import defaultdict
 # Create downloads directory if it doesn't exist
 os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads"), exist_ok=True)
 
-db_env = AgileSQLiteEnv("/Users/admin/webapps/soupre/soupre.db")
-engine = db_env.engine
+sqlite_url = "sqlite:////Users/admin/webapps/soupre/soupre.db"
+engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
 # ---------------------------------------------------------------------------
 # Per-job log queues (job_id -> asyncio.Queue of log line strings)
@@ -43,7 +42,7 @@ class JobQueueHandler(logging.Handler):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db_env.create_tables()
+    SQLModel.metadata.create_all(engine)
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -59,7 +58,8 @@ app.add_middleware(
 )
 
 def get_session():
-    yield from db_env.get_session()
+    with Session(engine) as session:
+        yield session
 
 
 async def _run_job_with_logging(job_id: int, target_url: str):

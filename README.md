@@ -35,19 +35,4 @@ npm run dev:all
 The terminal will display the dynamic ports chosen (usually `3000` for frontend and `8000` for backend).
 
 ## Development
-
-### UI Components
 If you are developing the UI components, use `npm link @qfwfq/material-catppuccin-ui` inside the `frontend` directory to link the local repository.
-
-### Database Layer (`agile-sqlite-env`)
-The backend uses [`agile-sqlite-env`](https://github.com/qeffeweffeq/agile-sqlite-env) to bootstrap the SQLite engine, create tables, and inject database sessions into FastAPI routes. It replaces all manual `create_engine` / `Session` boilerplate.
-
-To develop against a local copy of the library:
-
-```bash
-cd backend
-source venv/bin/activate
-pip install -e /Users/admin/webapps/agile-sqlite-env
-```
-
-Any changes you make to the `agile-sqlite-env` source will be immediately reflected when you restart the backend.
