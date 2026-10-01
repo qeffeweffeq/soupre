@@ -36,10 +36,24 @@ COMMON_PATHS = [
 
 
 def _get(url: str) -> bytes | None:
+    """Fetch a URL and return bytes only if the response looks like XML."""
     try:
-        r = requests.get(url, timeout=15,
-                         headers={"User-Agent": "SoupreBot/1.0"})
+        r = requests.get(
+            url,
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/121.0.0.0 Safari/537.36",
+                "Accept": "application/xml,text/xml,*/*;q=0.8",
+            },
+            allow_redirects=True,
+        )
         r.raise_for_status()
+        content_type = r.headers.get("Content-Type", "").lower()
+        if "html" in content_type:
+            logger.debug(f"[Sitemap] Skipping {url} — returned HTML (not XML)")
+            return None
         return r.content
     except Exception as e:
         logger.warning(f"[Sitemap] Cannot fetch {url}: {e}")
