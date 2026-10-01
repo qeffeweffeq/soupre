@@ -35,10 +35,10 @@ COMMON_PATHS = [
 ]
 
 
-def _get(url: str) -> bytes | None:
+def _get(url: str, session: requests.Session) -> bytes | None:
     """Fetch a URL and return bytes only if the response looks like XML."""
     try:
-        r = requests.get(
+        r = session.get(
             url,
             timeout=15,
             headers={
@@ -74,7 +74,12 @@ def discover_sitemap_urls(
     base_url: str,
     job_dir: str,
     max_pages: int = 50,
+    cookies: list[dict] | None = None
 ) -> list[str]:
+    session = requests.Session()
+    if cookies:
+        for c in cookies:
+            session.cookies.set(c["name"], c["value"], domain=c["domain"])
     """
     Discover all page URLs from base_url's sitemap.
     Strategy: robots.txt Sitemap: directive → common paths → fail gracefully.
@@ -88,14 +93,14 @@ def discover_sitemap_urls(
     path_lower = parsed.path.lower()
     if path_lower.endswith('.xml') or 'sitemap' in path_lower:
         logger.info(f"[Sitemap] URL looks like a direct sitemap, trying it first: {base_url}")
-        direct_content = _get(base_url)
+        direct_content = _get(base_url, session)
         if direct_content:
             try:
                 direct_urls: list[str] = []
                 if _is_index(direct_content):
                     child_sitemap_urls = _locs(direct_content)
                     for cu in child_sitemap_urls:
-                        child = _get(cu)
+                        child = _get(cu, session)
                         if child:
                             direct_urls.extend(_locs(child))
                         if len(direct_urls) >= max_pages:
@@ -129,7 +134,7 @@ def discover_sitemap_urls(
 
     # Step 1: robots.txt — look for Sitemap: directive
     candidates: list[str] = []
-    robots = _get(urljoin(origin, "/robots.txt"))
+    robots = _get(urljoin(origin, "/robots.txt"), session)
     if robots:
         for line in robots.decode("utf-8", errors="ignore").splitlines():
             if line.lower().startswith("sitemap:"):
@@ -146,7 +151,7 @@ def discover_sitemap_urls(
     all_urls: list[str] = []
 
     for sitemap_url in candidates:
-        content = _get(sitemap_url)
+        content = _get(sitemap_url, session)
         if not content:
             continue
         try:
@@ -154,7 +159,7 @@ def discover_sitemap_urls(
                 # Sitemap index: expand child sitemaps
                 child_sitemap_urls = _locs(content)
                 for cu in child_sitemap_urls:
-                    child = _get(cu)
+                    child = _get(cu, session)
                     if child:
                         all_urls.extend(_locs(child))
                     if len(all_urls) >= max_pages:

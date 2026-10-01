@@ -289,12 +289,25 @@ async def run_scrape_job(
     try:
         if scrape_mode == "sitemap":
             from .sitemap_fetcher import discover_sitemap_urls
+            from .fetcher import fetch_url_with_browser
+            import logging
+            from urllib.parse import urlparse
+            import os
+
             domain = urlparse(target_url).netloc.replace(".", "_")
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(
                 os.path.abspath(__file__))))
             job_dir = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
 
-            urls = discover_sitemap_urls(target_url, job_dir=job_dir, max_pages=max_pages)
+            logging.info(f"[Job {job_id}] Acquiring clearance cookies for sitemap discovery via browser...")
+            _, _, clearance_cookies = await fetch_url_with_browser(target_url)
+
+            urls = discover_sitemap_urls(
+                target_url,
+                job_dir=job_dir,
+                max_pages=max_pages,
+                cookies=clearance_cookies
+            )
             if not urls:
                 from database.models import ScrapeJob
                 with Session(db_engine) as s:
