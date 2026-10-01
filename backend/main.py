@@ -192,35 +192,55 @@ def get_job_pages(job_id: int, session: Session = Depends(get_session)):
     return pages
 
 
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        return {"status": "not found"}
+    if job.status == "running":
+        job.status = "cancelled"
+        session.commit()
+    return {"status": "cancelled"}
+
+
 @app.delete("/api/jobs/{job_id}")
-def delete_job(job_id: int, session: Session = Depends(get_session)):
+async def delete_job(job_id: int, session: Session = Depends(get_session)):
     job = session.get(ScrapeJob, job_id)
     if not job:
         return {"status": "not found"}
 
     import shutil
-    folder_to_delete = None
+    import os
+    from urllib.parse import urlparse
 
+    # 1. Close SSE stream if active
+    queue = job_log_queues.get(job_id)
+    if queue:
+        await queue.put(_DONE_SENTINEL)
+    job_log_queues.pop(job_id, None)
+
+    # 2. Determine folder to delete (Sitemap jobs use a predictable folder name)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    domain = urlparse(job.target_url).netloc.replace(".", "_")
+    folder_to_delete = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+
+    # Fallback to checking page paths for single page scrapes
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
-        if not folder_to_delete:
+        if not os.path.exists(folder_to_delete):
             path = page.markdown_path or page.screenshot_path
             if path and "../_downloads/" in path:
                 parts = path.split("/")
                 if len(parts) >= 3:
                     folder_name = parts[2]
-                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                     folder_to_delete = os.path.join(base_dir, "_downloads", folder_name)
         session.delete(page)
 
-    if folder_to_delete and os.path.exists(folder_to_delete):
+    if os.path.exists(folder_to_delete):
         try:
             shutil.rmtree(folder_to_delete)
         except Exception as e:
             print(f"Error deleting folder {folder_to_delete}: {e}")
-
-    # Clean up the log queue for this job
-    job_log_queues.pop(job_id, None)
 
     session.delete(job)
     session.commit()

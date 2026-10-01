@@ -345,9 +345,11 @@ async def run_scrape_job(
 
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
-                    if job:
-                        job.scraped_pages = i + 1
-                        s.commit()
+                    if not job or job.status == "cancelled":
+                        logging.info(f"[Job {job_id}] Cancelled or deleted. Stopping loop.")
+                        break
+                    job.scraped_pages = i + 1
+                    s.commit()
         else:
             await scrape_page(target_url, job_id, db_engine)
 
