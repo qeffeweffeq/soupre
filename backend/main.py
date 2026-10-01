@@ -81,13 +81,39 @@ async def _run_job_with_logging(job_id: int, target_url: str):
 
 
 @app.post("/api/jobs")
-def create_job(target_url: str, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
-    job = ScrapeJob(target_url=target_url)
+def create_job(
+    target_url: str,
+    background_tasks: BackgroundTasks,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+    session: Session = Depends(get_session),
+):
+    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
     session.add(job)
     session.commit()
     session.refresh(job)
-    background_tasks.add_task(_run_job_with_logging, job.id, target_url)
+
+    from modules.scrapers.engine import run_scrape_job
+    background_tasks.add_task(
+        run_scrape_job,
+        job.id, target_url, engine,
+        scrape_mode, max_pages, delay_min, delay_max,
+        large_threshold, large_pause_sec,
+    )
     return {"job_id": job.id, "status": "started"}
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: int, session: Session = Depends(get_session)):
+    from fastapi import HTTPException
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
 
 
 @app.get("/api/jobs/{job_id}/logs")
