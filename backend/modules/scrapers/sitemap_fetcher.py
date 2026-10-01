@@ -8,8 +8,30 @@ from lxml import etree
 from modules.config import logger
 
 COMMON_PATHS = [
-    "/sitemap.xml", "/sitemap_index.xml",
-    "/sitemap-index.xml", "/sitemapindex.xml",
+    # Standard
+    "/sitemap.xml",
+    "/sitemap_index.xml",
+    "/sitemap-index.xml",
+    "/sitemapindex.xml",
+    # WordPress native (5.5+)
+    "/wp-sitemap.xml",
+    # WordPress Yoast SEO plugin
+    "/page-sitemap.xml",
+    "/post-sitemap.xml",
+    "/category-sitemap.xml",
+    "/tag-sitemap.xml",
+    "/author-sitemap.xml",
+    "/news-sitemap.xml",
+    # WordPress Rank Math / All-in-One SEO
+    "/sitemap_index.xml",
+    "/sitemap-pages.xml",
+    "/sitemap-posts.xml",
+    # Other common patterns
+    "/sitemap1.xml",
+    "/sitemap-0.xml",
+    "/feeds/sitemap.xml",
+    "/sitemap/sitemap.xml",
+    "/sitemaps/sitemap.xml",
 ]
 
 
@@ -47,6 +69,49 @@ def discover_sitemap_urls(
     """
     parsed = urlparse(base_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    # If the submitted URL itself looks like a sitemap, try it directly first
+    path_lower = parsed.path.lower()
+    if path_lower.endswith('.xml') or 'sitemap' in path_lower:
+        logger.info(f"[Sitemap] URL looks like a direct sitemap, trying it first: {base_url}")
+        direct_content = _get(base_url)
+        if direct_content:
+            try:
+                direct_urls: list[str] = []
+                if _is_index(direct_content):
+                    child_sitemap_urls = _locs(direct_content)
+                    for cu in child_sitemap_urls:
+                        child = _get(cu)
+                        if child:
+                            direct_urls.extend(_locs(child))
+                        if len(direct_urls) >= max_pages:
+                            break
+                else:
+                    direct_urls.extend(_locs(direct_content))
+
+                if direct_urls:
+                    # Save sitemap to disk
+                    if job_dir:
+                        os.makedirs(job_dir, exist_ok=True)
+                        with open(os.path.join(job_dir, "sitemap.xml"), "wb") as f:
+                            f.write(direct_content)
+                        logger.info(f"[Sitemap] Saved direct sitemap.xml to {job_dir}")
+
+                    # Deduplicate, same-domain filter, cap
+                    seen: set[str] = set()
+                    result: list[str] = []
+                    for url in direct_urls:
+                        if url not in seen and urlparse(url).netloc == parsed.netloc:
+                            seen.add(url)
+                            result.append(url)
+                        if len(result) >= max_pages:
+                            break
+
+                    logger.info(f"[Sitemap] {len(result)} URLs from direct sitemap {base_url}")
+                    return result
+            except Exception as e:
+                logger.warning(f"[Sitemap] Direct sitemap parse failed for {base_url}: {e}")
+                # Fall through to normal discovery
 
     # Step 1: robots.txt — look for Sitemap: directive
     candidates: list[str] = []
