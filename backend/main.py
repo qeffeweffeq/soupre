@@ -40,9 +40,34 @@ class JobQueueHandler(logging.Handler):
         )
 
 
+def _migrate_db(engine) -> None:
+    """Add any new columns to existing SQLite tables (safe, idempotent)."""
+    from sqlalchemy import text
+    migrations = [
+        # (table_name, column_name, column_definition)
+        ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
+        ("scrapejob", "total_pages",   "INTEGER"),
+        ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "url_path",      "TEXT"),
+        ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
+    ]
+    with engine.connect() as conn:
+        for table, column, definition in migrations:
+            # Check if column already exists via PRAGMA
+            result = conn.execute(
+                text(f"PRAGMA table_info({table})")
+            )
+            existing = [row[1] for row in result.fetchall()]
+            if column not in existing:
+                conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+                ))
+                conn.commit()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
+    _migrate_db(engine)
     yield
 
 app = FastAPI(lifespan=lifespan)
