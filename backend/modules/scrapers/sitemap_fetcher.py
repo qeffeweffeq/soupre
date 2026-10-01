@@ -120,7 +120,11 @@ def discover_sitemap_urls(
                     seen: set[str] = set()
                     result: list[str] = []
                     for url in direct_urls:
-                        if url not in seen and urlparse(url).netloc == parsed.netloc:
+                        parsed_url = urlparse(url)
+                        ext = parsed_url.path.lower()
+                        if ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip')):
+                            continue
+                        if url not in seen and parsed_url.netloc == parsed.netloc:
                             seen.add(url)
                             result.append(url)
                         if len(result) >= max_pages:
@@ -184,7 +188,11 @@ def discover_sitemap_urls(
     seen: set[str] = set()
     result: list[str] = []
     for url in all_urls:
-        if url not in seen and urlparse(url).netloc == parsed.netloc:
+        parsed_url = urlparse(url)
+        ext = parsed_url.path.lower()
+        if ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip')):
+            continue
+        if url not in seen and parsed_url.netloc == parsed.netloc:
             seen.add(url)
             result.append(url)
         if len(result) >= max_pages:

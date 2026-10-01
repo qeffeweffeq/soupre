@@ -87,7 +87,16 @@ def get_session():
         yield session
 
 
-async def _run_job_with_logging(job_id: int, target_url: str):
+async def _run_job_with_logging(
+    job_id: int, 
+    target_url: str,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+):
     """Wrapper that attaches/detaches the JobQueueHandler around the scrape."""
     loop = asyncio.get_event_loop()
     handler = JobQueueHandler(job_id, loop)
@@ -98,7 +107,7 @@ async def _run_job_with_logging(job_id: int, target_url: str):
 
     from modules.scrapers.engine import run_scrape_job
     try:
-        await run_scrape_job(job_id, target_url, engine)
+        await run_scrape_job(job_id, target_url, engine, scrape_mode, max_pages, delay_min, delay_max, large_threshold, large_pause_sec)
     finally:
         root_logger.removeHandler(handler)
         # Signal SSE consumers that this job stream is finished
@@ -122,10 +131,9 @@ def create_job(
     session.commit()
     session.refresh(job)
 
-    from modules.scrapers.engine import run_scrape_job
     background_tasks.add_task(
-        run_scrape_job,
-        job.id, target_url, engine,
+        _run_job_with_logging,
+        job.id, target_url,
         scrape_mode, max_pages, delay_min, delay_max,
         large_threshold, large_pause_sec,
     )

@@ -60,7 +60,7 @@ def get_best_image(element):
                 
     return None
 
-async def scrape_page(url: str, job_id: int, db_engine):
+async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
     await asyncio.sleep(delay)
@@ -101,8 +101,11 @@ async def scrape_page(url: str, job_id: int, db_engine):
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
     
     domain = urlparse(url).netloc.replace(".", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder_name = f"{timestamp}_{domain}"
+    if job_dir_name:
+        folder_name = job_dir_name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        folder_name = f"{timestamp}_{domain}"
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     job_dir = os.path.join(base_dir, "_downloads", folder_name)
@@ -295,9 +298,10 @@ async def run_scrape_job(
             import os
 
             domain = urlparse(target_url).netloc.replace(".", "_")
+            job_dir_name = f"job_{job_id}_{domain}"
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(
                 os.path.abspath(__file__))))
-            job_dir = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+            job_dir = os.path.join(base_dir, "_downloads", job_dir_name)
 
             logging.info(f"[Job {job_id}] Acquiring clearance cookies for sitemap discovery via browser...")
             _, _, clearance_cookies = await fetch_url_with_browser(target_url)
@@ -337,7 +341,7 @@ async def run_scrape_job(
                     delay = round(random.uniform(delay_min, delay_max), 2)
                     await asyncio.sleep(delay)
 
-                await scrape_page(url, job_id, db_engine)
+                await scrape_page(url, job_id, db_engine, job_dir_name=job_dir_name)
 
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
