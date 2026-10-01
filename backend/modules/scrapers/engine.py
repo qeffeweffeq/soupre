@@ -268,14 +268,72 @@ async def scrape_page(url: str, job_id: int, db_engine):
             url=url,
             title=page_title,
             markdown_path=db_markdown_path,
-            screenshot_path=db_screenshot_path
+            screenshot_path=db_screenshot_path,
+            url_path=urlparse(url).path or "/",
+            url_depth=len([p for p in urlparse(url).path.split("/") if p]),
         )
         session.add(page)
         session.commit()
 
-async def run_scrape_job(job_id: int, target_url: str, db_engine):
+async def run_scrape_job(
+    job_id: int,
+    target_url: str,
+    db_engine,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+):
     try:
-        await scrape_page(target_url, job_id, db_engine)
+        if scrape_mode == "sitemap":
+            from .sitemap_fetcher import discover_sitemap_urls
+            domain = urlparse(target_url).netloc.replace(".", "_")
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__))))
+            job_dir = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+
+            urls = discover_sitemap_urls(target_url, job_dir=job_dir, max_pages=max_pages)
+            if not urls:
+                from database.models import ScrapeJob
+                with Session(db_engine) as s:
+                    job = s.get(ScrapeJob, job_id)
+                    if job:
+                        job.status = "failed"
+                        s.commit()
+                logging.error(f"[Job {job_id}] No sitemap found for {target_url}")
+                return
+
+            from database.models import ScrapeJob
+            with Session(db_engine) as s:
+                job = s.get(ScrapeJob, job_id)
+                if job:
+                    job.total_pages = len(urls)
+                    job.status = "running"
+                    s.commit()
+
+            for i, url in enumerate(urls):
+                # Large-sitemap pause every large_threshold pages (skip i==0)
+                if i > 0 and i % large_threshold == 0 and large_pause_sec > 0:
+                    logging.info(
+                        f"[Job {job_id}] Large-sitemap pause: {large_pause_sec}s after {i} pages"
+                    )
+                    await asyncio.sleep(large_pause_sec)
+                else:
+                    delay = round(random.uniform(delay_min, delay_max), 2)
+                    await asyncio.sleep(delay)
+
+                await scrape_page(url, job_id, db_engine)
+
+                with Session(db_engine) as s:
+                    job = s.get(ScrapeJob, job_id)
+                    if job:
+                        job.scraped_pages = i + 1
+                        s.commit()
+        else:
+            await scrape_page(target_url, job_id, db_engine)
+
         from database.models import ScrapeJob
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
@@ -283,7 +341,7 @@ async def run_scrape_job(job_id: int, target_url: str, db_engine):
                 job.status = "completed"
                 session.commit()
     except Exception as e:
-        logging.error(f"Job failed: {e}")
+        logging.error(f"Job {job_id} failed: {e}")
         from database.models import ScrapeJob
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
