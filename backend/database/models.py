@@ -18,6 +18,7 @@ class Page(SQLModel, table=True):
     job_id: int = Field(foreign_key="scrapejob.id")
     url: str
     title: str
+    status: str = Field(default="pending")
     markdown_path: Optional[str] = None
     screenshot_path: Optional[str] = None
     url_path: Optional[str] = None    # e.g. "/blog/my-post"

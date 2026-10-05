@@ -50,6 +50,7 @@ def _migrate_db(engine) -> None:
         ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
         ("page",      "url_path",      "TEXT"),
         ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -201,6 +202,7 @@ def cancel_job(job_id: int, session: Session = Depends(get_session)):
         job.status = "cancelled"
         session.commit()
     return {"status": "cancelled"}
+
 
 
 @app.delete("/api/jobs/{job_id}")
