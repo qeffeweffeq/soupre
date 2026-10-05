@@ -1,6 +1,10 @@
 catalogs:
+  next-starter-kit:
+    commit: d3dc34801c5f968d32e560bdbdf5fff05f6d26f5
+    ref: next-starter-kit-skills
+    source: git:https://github.com/qeffeweffeq/_agents.git
   personal:
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     ref: main
     source: git:https://github.com/qeffeweffeq/_agents.git
 hooks: {}
@@ -9,47 +13,57 @@ packs: {}
 skills:
   agent-workspace-isolation:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/agent-workspace-isolation
     reason: skill:personal/*
   architecture:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/architecture
     reason: skill:personal/*
   coding-style:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/coding-style
     reason: skill:personal/*
   git-workflow:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/git-workflow
     reason: skill:personal/*
   github-issue-management:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/github-issue-management
     reason: skill:personal/*
   global-naming-conventions:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/global-naming-conventions
     reason: skill:personal/*
-  next-js-starter-setup:
-    catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
-    path: skills/next-js-starter-setup
-    reason: skill:personal/*
+  next-js-sk-cicd:
+    catalog: next-starter-kit
+    commit: d3dc34801c5f968d32e560bdbdf5fff05f6d26f5
+    path: skills/next-js-sk-cicd
+    reason: skill:next-starter-kit/*
+  next-js-sk-material-setup:
+    catalog: next-starter-kit
+    commit: d3dc34801c5f968d32e560bdbdf5fff05f6d26f5
+    path: skills/next-js-sk-material-setup
+    reason: skill:next-starter-kit/*
+  next-js-sk-setup:
+    catalog: next-starter-kit
+    commit: d3dc34801c5f968d32e560bdbdf5fff05f6d26f5
+    path: skills/next-js-sk-setup
+    reason: skill:next-starter-kit/*
   web-app-dev:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/web-app-dev
     reason: skill:personal/*
   web-design:
     catalog: personal
-    commit: 2508e0bfd67b0493b3a3a6e05639c96477986116
+    commit: 142840fb59e860616c66feed2bbb7301f340c49e
     path: skills/web-design
     reason: skill:personal/*
 version: 1
