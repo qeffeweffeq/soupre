@@ -204,6 +204,24 @@ def cancel_job(job_id: int, session: Session = Depends(get_session)):
     return {"status": "cancelled"}
 
 
+@app.post("/api/jobs/{job_id}/resume")
+def resume_job(job_id: int, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+    from fastapi import HTTPException
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status == "running":
+        raise HTTPException(status_code=400, detail="Job is already running")
+    
+    job.status = "running"
+    session.commit()
+    
+    background_tasks.add_task(
+        _run_job_with_logging,
+        job.id, job.target_url,
+        job.scrape_mode
+    )
+    return {"status": "resumed"}
 
 @app.delete("/api/jobs/{job_id}")
 async def delete_job(job_id: int, session: Session = Depends(get_session)):
