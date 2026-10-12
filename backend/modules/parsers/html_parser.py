@@ -155,6 +155,11 @@ def should_skip_element(element, skip_patterns=None):
                          'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone']
 
     try:
+        tag_name = getattr(element, 'name', '') or ''
+        # Never skip img elements based on modal/slider wrappers
+        if tag_name == 'img':
+            return False
+
         # Check the element's own class and ID
         element_classes = element.get('class', [])
         if isinstance(element_classes, list):
@@ -166,7 +171,14 @@ def should_skip_element(element, skip_patterns=None):
         if not isinstance(element_id, str):
             element_id = str(element_id)
 
-        if any(pattern in element_classes.lower() or pattern in element_id.lower() for pattern in skip_patterns):
+        classes_lower = element_classes.lower()
+        id_lower = element_id.lower()
+
+        # Do not skip modal-opener or product media wrappers
+        if 'modal-opener' in tag_name or 'modal-opener' in classes_lower or 'product__media' in classes_lower:
+            return False
+
+        if any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
             return True
 
         # Check parent elements' classes and IDs
@@ -174,6 +186,7 @@ def should_skip_element(element, skip_patterns=None):
         parent_ids = []
 
         for parent in element.parents:
+            parent_tag = getattr(parent, 'name', '') or ''
             parent_class = parent.get('class', [])
             if isinstance(parent_class, list):
                 parent_class = ' '.join(parent_class)
@@ -183,6 +196,13 @@ def should_skip_element(element, skip_patterns=None):
             parent_id = parent.get('id', '')
             if not isinstance(parent_id, str):
                 parent_id = str(parent_id)
+
+            p_class_lower = parent_class.lower()
+            p_id_lower = parent_id.lower()
+
+            # Ignore 'modal' match if the parent is a modal-opener or product-media wrapper
+            if 'modal-opener' in parent_tag or 'modal-opener' in p_class_lower or 'product__media' in p_class_lower:
+                continue
 
             if parent_class:
                 parent_classes.append(parent_class)

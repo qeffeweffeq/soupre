@@ -130,11 +130,22 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         # Skip elements with certain classes/IDs that indicate non-content
         element_classes = get_element_attr_as_string(element, 'class')
         element_id = get_element_attr_as_string(element, 'id')
+        classes_lower = element_classes.lower()
+        id_lower = element_id.lower()
+        tag_name = getattr(element, 'name', '') or ''
+
+        # Exception: do not skip gallery media or modal openers
+        is_media_container = (
+            'modal-opener' in tag_name or
+            'modal-opener' in classes_lower or
+            'product__media' in classes_lower or
+            tag_name == 'img'
+        )
 
         skip_patterns = ['cookie', 'consent', 'popup', 'modal', 'banner', 'sidebar',
                          'footer', 'header', 'menu', 'nav', 'search', 'cart', 'login']
 
-        if any(pattern in element_classes.lower() or pattern in element_id.lower() for pattern in skip_patterns):
+        if not is_media_container and any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
             return ""
 
         # Process headings with proper spacing
@@ -213,19 +224,31 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process lists with proper formatting
         elif element.name == 'ul':
+            has_media = bool(element.find('img') or element.find(attrs={'data-media-video': True}))
             md = "\n\n"
             for li in element.find_all('li', recursive=False):
-                li_text = clean_text(li.get_text(separator=" "))
-                if li_text:
-                    md += f"* {li_text}\n"
+                if has_media and (li.find('img') or li.find(attrs={'data-media-video': True})):
+                    li_content = process_children_recursively(li, base_url, driver, page_dir, processed_elements)
+                    if li_content and li_content.strip():
+                        md += f"{li_content.strip()}\n\n"
+                else:
+                    li_text = clean_text(li.get_text(separator=" "))
+                    if li_text:
+                        md += f"* {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
 
         elif element.name == 'ol':
+            has_media = bool(element.find('img') or element.find(attrs={'data-media-video': True}))
             md = "\n\n"
             for i, li in enumerate(element.find_all('li', recursive=False), 1):
-                li_text = clean_text(li.get_text(separator=" "))
-                if li_text:
-                    md += f"{i}. {li_text}\n"
+                if has_media and (li.find('img') or li.find(attrs={'data-media-video': True})):
+                    li_content = process_children_recursively(li, base_url, driver, page_dir, processed_elements)
+                    if li_content and li_content.strip():
+                        md += f"{li_content.strip()}\n\n"
+                else:
+                    li_text = clean_text(li.get_text(separator=" "))
+                    if li_text:
+                        md += f"{i}. {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
 
         # Process blockquotes
