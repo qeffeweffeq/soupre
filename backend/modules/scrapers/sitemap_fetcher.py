@@ -44,18 +44,28 @@ def _get(url: str, session: requests.Session) -> bytes | None:
             url,
             timeout=15,
             headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                               "AppleWebKit/537.36 (KHTML, like Gecko) "
                               "Chrome/121.0.0.0 Safari/537.36",
                 "Accept": "application/xml,text/xml,text/html,*/*;q=0.8",
             },
             allow_redirects=True,
         )
+        if r.status_code == 202:
+            logger.debug(f"[Sitemap] Skipping {url} — status 202")
+            return None
         r.raise_for_status()
         content = r.content
+        lower_content = content[:10000].lower()
+        is_robots = url.endswith("robots.txt")
+        if (b"sgcaptcha" in lower_content or
+            b"checking the site connection" in lower_content or
+            b"just a moment" in lower_content or
+            (len(content) < 500 and not is_robots)):
+            logger.debug(f"[Sitemap] Skipping {url} — bot challenge or too short ({len(content)} bytes)")
+            return None
         content_type = r.headers.get("Content-Type", "").lower()
         if "html" in content_type:
-            lower_content = content[:10000].lower()
             if (b"<loc>" not in lower_content and
                 b"sitemap" not in lower_content and
                 b".xml" not in lower_content):
@@ -67,6 +77,31 @@ def _get(url: str, session: requests.Session) -> bytes | None:
         return None
 
 
+async def _fetch(url: str, session: requests.Session) -> bytes | None:
+    """Try fetching with requests first, fall back to Playwright browser if blocked."""
+    content = _get(url, session)
+    if content:
+        return content
+    try:
+        from modules.scrapers.fetcher import fetch_url_with_browser
+        logger.info(f"[Sitemap] Requests blocked or empty for {url}, falling back to browser...")
+        html, _, cookies = await fetch_url_with_browser(url)
+        if cookies:
+            for c in cookies:
+                session.cookies.set(c["name"], c["value"], domain=c.get("domain", ""))
+        if html:
+            content_bytes = html.encode("utf-8")
+            lower = content_bytes[:10000].lower()
+            if (b"sgcaptcha" in lower or
+                b"checking the site connection" in lower or
+                b"just a moment" in lower):
+                return None
+            return content_bytes
+    except Exception as e:
+        logger.warning(f"[Sitemap] Browser fallback failed for {url}: {e}")
+    return None
+
+
 def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
     """
     Extract (is_index, urls) from content (XML or HTML).
@@ -74,6 +109,7 @@ def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
     - Standard XML sitemaps (<url><loc>...</loc></url>)
     - Standard XML sitemap index (<sitemap><loc>...</loc></sitemap>)
     - HTML-rendered sitemaps (e.g. Yoast SEO with XSL stylesheet) with <a href="...">
+    - Raw regex <loc> fallback
     """
     # 1. Attempt standard XML parsing
     try:
@@ -93,37 +129,45 @@ def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
     except Exception:
         pass
 
-    # 2. Check for raw <loc> tags using regex (handles XML served with HTML tags/entities)
+    # 2. Table / HTML parsing (Yoast SEO / Rank Math)
+    try:
+        soup = BeautifulSoup(content, "html.parser")
+        candidate_tables = soup.find_all("table", id="sitemap") or soup.find_all("table")
+        for table in candidate_tables:
+            headers = [th.get_text().strip().lower() for th in table.find_all("th")]
+            tbody = table.find("tbody") or table
+            links = []
+            for a in tbody.find_all("a"):
+                h = a.get("href")
+                if h and isinstance(h, str):
+                    h = h.strip()
+                    if h and not h.startswith("#") and not h.startswith("javascript:"):
+                        links.append(h)
+
+            if any("sitemap" in th for th in headers):
+                child_sitemaps = [
+                    h for h in links
+                    if h.lower().endswith(".xml") and "sitemaps.org" not in h.lower() and "yoa.st" not in h.lower()
+                ]
+                if child_sitemaps:
+                    return True, child_sitemaps
+
+            if any("url" in th for th in headers):
+                page_urls = [
+                    h for h in links
+                    if not h.lower().endswith((".xml", ".xsl", ".css", ".js"))
+                ]
+                if page_urls:
+                    return False, page_urls
+    except Exception as e:
+        logger.debug(f"[Sitemap] Table HTML parsing failed: {e}")
+
+    # 3. Check for raw <loc> tags using regex (handles XML served with HTML tags/entities)
     content_str = content.decode("utf-8", errors="ignore")
     loc_matches = [m.strip() for m in re.findall(r'<loc>\s*(https?://[^\s<]+)\s*</loc>', content_str, re.IGNORECASE) if m.strip()]
     if loc_matches:
         is_index = "<sitemap>" in content_str.lower() or "sitemapindex" in content_str.lower()
         return is_index, loc_matches
-
-    # 3. HTML parsing (e.g. Yoast SEO rendered with XSL stylesheet to HTML or HTML sitemap)
-    try:
-        soup = BeautifulSoup(content, "html.parser")
-        hrefs = []
-        for a in soup.find_all("a"):
-            h = a.get("href")
-            if h and isinstance(h, str):
-                h = h.strip()
-                if h and not h.startswith("#") and not h.startswith("javascript:"):
-                    hrefs.append(h)
-
-        # Check if there are child XML sitemaps referenced in HTML links
-        child_xmls = [h for h in hrefs if h.lower().endswith(".xml") or ("sitemap" in h.lower() and not h.lower().endswith((".html", ".htm", ".php", "/")))]
-        if child_xmls:
-            return True, child_xmls
-
-        # Page URLs from HTML sitemap
-        page_urls = [h for h in hrefs if not h.lower().endswith((".xml", ".xsl", ".css", ".js"))]
-        if page_urls:
-            sitemap_indicator = "sitemap" in soup.text.lower() or soup.find(id=re.compile(r'sitemap', re.I)) or soup.find(class_=re.compile(r'sitemap', re.I))
-            if sitemap_indicator:
-                return False, page_urls
-    except Exception as e:
-        logger.debug(f"[Sitemap] HTML parsing failed: {e}")
 
     return False, []
 
@@ -138,22 +182,29 @@ def _is_index(content: bytes) -> bool:
     return is_index
 
 
-def discover_sitemap_urls(
+async def discover_sitemap_urls(
     base_url: str,
     job_dir: str,
     max_pages: int = 50,
     cookies: list[dict] | None = None
 ) -> list[str]:
-    session = requests.Session()
-    if cookies:
-        for c in cookies:
-            session.cookies.set(c["name"], c["value"], domain=c.get("domain", ""))
     """
     Discover all page URLs from base_url's sitemap.
     Strategy: robots.txt Sitemap: directive → common paths → fail gracefully.
     Saves the raw sitemap XML to {job_dir}/sitemap.xml.
     Returns up to max_pages same-domain URLs, or [] if no sitemap found.
     """
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "application/xml,text/xml,text/html,*/*;q=0.8",
+    })
+    if cookies:
+        for c in cookies:
+            session.cookies.set(c["name"], c["value"], domain=c.get("domain", ""))
+
     parsed = urlparse(base_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -161,21 +212,21 @@ def discover_sitemap_urls(
     path_lower = parsed.path.lower()
     if path_lower.endswith('.xml') or 'sitemap' in path_lower:
         logger.info(f"[Sitemap] URL looks like a direct sitemap, trying it first: {base_url}")
-        direct_content = _get(base_url, session)
+        direct_content = await _fetch(base_url, session)
         if direct_content:
             try:
                 direct_urls: list[str] = []
                 is_index, extracted = _extract_sitemap_urls(direct_content)
-                if is_index:
+                if is_index and extracted:
                     for cu in extracted:
                         cu = urljoin(origin, cu)
-                        child = _get(cu, session)
+                        child = await _fetch(cu, session)
                         if child:
                             _, child_urls = _extract_sitemap_urls(child)
                             direct_urls.extend([urljoin(origin, u) for u in child_urls])
                         if len(direct_urls) >= max_pages:
                             break
-                else:
+                elif not is_index and extracted:
                     direct_urls.extend([urljoin(origin, u) for u in extracted])
 
                 if direct_urls:
@@ -208,11 +259,15 @@ def discover_sitemap_urls(
 
     # Step 1: robots.txt — look for Sitemap: directive
     candidates: list[str] = []
-    robots = _get(urljoin(origin, "/robots.txt"), session)
+    robots = await _fetch(urljoin(origin, "/robots.txt"), session)
     if robots:
         for line in robots.decode("utf-8", errors="ignore").splitlines():
-            if line.lower().startswith("sitemap:"):
-                candidates.append(line.split(":", 1)[1].strip())
+            if "sitemap:" in line.lower():
+                match = re.search(r'sitemap:\s*(https?://[^\s<"\']+)', line, re.IGNORECASE)
+                if match:
+                    candidates.append(match.group(1).strip())
+                elif ":" in line:
+                    candidates.append(line.split(":", 1)[1].strip())
 
     # Step 2: common fallback paths
     for p in COMMON_PATHS:
@@ -225,28 +280,33 @@ def discover_sitemap_urls(
     all_urls: list[str] = []
 
     for sitemap_url in candidates:
-        content = _get(sitemap_url, session)
+        content = await _fetch(sitemap_url, session)
         if not content:
             continue
         try:
             is_index, extracted = _extract_sitemap_urls(content)
-            if is_index:
+            if is_index and extracted:
                 # Sitemap index: expand child sitemaps
                 for cu in extracted:
                     cu = urljoin(origin, cu)
-                    child = _get(cu, session)
+                    child = await _fetch(cu, session)
                     if child:
                         _, child_urls = _extract_sitemap_urls(child)
                         all_urls.extend([urljoin(origin, u) for u in child_urls])
                     if len(all_urls) >= max_pages:
                         break
-                raw_xml = content
-            else:
+                if all_urls:
+                    raw_xml = content
+                    sitemap_url_used = sitemap_url
+                    break
+            elif not is_index and extracted:
                 all_urls.extend([urljoin(origin, u) for u in extracted])
-                raw_xml = content
-
-            sitemap_url_used = sitemap_url
-            break
+                if all_urls:
+                    raw_xml = content
+                    sitemap_url_used = sitemap_url
+                    break
+            else:
+                logger.debug(f"[Sitemap] No URLs extracted from {sitemap_url}, trying next candidate")
         except Exception as e:
             logger.warning(f"[Sitemap] Parse error for {sitemap_url}: {e}")
 

@@ -347,14 +347,11 @@ async def run_scrape_job(
                         job.status = "running"
                         s.commit()
                 else:
-                    logging.info(f"[Job {job_id}] Acquiring clearance cookies for sitemap discovery via browser...")
-                    _, _, clearance_cookies = await fetch_url_with_browser(target_url)
-
-                    urls = discover_sitemap_urls(
+                    logging.info(f"[Job {job_id}] Discovering sitemap URLs for {target_url}...")
+                    urls = await discover_sitemap_urls(
                         target_url,
                         job_dir=job_dir,
-                        max_pages=max_pages,
-                        cookies=clearance_cookies
+                        max_pages=max_pages
                     )
                     if not urls:
                         job = s.get(ScrapeJob, job_id)
