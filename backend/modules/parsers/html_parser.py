@@ -174,8 +174,8 @@ def should_skip_element(element, skip_patterns=None):
         classes_lower = element_classes.lower()
         id_lower = element_id.lower()
 
-        # Do not skip modal-opener or product media wrappers
-        if 'modal-opener' in tag_name or 'modal-opener' in classes_lower or 'product__media' in classes_lower:
+        # Do not skip modal-opener, product media, or lightbox wrappers
+        if 'modal-opener' in tag_name or 'modal-opener' in classes_lower or 'product__media' in classes_lower or 'lightbox' in classes_lower:
             return False
 
         if any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
@@ -200,8 +200,8 @@ def should_skip_element(element, skip_patterns=None):
             p_class_lower = parent_class.lower()
             p_id_lower = parent_id.lower()
 
-            # Ignore 'modal' match if the parent is a modal-opener or product-media wrapper
-            if 'modal-opener' in parent_tag or 'modal-opener' in p_class_lower or 'product__media' in p_class_lower:
+            # Ignore 'modal' match if the parent is a modal-opener, product-media, or lightbox wrapper
+            if 'modal-opener' in parent_tag or 'modal-opener' in p_class_lower or 'product__media' in p_class_lower or 'lightbox' in p_class_lower:
                 continue
 
             if parent_class:

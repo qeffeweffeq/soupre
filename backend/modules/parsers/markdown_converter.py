@@ -37,6 +37,21 @@ def get_best_image(element):
             
     # Check the element itself
     parse_srcset(element.get('data-srcset') or element.get('srcset'))
+
+    # Check high-res attributes on element itself (e.g. USM data-lightbox-src, zoom images)
+    for big_attr in [
+        'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+        'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+        'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd'
+    ]:
+        val = element.get(big_attr) if hasattr(element, 'get') else None
+        if val and not val.startswith('data:'):
+            candidates.append((3000, val))
+
+    # If the src contains downscaled thumbnail dimensions (e.g. USM 550x550), provide the high-res 1140x1140 counterpart
+    src_val = element.get('src') if hasattr(element, 'get') else None
+    if src_val and not src_val.startswith('data:') and '.550x550_' in src_val:
+        candidates.append((2500, src_val.replace('.550x550_', '.1140x1140_')))
     
     # If it's an img, check its parent picture sources and parent div data-media-url
     if element.name == 'img':
@@ -61,12 +76,15 @@ def get_best_image(element):
                             width = int(w_match.group(1))
                         candidates.append((width, u))
 
-            # check high-res attributes on parent (e.g. Tumblr data-big-photo, data-imagehd)
-            for big_attr in ['data-big-photo', 'data-imagehd', 'data-highres', 'data-full-image', 'data-zoom-image']:
+            # check high-res attributes on parent (e.g. Tumblr data-big-photo, USM data-lightbox-src)
+            for big_attr in [
+                'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+                'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+                'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd'
+            ]:
                 big_url = parent.get(big_attr)
                 if big_url and not big_url.startswith('data:'):
-                    w = 2500
-                    candidates.append((w, big_url))
+                    candidates.append((3000, big_url))
                         
             parent = parent.parent
             
@@ -76,7 +94,12 @@ def get_best_image(element):
         if best_src and not best_src.startswith('data:'):
             return best_src
         
-    for attr in ['data-media-url', 'data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
+    for attr in [
+        'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+        'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+        'data-media-url', 'data-large_image', 'data-large', 'data-full-url',
+        'data-src', 'data-lazy-src', 'src'
+    ]:
         val = element.get(attr)
         if val and not val.startswith('data:'):
             if attr == 'data-media-url' and ',' in val:
@@ -141,11 +164,12 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         id_lower = element_id.lower()
         tag_name = getattr(element, 'name', '') or ''
 
-        # Exception: do not skip gallery media or modal openers
+        # Exception: do not skip gallery media, modal openers, or lightboxes
         is_media_container = (
             'modal-opener' in tag_name or
             'modal-opener' in classes_lower or
             'product__media' in classes_lower or
+            'lightbox' in classes_lower or
             tag_name == 'img'
         )
 
