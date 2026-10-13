@@ -74,8 +74,6 @@ async def fetch_url_with_browser(url):
                     await page.mouse.wheel(0, 500)
                     await asyncio.sleep(0.5)
                 
-                html_content = await page.content()
-                
                 # Take screenshot for the UI
                 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
                 temp_media_dir = os.path.join(base_dir, "_downloads")
@@ -87,6 +85,64 @@ async def fetch_url_with_browser(url):
                 screenshot_path = os.path.join(temp_media_dir, filename)
                 
                 await page.screenshot(path=screenshot_path, full_page=False)
+
+                # Auto-expand "Load more" / infinite scroll pagination if present
+                load_more_selector = '#load_more_button, [id*="load_more" i], [title*="Load more" i], .load-more'
+                try:
+                    await page.wait_for_load_state('load', timeout=6000)
+                except Exception:
+                    pass
+
+                has_load_more = await page.evaluate(f'''() => {{
+                    const btn = document.querySelector('{load_more_selector}');
+                    if (!btn) return false;
+                    const style = window.getComputedStyle(btn);
+                    return style.display !== 'none' && style.visibility !== 'hidden';
+                }}''')
+
+                if has_load_more:
+                    logger.info(f"[Browser] Detected 'Load more' button on {url}. Expanding infinite content...")
+                    clicks = 0
+                    max_clicks = 200
+                    consecutive_failures = 0
+
+                    while clicks < max_clicks:
+                        prev_count = await page.evaluate('''() => {
+                            return document.querySelectorAll('.post, article, .item, .entry').length;
+                        }''')
+
+                        clicked = await page.evaluate(f'''() => {{
+                            const btn = document.querySelector('{load_more_selector}');
+                            if (!btn) return false;
+                            const style = window.getComputedStyle(btn);
+                            if (style.display === 'none' || style.visibility === 'hidden') return false;
+                            btn.scrollIntoView({{ behavior: 'instant', block: 'center' }});
+                            btn.click();
+                            return true;
+                        }}''')
+
+                        if not clicked:
+                            logger.info(f"[Browser] 'Load more' button no longer active after {clicks} clicks.")
+                            break
+
+                        try:
+                            await page.wait_for_function(
+                                f"document.querySelectorAll('.post, article, .item, .entry').length > {prev_count}",
+                                timeout=5000
+                            )
+                            clicks += 1
+                            consecutive_failures = 0
+                            if clicks % 10 == 0:
+                                curr_count = await page.evaluate("document.querySelectorAll('.post, article, .item, .entry').length")
+                                logger.info(f"[Browser] Loaded more content: {clicks} clicks ({curr_count} items)...")
+                        except Exception:
+                            consecutive_failures += 1
+                            if consecutive_failures >= 2:
+                                logger.info(f"[Browser] Finished loading more content after {clicks} clicks.")
+                                break
+                            await asyncio.sleep(1)
+
+                html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url}")
                 
             except Exception as nav_e:

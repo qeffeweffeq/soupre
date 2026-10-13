@@ -60,6 +60,13 @@ def get_best_image(element):
                         if w_match:
                             width = int(w_match.group(1))
                         candidates.append((width, u))
+
+            # check high-res attributes on parent (e.g. Tumblr data-big-photo, data-imagehd)
+            for big_attr in ['data-big-photo', 'data-imagehd', 'data-highres', 'data-full-image', 'data-zoom-image']:
+                big_url = parent.get(big_attr)
+                if big_url and not big_url.startswith('data:'):
+                    w = 2500
+                    candidates.append((w, big_url))
                         
             parent = parent.parent
             
@@ -124,7 +131,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(text) if text.strip() else ''
 
         # Skip form elements and inputs
-        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript']:
+        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe']:
             return ""
 
         # Skip elements with certain classes/IDs that indicate non-content
@@ -172,25 +179,24 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process links with proper spacing
         elif element.name == 'a':
+            # Extract images within the link first
+            img_md = ""
+            if element.find('img'):
+                for img in element.find_all('img'):
+                    img_md += html_to_markdown(img, base_url, driver, page_dir, processed_elements)
+
             href = element.get('href', '')
-            if href:
-                # Skip links to javascript, mailto, tel
-                if href.startswith(('javascript:', 'mailto:', 'tel:')):
-                    return clean_text(element.get_text(separator=" "))
+            link_text = clean_text(element.get_text(separator=" "))
 
-                # Convert relative URLs to absolute
+            if href and not href.startswith(('javascript:', 'mailto:', 'tel:')):
                 href = urljoin(base_url, href)
-                link_text = clean_text(element.get_text(separator=" "))
-
-                # If the link has no text but has an image, process the image
-                if not link_text and element.find('img'):
-                    img = element.find('img')
-                    return html_to_markdown(img, base_url, driver, page_dir, processed_elements)
-
-                # Return formatted link if it has text
                 if link_text:
-                    return f"[{link_text}]({href})\n\n"
-            return clean_text(element.get_text(separator=" "))
+                    return img_md + f"[{link_text}]({href})\n\n"
+                return img_md
+            else:
+                if img_md:
+                    return img_md + (f"{link_text}\n\n" if link_text else "")
+                return clean_text(link_text)
 
         # Process images with better handling
         elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and (element.has_attr('data-media-video') or element.has_attr('data-media-autoplayvideo') or (element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))))):

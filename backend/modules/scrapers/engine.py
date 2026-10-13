@@ -196,36 +196,63 @@ async def scrape_page(url: str, job_id: int, db_engine):
                 except:
                     pass
                     
+                # Deduplicate images by src while keeping alt
+                unique_images = []
+                seen_srcs = set()
+                for alt, src in img_matches:
+                    if src.startswith('data:') or src in seen_srcs:
+                        continue
+                    seen_srcs.add(src)
+                    unique_images.append((alt, src))
+
+                logging.info(f"Downloading {len(unique_images)} unique images concurrently...")
+
+                sem = asyncio.Semaphore(15)
+                used_filenames = set()
+                download_lock = asyncio.Lock()
+                downloaded_count = 0
+
                 media_csv_path = os.path.join(media_dir, "media_index.csv")
                 with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
                     writer = csv.writer(f)
                     writer.writerow(["Filename", "Alt Text", "Original URL"])
-                    
-                    for alt, src in img_matches:
-                        if src.startswith('data:'):
-                            continue
-                            
-                        img_filename = os.path.basename(urlparse(src).path)
-                        img_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', img_filename)
-                        if not img_filename or '.' not in img_filename:
-                            img_filename = f"image_{int(time.time())}.jpg"
-                            
-                        local_path = os.path.join(images_dir, img_filename)
-                        rel_path = f"images/{img_filename}"
-                        
+
+                    async def download_one(alt, src, idx):
+                        nonlocal downloaded_count
+                        raw_filename = os.path.basename(urlparse(src).path)
+                        clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_filename)
+                        if not clean_name or '.' not in clean_name:
+                            clean_name = f"image_{idx}.jpg"
+
+                        # Avoid collisions
+                        async with download_lock:
+                            if clean_name in used_filenames:
+                                clean_name = f"{idx}_{clean_name}"
+                            used_filenames.add(clean_name)
+
+                        local_path = os.path.join(images_dir, clean_name)
+                        rel_path = f"images/{clean_name}"
+
                         try:
-                            # Use API context fetch instead of DOM navigation
-                            img_resp = await context.request.get(src, timeout=10000)
-                            body = await img_resp.body()
-                            
+                            async with sem:
+                                img_resp = await context.request.get(src, timeout=15000)
+                                body = await img_resp.body()
+
                             with open(local_path, 'wb') as img_file:
                                 img_file.write(body)
-                                
-                            writer.writerow([img_filename, alt, src])
-                            downloaded_media.append((src, rel_path))
+
+                            async with download_lock:
+                                writer.writerow([clean_name, alt, src])
+                                downloaded_media.append((src, rel_path))
+                                downloaded_count += 1
+                                if downloaded_count % 50 == 0 or downloaded_count == len(unique_images):
+                                    logging.info(f"Downloaded {downloaded_count}/{len(unique_images)} images...")
                         except Exception as e:
                             logging.warning(f"Failed to download {src}: {e}")
-                            
+
+                    tasks = [download_one(alt, src, i) for i, (alt, src) in enumerate(unique_images)]
+                    await asyncio.gather(*tasks)
+
                 await browser.close()
                 
         await download_images_pw()
