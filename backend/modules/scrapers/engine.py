@@ -106,16 +106,42 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     job_dir = os.path.join(base_dir, "_downloads", folder_name)
-    media_dir = job_dir
-    content_dir = job_dir
-    
-    os.makedirs(media_dir, exist_ok=True)
-    os.makedirs(content_dir, exist_ok=True)
+
+    if job_dir_name:
+        images_dir = os.path.join(job_dir, "_images")
+        page_dir = os.path.join(job_dir, safe_title)
+        if os.path.exists(page_dir):
+            existing_meta = os.path.join(page_dir, "metadata.csv")
+            if os.path.exists(existing_meta):
+                try:
+                    with open(existing_meta, "r", encoding="utf-8") as f:
+                        if url not in f.read():
+                            url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
+                            page_dir = os.path.join(job_dir, f"{safe_title}_{url_suffix}")
+                except Exception:
+                    pass
+        folder_page_name = os.path.basename(page_dir)
+        img_rel_prefix = "../_images"
+        db_markdown_path = f"../_downloads/{folder_name}/{folder_page_name}/{safe_title}.md"
+    else:
+        images_dir = os.path.join(job_dir, "images")
+        page_dir = job_dir
+        folder_page_name = ""
+        img_rel_prefix = "images"
+        db_markdown_path = f"../_downloads/{folder_name}/{safe_title}.md"
+
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(page_dir, exist_ok=True)
     
     if screenshot_path and os.path.exists(screenshot_path):
-        new_screenshot_path = os.path.join(media_dir, os.path.basename(screenshot_path))
+        new_screenshot_path = os.path.join(page_dir, os.path.basename(screenshot_path))
         os.rename(screenshot_path, new_screenshot_path)
         screenshot_path = new_screenshot_path
+
+    if job_dir_name:
+        db_screenshot_path = f"../_downloads/{folder_name}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+    else:
+        db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
 
     metadata = {
         "URL": url,
@@ -132,7 +158,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
     if kw_tag and kw_tag.get("content"):
         metadata["Keywords"] = kw_tag["content"].strip()
 
-    metadata_csv_path = os.path.join(content_dir, "metadata.csv")
+    metadata_csv_path = os.path.join(page_dir, "metadata.csv")
     with open(metadata_csv_path, "w", newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(["Key", "Value"])
@@ -141,7 +167,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
 
     main_content = soup.find('main') or soup.find('body')
     try:
-        raw_markdown = convert_content_to_markdown(main_content, soup, url, pw_cookies, media_dir)
+        raw_markdown = convert_content_to_markdown(main_content, soup, url, pw_cookies, page_dir)
     except Exception as e:
         logging.error(f"Error converting to markdown: {e}")
         raw_markdown = str(e)
@@ -153,9 +179,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
         
     final_markdown = f"# {page_title}\n\n{md_table}\n\n---\n\n{raw_markdown}"
     
-    abs_markdown_path = os.path.join(content_dir, f"{safe_title}.md")
-    db_markdown_path = f"../_downloads/{folder_name}/{safe_title}.md"
-    db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+    abs_markdown_path = os.path.join(page_dir, f"{safe_title}.md")
     
     # Extract all image URLs from markdown
     import re
@@ -166,10 +190,6 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
     img_matches = re.findall(r'!\[(.*?)\]\((.*?)\)', final_markdown)
     
     downloaded_media = []
-    
-    # Use playwright to download images to bypass Captcha
-    images_dir = os.path.join(media_dir, 'images')
-    os.makedirs(images_dir, exist_ok=True)
     
     if img_matches:
         logging.info(f"Attempting to download {len(img_matches)} images using Playwright...")
@@ -212,7 +232,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
                 download_lock = asyncio.Lock()
                 downloaded_count = 0
 
-                media_csv_path = os.path.join(media_dir, "media_index.csv")
+                media_csv_path = os.path.join(page_dir, "media_index.csv")
                 with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
                     writer = csv.writer(f)
                     writer.writerow(["Filename", "Alt Text", "Original URL"])
@@ -231,7 +251,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
                             used_filenames.add(clean_name)
 
                         local_path = os.path.join(images_dir, clean_name)
-                        rel_path = f"images/{clean_name}"
+                        rel_path = f"{img_rel_prefix}/{clean_name}"
 
                         try:
                             async with sem:
@@ -266,7 +286,7 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
     import subprocess
     video_matches = re.findall(r'\[Video\]\((.*?)\)', final_markdown)
     downloaded_videos = set()
-    videos_dir = os.path.join(job_dir, 'videos')
+    videos_dir = os.path.join(page_dir, 'videos') if job_dir_name else os.path.join(job_dir, 'videos')
     if video_matches:
         os.makedirs(videos_dir, exist_ok=True)
         logging.info(f"Attempting to download {len(set(video_matches))} videos using yt-dlp...")
