@@ -362,10 +362,13 @@ async def run_scrape_job(
                         return
 
                     for u in urls:
+                        parsed_path = urlparse(u).path
                         p = Page(
                             job_id=job_id,
                             url=u,
-                            title="Pending...",
+                            title=(parsed_path or u),
+                            url_path=(parsed_path or "/"),
+                            url_depth=len([part for part in (parsed_path or "").split("/") if part]),
                             status="pending"
                         )
                         s.add(p)
