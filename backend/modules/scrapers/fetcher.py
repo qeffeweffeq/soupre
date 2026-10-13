@@ -62,7 +62,7 @@ async def fetch_url_with_browser(url):
                     try:
                         # Wait up to 10 seconds for the challenge to resolve and page to reload
                         await page.wait_for_function(
-                            "() => !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", 
+                            "() => document.body && !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", 
                             timeout=15000
                         )
                         # Wait an additional 3 seconds for the actual DOM to settle after redirect

@@ -40,9 +40,34 @@ class JobQueueHandler(logging.Handler):
         )
 
 
+def _migrate_db(engine) -> None:
+    """Add any new columns to existing SQLite tables (safe, idempotent)."""
+    from sqlalchemy import text
+    migrations = [
+        # (table_name, column_name, column_definition)
+        ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
+        ("scrapejob", "total_pages",   "INTEGER"),
+        ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "url_path",      "TEXT"),
+        ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
+    ]
+    with engine.connect() as conn:
+        for table, column, definition in migrations:
+            # Check if column already exists via PRAGMA
+            result = conn.execute(
+                text(f"PRAGMA table_info({table})")
+            )
+            existing = [row[1] for row in result.fetchall()]
+            if column not in existing:
+                conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+                ))
+                conn.commit()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
+    _migrate_db(engine)
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -62,7 +87,16 @@ def get_session():
         yield session
 
 
-async def _run_job_with_logging(job_id: int, target_url: str):
+async def _run_job_with_logging(
+    job_id: int, 
+    target_url: str,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+):
     """Wrapper that attaches/detaches the JobQueueHandler around the scrape."""
     loop = asyncio.get_event_loop()
     handler = JobQueueHandler(job_id, loop)
@@ -73,7 +107,7 @@ async def _run_job_with_logging(job_id: int, target_url: str):
 
     from modules.scrapers.engine import run_scrape_job
     try:
-        await run_scrape_job(job_id, target_url, engine)
+        await run_scrape_job(job_id, target_url, engine, scrape_mode, max_pages, delay_min, delay_max, large_threshold, large_pause_sec)
     finally:
         root_logger.removeHandler(handler)
         # Signal SSE consumers that this job stream is finished
@@ -81,13 +115,38 @@ async def _run_job_with_logging(job_id: int, target_url: str):
 
 
 @app.post("/api/jobs")
-def create_job(target_url: str, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
-    job = ScrapeJob(target_url=target_url)
+def create_job(
+    target_url: str,
+    background_tasks: BackgroundTasks,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+    session: Session = Depends(get_session),
+):
+    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
     session.add(job)
     session.commit()
     session.refresh(job)
-    background_tasks.add_task(_run_job_with_logging, job.id, target_url)
+
+    background_tasks.add_task(
+        _run_job_with_logging,
+        job.id, target_url,
+        scrape_mode, max_pages, delay_min, delay_max,
+        large_threshold, large_pause_sec,
+    )
     return {"job_id": job.id, "status": "started"}
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: int, session: Session = Depends(get_session)):
+    from fastapi import HTTPException
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
 
 
 @app.get("/api/jobs/{job_id}/logs")
@@ -133,35 +192,55 @@ def get_job_pages(job_id: int, session: Session = Depends(get_session)):
     return pages
 
 
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        return {"status": "not found"}
+    if job.status == "running":
+        job.status = "cancelled"
+        session.commit()
+    return {"status": "cancelled"}
+
+
 @app.delete("/api/jobs/{job_id}")
-def delete_job(job_id: int, session: Session = Depends(get_session)):
+async def delete_job(job_id: int, session: Session = Depends(get_session)):
     job = session.get(ScrapeJob, job_id)
     if not job:
         return {"status": "not found"}
 
     import shutil
-    folder_to_delete = None
+    import os
+    from urllib.parse import urlparse
 
+    # 1. Close SSE stream if active
+    queue = job_log_queues.get(job_id)
+    if queue:
+        await queue.put(_DONE_SENTINEL)
+    job_log_queues.pop(job_id, None)
+
+    # 2. Determine folder to delete (Sitemap jobs use a predictable folder name)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    domain = urlparse(job.target_url).netloc.replace(".", "_")
+    folder_to_delete = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+
+    # Fallback to checking page paths for single page scrapes
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
-        if not folder_to_delete:
+        if not os.path.exists(folder_to_delete):
             path = page.markdown_path or page.screenshot_path
             if path and "../_downloads/" in path:
                 parts = path.split("/")
                 if len(parts) >= 3:
                     folder_name = parts[2]
-                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                     folder_to_delete = os.path.join(base_dir, "_downloads", folder_name)
         session.delete(page)
 
-    if folder_to_delete and os.path.exists(folder_to_delete):
+    if os.path.exists(folder_to_delete):
         try:
             shutil.rmtree(folder_to_delete)
         except Exception as e:
             print(f"Error deleting folder {folder_to_delete}: {e}")
-
-    # Clean up the log queue for this job
-    job_log_queues.pop(job_id, None)
 
     session.delete(job)
     session.commit()
