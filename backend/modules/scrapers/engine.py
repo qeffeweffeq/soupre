@@ -101,7 +101,6 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
     
     domain = urlparse(url).netloc.replace(".", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder_name = job_dir_name if job_dir_name else f"{timestamp}_{domain}"
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

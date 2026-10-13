@@ -3,9 +3,12 @@ catalogs:
   - name: personal
     source: git:https://github.com/qeffeweffeq/_agents.git
     ref: main
+  - name: next-starter-kit
+    source: git:https://github.com/qeffeweffeq/_agents.git
+    ref: next-starter-kit-skills
 harnesses:
   - claude
   - codex
 requires:
   - skill: personal/* # This installs all standard generic skills from main
-
+  - skill: next-starter-kit/* # This installs all next-starter-kit skills from the next-starter-kit-skills branch
