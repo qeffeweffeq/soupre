@@ -60,7 +60,7 @@ def get_best_image(element):
                 
     return None
 
-async def scrape_page(url: str, job_id: int, db_engine):
+async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
     await asyncio.sleep(delay)
@@ -102,7 +102,7 @@ async def scrape_page(url: str, job_id: int, db_engine):
     
     domain = urlparse(url).netloc.replace(".", "_")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder_name = f"{timestamp}_{domain}"
+    folder_name = job_dir_name if job_dir_name else f"{timestamp}_{domain}"
     
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     job_dir = os.path.join(base_dir, "_downloads", folder_name)
@@ -290,27 +290,130 @@ async def scrape_page(url: str, job_id: int, db_engine):
         f.write(final_markdown)
         
     with Session(db_engine) as session:
-        page = Page(
-            job_id=job_id,
-            url=url,
-            title=page_title,
-            markdown_path=db_markdown_path,
-            screenshot_path=db_screenshot_path
-        )
-        session.add(page)
+        from sqlmodel import select
+        page = session.exec(select(Page).where(Page.job_id == job_id, Page.url == url)).first()
+        if not page:
+            page = Page(
+                job_id=job_id,
+                url=url,
+            )
+            session.add(page)
+            
+        page.title = page_title
+        page.markdown_path = db_markdown_path
+        page.screenshot_path = db_screenshot_path
+        page.url_path = urlparse(url).path or "/"
+        page.url_depth = len([p for p in urlparse(url).path.split("/") if p])
+        page.status = "completed"
+        
         session.commit()
 
-async def run_scrape_job(job_id: int, target_url: str, db_engine):
+async def run_scrape_job(
+    job_id: int,
+    target_url: str,
+    db_engine,
+    scrape_mode: str = "single",
+    max_pages: int = 50,
+    delay_min: float = 1.5,
+    delay_max: float = 4.5,
+    large_threshold: int = 20,
+    large_pause_sec: int = 120,
+):
     try:
-        await scrape_page(target_url, job_id, db_engine)
+        if scrape_mode == "sitemap":
+            from .sitemap_fetcher import discover_sitemap_urls
+            from .fetcher import fetch_url_with_browser
+            import logging
+            from urllib.parse import urlparse
+            import os
+
+            from sqlmodel import select
+            from database.models import ScrapeJob, Page
+
+            domain = urlparse(target_url).netloc.replace(".", "_")
+            job_dir_name = f"job_{job_id}_{domain}"
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__))))
+            job_dir = os.path.join(base_dir, "_downloads", job_dir_name)
+
+            with Session(db_engine) as s:
+                existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
+                if existing_pages:
+                    logging.info(f"[Job {job_id}] Resuming sitemap job.")
+                    pending_urls = [p.url for p in existing_pages if p.status == "pending"]
+                    job = s.get(ScrapeJob, job_id)
+                    if job:
+                        job.total_pages = len(existing_pages)
+                        job.status = "running"
+                        s.commit()
+                else:
+                    logging.info(f"[Job {job_id}] Acquiring clearance cookies for sitemap discovery via browser...")
+                    _, _, clearance_cookies = await fetch_url_with_browser(target_url)
+
+                    urls = discover_sitemap_urls(
+                        target_url,
+                        job_dir=job_dir,
+                        max_pages=max_pages,
+                        cookies=clearance_cookies
+                    )
+                    if not urls:
+                        job = s.get(ScrapeJob, job_id)
+                        if job:
+                            job.status = "failed"
+                            s.commit()
+                        logging.error(f"[Job {job_id}] No sitemap found for {target_url}")
+                        return
+
+                    for u in urls:
+                        p = Page(
+                            job_id=job_id,
+                            url=u,
+                            title="Pending...",
+                            status="pending"
+                        )
+                        s.add(p)
+                    s.commit()
+
+                    job = s.get(ScrapeJob, job_id)
+                    if job:
+                        job.total_pages = len(urls)
+                        job.status = "running"
+                        s.commit()
+                    
+                    pending_urls = urls
+
+            for i, url in enumerate(pending_urls):
+                # Large-sitemap pause every large_threshold pages (skip i==0)
+                if i > 0 and i % large_threshold == 0 and large_pause_sec > 0:
+                    logging.info(
+                        f"[Job {job_id}] Large-sitemap pause: {large_pause_sec}s after {i} pages"
+                    )
+                    await asyncio.sleep(large_pause_sec)
+                else:
+                    delay = round(random.uniform(delay_min, delay_max), 2)
+                    await asyncio.sleep(delay)
+
+                await scrape_page(url, job_id, db_engine, job_dir_name=job_dir_name)
+
+                with Session(db_engine) as s:
+                    job = s.get(ScrapeJob, job_id)
+                    if not job or job.status == "cancelled":
+                        logging.info(f"[Job {job_id}] Cancelled or deleted. Stopping loop.")
+                        break
+                    completed_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status == "completed")).all())
+                    job.scraped_pages = completed_count
+                    s.commit()
+        else:
+            await scrape_page(target_url, job_id, db_engine)
+
         from database.models import ScrapeJob
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
-            if job:
+            if job and job.status != "cancelled" and job.status != "failed":
                 job.status = "completed"
                 session.commit()
     except Exception as e:
-        logging.error(f"Job failed: {e}")
+        logging.error(f"Job {job_id} failed: {e}")
         from database.models import ScrapeJob
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
