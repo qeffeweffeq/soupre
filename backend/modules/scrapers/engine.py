@@ -390,30 +390,45 @@ async def run_scrape_job(
                     delay = round(random.uniform(delay_min, delay_max), 2)
                     await asyncio.sleep(delay)
 
-                await scrape_page(url, job_id, db_engine, job_dir_name=job_dir_name)
+                try:
+                    await scrape_page(url, job_id, db_engine, job_dir_name=job_dir_name)
+                except Exception as e:
+                    logging.error(f"[Job {job_id}] Error scraping page {url}: {e}")
+                    with Session(db_engine) as s:
+                        page = s.exec(select(Page).where(Page.job_id == job_id, Page.url == url)).first()
+                        if page:
+                            page.status = "failed"
+                        else:
+                            s.add(Page(job_id=job_id, url=url, status="failed"))
+                        s.commit()
 
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
-                    if not job or job.status == "cancelled":
-                        logging.info(f"[Job {job_id}] Cancelled or deleted. Stopping loop.")
+                    if not job or job.status in ("cancelled", "paused"):
+                        logging.info(f"[Job {job_id}] Job {getattr(job, 'status', 'deleted')}. Stopping loop.")
                         break
-                    completed_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status == "completed")).all())
+                    completed_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status.in_(["completed", "failed"]))).all())
+                    job.status = "running"
                     job.scraped_pages = completed_count
                     s.commit()
         else:
             await scrape_page(target_url, job_id, db_engine)
 
-        from database.models import ScrapeJob
+        from database.models import ScrapeJob, Page
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
-            if job and job.status != "cancelled" and job.status != "failed":
-                job.status = "completed"
+            if job and job.status not in ("cancelled", "paused", "failed"):
+                pending_count = len(session.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all())
+                if pending_count == 0:
+                    job.status = "completed"
+                else:
+                    job.status = "paused"
                 session.commit()
     except Exception as e:
         logging.error(f"Job {job_id} failed: {e}")
         from database.models import ScrapeJob
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
-            if job:
+            if job and job.status not in ("cancelled", "paused"):
                 job.status = "failed"
                 session.commit()

@@ -206,7 +206,16 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             # Extract images within the link first
             img_md = ""
             if element.find('img'):
+                seen_img_urls = set()
                 for img in element.find_all('img'):
+                    if img.find_parent('noscript'):
+                        continue
+                    src = get_best_image(img)
+                    if src:
+                        full_src = urljoin(base_url, src)
+                        if full_src in seen_img_urls:
+                            continue
+                        seen_img_urls.add(full_src)
                     img_md += html_to_markdown(img, base_url, driver, page_dir, processed_elements)
 
             href = element.get('href', '')
@@ -467,6 +476,9 @@ def meta_to_markdown_table(meta_data, title):
 
 def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     """Convert page content to markdown with improved formatting and error handling"""
+    for tag in soup.find_all(['noscript', 'script', 'style']):
+        tag.decompose()
+
     # Start building markdown content
     title = soup.title.string if soup.title else "Untitled Page"
     markdown_content = ""
@@ -561,6 +573,10 @@ def post_process_markdown(markdown):
     for pattern in UNWANTED_CONTENT_PATTERNS:
         # Match the pattern, potentially surrounded by some common prefixes or as standalone lines
         markdown = re.sub(rf'(?i)^.*{pattern}.*$\n?', '', markdown, flags=re.MULTILINE)
+
+    # Deduplicate consecutive identical markdown image tags
+    while re.search(r'(!\[.*?\]\([^\)]+\))\s*\1', markdown):
+        markdown = re.sub(r'(!\[.*?\]\([^\)]+\))\s*\1', r'\1', markdown)
 
     # Fix newlines
     markdown = re.sub(r'\n{3,}', '\n\n', markdown)  # Replace 3+ newlines with 2

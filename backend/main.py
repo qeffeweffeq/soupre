@@ -212,6 +212,17 @@ def cancel_job(job_id: int, session: Session = Depends(get_session)):
     return {"status": "cancelled"}
 
 
+@app.post("/api/jobs/{job_id}/pause")
+def pause_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        return {"status": "not found"}
+    if job.status == "running":
+        job.status = "paused"
+        session.commit()
+    return {"status": "paused"}
+
+
 @app.post("/api/jobs/{job_id}/resume")
 def resume_job(job_id: int, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     from fastapi import HTTPException
