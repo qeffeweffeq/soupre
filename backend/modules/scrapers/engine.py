@@ -494,6 +494,11 @@ async def run_scrape_job(
                 existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 pages_by_url = {p.url: p for p in existing_pages}
 
+                for p in existing_pages:
+                    if p.status == "failed":
+                        p.status = "pending"
+                        s.add(p)
+
                 if not entries and not existing_pages:
                     job = s.get(ScrapeJob, job_id)
                     if job:
@@ -561,7 +566,16 @@ async def run_scrape_job(
 
                 all_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 completed_pages = [p for p in all_pages if p.status == "completed"]
-                pending_pages = [p for p in all_pages if p.status == "pending"]
+                pending_items = [
+                    {
+                        "id": p.id,
+                        "url": p.url,
+                        "hreflang": p.hreflang,
+                        "lastmod": p.lastmod,
+                    }
+                    for p in all_pages
+                    if p.status == "pending"
+                ]
 
                 job = s.get(ScrapeJob, job_id)
                 if job:
@@ -573,11 +587,11 @@ async def run_scrape_job(
                 logging.info(
                     f"[Job {job_id}] Total pages: {len(all_pages)}, "
                     f"Already completed: {len(completed_pages)}, "
-                    f"Pending to scrape: {len(pending_pages)}"
+                    f"Pending to scrape: {len(pending_items)}"
                 )
 
-            for i, p_record in enumerate(pending_pages):
-                url = p_record.url
+            for i, item in enumerate(pending_items):
+                url = item["url"]
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
                     if not job or job.status in ("cancelled", "paused"):
@@ -599,8 +613,8 @@ async def run_scrape_job(
                         job_id,
                         db_engine,
                         job_dir_name=job_dir_name,
-                        sitemap_hreflang=p_record.hreflang,
-                        sitemap_lastmod=p_record.lastmod
+                        sitemap_hreflang=item["hreflang"],
+                        sitemap_lastmod=item["lastmod"]
                     )
                 except Exception as e:
                     logging.error(f"[Job {job_id}] Error scraping page {url}: {e}")

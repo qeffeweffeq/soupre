@@ -162,6 +162,13 @@ def create_job(
                 return {"job_id": existing.id, "status": "already_running"}
 
             # Restore existing job
+            failed_pages = session.exec(
+                select(Page).where(Page.job_id == existing.id, Page.status == "failed")
+            ).all()
+            for p in failed_pages:
+                p.status = "pending"
+                session.add(p)
+
             existing.status = "running"
             session.add(existing)
             session.commit()
@@ -280,14 +287,25 @@ def resume_job(job_id: int, background_tasks: BackgroundTasks, session: Session 
     if job.status == "running":
         raise HTTPException(status_code=400, detail="Job is already running")
 
-    job.status = "running"
-    session.commit()
+    failed_pages = session.exec(
+        select(Page).where(Page.job_id == job_id, Page.status == "failed")
+    ).all()
+    for p in failed_pages:
+        p.status = "pending"
+        session.add(p)
 
+    job.status = "running"
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    max_pages = max(50, job.total_pages or 50)
     background_tasks.add_task(
         _run_job_with_logging,
         job.id,
         job.target_url,
         job.scrape_mode,
+        max_pages,
     )
     return {"status": "resumed"}
 @app.delete("/api/jobs/{job_id}")
