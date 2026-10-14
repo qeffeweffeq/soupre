@@ -9,9 +9,11 @@ import os
 import asyncio
 import logging
 from collections import defaultdict
+from urllib.parse import urlparse
+from modules.config import DOWNLOADS_DIR, PROJECT_ROOT
 
 # Create downloads directory if it doesn't exist
-os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads"), exist_ok=True)
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 sqlite_url = "sqlite:////Users/admin/webapps/soupre/soupre.db"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
@@ -51,6 +53,8 @@ def _migrate_db(engine) -> None:
         ("page",      "url_path",      "TEXT"),
         ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
         ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
+        ("page",      "hreflang",      "TEXT"),
+        ("page",      "lastmod",       "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -67,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/downloads", StaticFiles(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads")), name="downloads")
+app.mount("/downloads", StaticFiles(directory=DOWNLOADS_DIR), name="downloads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -119,6 +123,17 @@ async def _run_job_with_logging(
         await job_log_queues[job_id].put(_DONE_SENTINEL)
 
 
+def _normalize_target_url(url: str) -> str:
+    url = url.strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc.lower()
+    path = parsed.path.rstrip("/")
+    return f"{scheme}://{netloc}{path}"
+
+
 @app.post("/api/jobs")
 def create_job(
     target_url: str,
@@ -131,6 +146,39 @@ def create_job(
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
+    if scrape_mode == "sitemap":
+        norm_target = _normalize_target_url(target_url)
+        existing_jobs = session.exec(
+            select(ScrapeJob).where(ScrapeJob.scrape_mode == "sitemap")
+        ).all()
+        existing = None
+        for j in existing_jobs:
+            if _normalize_target_url(j.target_url) == norm_target:
+                existing = j
+                break
+
+        if existing:
+            if existing.status == "running":
+                return {"job_id": existing.id, "status": "already_running"}
+
+            # Restore existing job
+            existing.status = "running"
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            background_tasks.add_task(
+                _run_job_with_logging,
+                existing.id,
+                existing.target_url,
+                scrape_mode,
+                max_pages,
+                delay_min,
+                delay_max,
+                large_threshold,
+                large_pause_sec,
+            )
+            return {"job_id": existing.id, "status": "restored"}
+
     job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
     session.add(job)
     session.commit()
@@ -259,20 +307,21 @@ async def delete_job(job_id: int, session: Session = Depends(get_session)):
     job_log_queues.pop(job_id, None)
 
     # 2. Determine folder to delete (Sitemap jobs use a predictable folder name)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     domain = urlparse(job.target_url).netloc.replace(".", "_")
-    folder_to_delete = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+    folder_to_delete = os.path.join(DOWNLOADS_DIR, f"job_{job_id}_{domain}")
 
     # Fallback to checking page paths for single page scrapes
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
         if not os.path.exists(folder_to_delete):
             path = page.markdown_path or page.screenshot_path
-            if path and "../_downloads/" in path:
+            if path and "_downloads/" in path:
                 parts = path.split("/")
-                if len(parts) >= 3:
-                    folder_name = parts[2]
-                    folder_to_delete = os.path.join(base_dir, "_downloads", folder_name)
+                if "_downloads" in parts:
+                    idx = parts.index("_downloads")
+                    if idx + 1 < len(parts):
+                        folder_name = parts[idx + 1]
+                        folder_to_delete = os.path.join(DOWNLOADS_DIR, folder_name)
         session.delete(page)
 
     if os.path.exists(folder_to_delete):

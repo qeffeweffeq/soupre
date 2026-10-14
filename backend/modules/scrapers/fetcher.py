@@ -1,20 +1,26 @@
 import asyncio
 import os
 import time
+from typing import Optional
 from urllib.parse import urlparse
 import logging
 from playwright.async_api import async_playwright
 from playwright_stealth import Stealth
+from modules.config import DOWNLOADS_DIR
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 
-async def fetch_url_with_browser(url):
+async def fetch_url_with_browser(
+    url: str,
+    take_screenshot: bool = True,
+    target_screenshot_path: Optional[str] = None
+):
     """
     Fetch a URL using Playwright (Chromium) and return its rendered HTML.
     Includes playwright-stealth to bypass Cloudflare/Bot Challenges.
     """
-    logger.info(f"[Browser] Fetching page: {url}")
+    logger.info(f"[Browser] Fetching page: {url} (screenshot={take_screenshot})")
     
     html_content = ""
     cookies_list = []
@@ -77,17 +83,27 @@ async def fetch_url_with_browser(url):
                     await page.mouse.wheel(0, 500)
                     await asyncio.sleep(0.5)
                 
-                # Take screenshot for the UI
-                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-                temp_media_dir = os.path.join(base_dir, "_downloads")
-                os.makedirs(temp_media_dir, exist_ok=True)
-                
+                # Acquire cookies
                 cookies_list = await context.cookies()
-                domain = urlparse(url).netloc.replace(".", "_")
-                filename = f"screenshot_{domain}_{int(time.time())}.png"
-                screenshot_path = os.path.join(temp_media_dir, filename)
-                
-                await page.screenshot(path=screenshot_path, full_page=False)
+
+                # Take screenshot for the UI if requested
+                if take_screenshot:
+                    if target_screenshot_path:
+                        screenshot_path = target_screenshot_path
+                        os.makedirs(os.path.dirname(os.path.abspath(screenshot_path)), exist_ok=True)
+                    else:
+                        domain = urlparse(url).netloc.replace(".", "_")
+                        filename = f"screenshot_{domain}_{int(time.time())}.png"
+                        screenshot_path = os.path.join(DOWNLOADS_DIR, filename)
+                        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+                    try:
+                        await page.screenshot(path=screenshot_path, full_page=False)
+                    except Exception as e:
+                        logger.warning(f"[Browser] Failed to take screenshot for {url}: {e}")
+                        screenshot_path = ""
+                else:
+                    screenshot_path = ""
 
                 # Auto-expand "Load more" / infinite scroll pagination if present
                 load_more_selector = '#load_more_button, [id*="load_more" i], [title*="Load more" i], .load-more'

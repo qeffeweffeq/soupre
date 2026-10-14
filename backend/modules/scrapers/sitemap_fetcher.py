@@ -3,11 +3,22 @@ sitemap_fetcher.py — auto-discover and parse a website's sitemap.
 """
 import os
 import re
+from dataclasses import dataclass
+from typing import Optional
 import requests
 from urllib.parse import urlparse, urljoin
 from lxml import etree
 from bs4 import BeautifulSoup
-from modules.config import logger
+from modules.config import logger, DOWNLOADS_DIR
+
+@dataclass
+class SitemapEntry:
+    url: str
+    lastmod: Optional[str] = None
+    hreflang: Optional[str] = None
+
+    def __str__(self):
+        return self.url
 
 COMMON_PATHS = [
     # Standard
@@ -85,7 +96,7 @@ async def _fetch(url: str, session: requests.Session) -> bytes | None:
     try:
         from modules.scrapers.fetcher import fetch_url_with_browser
         logger.info(f"[Sitemap] Requests blocked or empty for {url}, falling back to browser...")
-        html, _, cookies = await fetch_url_with_browser(url)
+        html, _, cookies = await fetch_url_with_browser(url, take_screenshot=False)
         if cookies:
             for c in cookies:
                 session.cookies.set(c["name"], c["value"], domain=c.get("domain", ""))
@@ -102,11 +113,11 @@ async def _fetch(url: str, session: requests.Session) -> bytes | None:
     return None
 
 
-def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
+def _extract_sitemap_entries(content: bytes) -> tuple[bool, list[SitemapEntry]]:
     """
-    Extract (is_index, urls) from content (XML or HTML).
+    Extract (is_index, entries) from content (XML or HTML).
     Handles:
-    - Standard XML sitemaps (<url><loc>...</loc></url>)
+    - Standard XML sitemaps (<url><loc>...</loc><lastmod>...</lastmod><xhtml:link.../></url>)
     - Standard XML sitemap index (<sitemap><loc>...</loc></sitemap>)
     - HTML-rendered sitemaps (e.g. Yoast SEO with XSL stylesheet) with <a href="...">
     - Raw regex <loc> fallback
@@ -114,18 +125,62 @@ def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
     # 1. Attempt standard XML parsing
     try:
         root = etree.fromstring(content)
-        sitemaps = [u.strip() for u in root.xpath("//*[local-name()='sitemap']/*[local-name()='loc']/text()") if u.strip()]
-        if sitemaps:
-            return True, sitemaps
+        sitemap_nodes = root.xpath("//*[local-name()='sitemap']")
+        if sitemap_nodes:
+            sitemaps: list[SitemapEntry] = []
+            for sn in sitemap_nodes:
+                locs = sn.xpath("*[local-name()='loc']/text()")
+                lastmods = sn.xpath("*[local-name()='lastmod']/text()")
+                if locs and locs[0].strip():
+                    sitemaps.append(SitemapEntry(
+                        url=locs[0].strip(),
+                        lastmod=lastmods[0].strip() if lastmods else None
+                    ))
+            if sitemaps:
+                return True, sitemaps
 
-        page_locs = [u.strip() for u in root.xpath("//*[local-name()='url']/*[local-name()='loc']/text()") if u.strip()]
-        if page_locs:
-            return False, page_locs
+        url_nodes = root.xpath("//*[local-name()='url']")
+        if url_nodes:
+            page_entries: list[SitemapEntry] = []
+            for un in url_nodes:
+                locs = un.xpath("*[local-name()='loc']/text()")
+                if not locs or not locs[0].strip():
+                    continue
+                url = locs[0].strip()
+                lastmods = un.xpath("*[local-name()='lastmod']/text()")
+                lastmod = lastmods[0].strip() if lastmods else None
+
+                # Look for xhtml:link rel="alternate" hreflang="..."
+                hreflang = None
+                links = un.xpath("*[local-name()='link']")
+                for link in links:
+                    rel = link.get("rel", "")
+                    hl = link.get("hreflang", "")
+                    href = link.get("href", "")
+                    if rel == "alternate" and hl:
+                        clean_hl = hl.strip().lower()
+                        if clean_hl != "x-default":
+                            lang_code = clean_hl.split("-")[0].split("_")[0]
+                            if href and href.strip() == url:
+                                hreflang = lang_code
+                                break
+                            elif not hreflang:
+                                hreflang = lang_code
+
+                if not hreflang:
+                    parsed_path = urlparse(url).path
+                    match = re.match(r"^/([a-z]{2})(/|$)", parsed_path.lower())
+                    if match:
+                        hreflang = match.group(1)
+
+                page_entries.append(SitemapEntry(url=url, lastmod=lastmod, hreflang=hreflang))
+            if page_entries:
+                return False, page_entries
 
         all_locs = [u.strip() for u in root.xpath("//*[local-name()='loc']/text()") if u.strip()]
         if all_locs:
-            is_index = "index" in root.tag.lower() or bool(root.xpath("//*[local-name()='sitemap']"))
-            return is_index, all_locs
+            is_index = "index" in root.tag.lower() or bool(sitemap_nodes)
+            return is_index, [SitemapEntry(url=u) for u in all_locs]
     except Exception:
         pass
 
@@ -136,29 +191,44 @@ def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
         for table in candidate_tables:
             headers = [th.get_text().strip().lower() for th in table.find_all("th")]
             tbody = table.find("tbody") or table
-            links = []
-            for a in tbody.find_all("a"):
+            rows = tbody.find_all("tr")
+            if not rows:
+                rows = [table]
+
+            child_sitemaps: list[SitemapEntry] = []
+            page_entries: list[SitemapEntry] = []
+            is_sitemap_col = any("sitemap" in th for th in headers)
+
+            for row in rows:
+                a = row.find("a")
+                if not a:
+                    continue
                 h = a.get("href")
-                if h and isinstance(h, str):
-                    h = h.strip()
-                    if h and not h.startswith("#") and not h.startswith("javascript:"):
-                        links.append(h)
+                if not h or not isinstance(h, str):
+                    continue
+                h = h.strip()
+                if not h or h.startswith("#") or h.startswith("javascript:"):
+                    continue
 
-            if any("sitemap" in th for th in headers):
-                child_sitemaps = [
-                    h for h in links
-                    if h.lower().endswith(".xml") and "sitemaps.org" not in h.lower() and "yoa.st" not in h.lower()
-                ]
-                if child_sitemaps:
-                    return True, child_sitemaps
+                lastmod = None
+                for td in row.find_all("td"):
+                    txt = td.get_text().strip()
+                    if re.match(r"^\d{4}-\d{2}-\d{2}", txt):
+                        lastmod = txt
+                        break
 
-            if any("url" in th for th in headers):
-                page_urls = [
-                    h for h in links
-                    if not h.lower().endswith((".xml", ".xsl", ".css", ".js"))
-                ]
-                if page_urls:
-                    return False, page_urls
+                if is_sitemap_col or (h.lower().endswith(".xml") and "sitemaps.org" not in h.lower() and "yoa.st" not in h.lower()):
+                    child_sitemaps.append(SitemapEntry(url=h, lastmod=lastmod))
+                elif not h.lower().endswith((".xml", ".xsl", ".css", ".js")):
+                    parsed_path = urlparse(h).path
+                    match = re.match(r"^/([a-z]{2})(/|$)", parsed_path.lower())
+                    hreflang = match.group(1) if match else None
+                    page_entries.append(SitemapEntry(url=h, lastmod=lastmod, hreflang=hreflang))
+
+            if child_sitemaps:
+                return True, child_sitemaps
+            if page_entries:
+                return False, page_entries
     except Exception as e:
         logger.debug(f"[Sitemap] Table HTML parsing failed: {e}")
 
@@ -167,9 +237,14 @@ def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
     loc_matches = [m.strip() for m in re.findall(r'<loc>\s*(https?://[^\s<]+)\s*</loc>', content_str, re.IGNORECASE) if m.strip()]
     if loc_matches:
         is_index = "<sitemap>" in content_str.lower() or "sitemapindex" in content_str.lower()
-        return is_index, loc_matches
+        return is_index, [SitemapEntry(url=u) for u in loc_matches]
 
     return False, []
+
+
+def _extract_sitemap_urls(content: bytes) -> tuple[bool, list[str]]:
+    is_index, entries = _extract_sitemap_entries(content)
+    return is_index, [e.url for e in entries]
 
 
 def _locs(content: bytes) -> list[str]:
@@ -178,8 +253,27 @@ def _locs(content: bytes) -> list[str]:
 
 
 def _is_index(content: bytes) -> bool:
-    is_index, _ = _extract_sitemap_urls(content)
+    is_index, _ = _extract_sitemap_entries(content)
     return is_index
+
+
+def generate_sitemap_xml(entries: list[SitemapEntry]) -> str:
+    """Generate a clean, standard XML sitemap from entries."""
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+        '        xmlns:xhtml="http://www.w3.org/1999/xhtml">'
+    ]
+    for e in entries:
+        lines.append("  <url>")
+        lines.append(f"    <loc>{e.url}</loc>")
+        if e.lastmod:
+            lines.append(f"    <lastmod>{e.lastmod}</lastmod>")
+        if e.hreflang:
+            lines.append(f'    <xhtml:link rel="alternate" hreflang="{e.hreflang}" href="{e.url}"/>')
+        lines.append("  </url>")
+    lines.append("</urlset>\n")
+    return "\n".join(lines)
 
 
 async def discover_sitemap_urls(
@@ -187,12 +281,12 @@ async def discover_sitemap_urls(
     job_dir: str,
     max_pages: int = 50,
     cookies: list[dict] | None = None
-) -> list[str]:
+) -> list[SitemapEntry]:
     """
     Discover all page URLs from base_url's sitemap.
     Strategy: robots.txt Sitemap: directive → common paths → fail gracefully.
-    Saves the raw sitemap XML to {job_dir}/sitemap.xml.
-    Returns up to max_pages same-domain URLs, or [] if no sitemap found.
+    Guaranteed to save valid sitemap XML to {job_dir}/sitemap.xml.
+    Returns up to max_pages same-domain SitemapEntry objects, or [] if no sitemap found.
     """
     session = requests.Session()
     session.headers.update({
@@ -215,41 +309,51 @@ async def discover_sitemap_urls(
         direct_content = await _fetch(base_url, session)
         if direct_content:
             try:
-                direct_urls: list[str] = []
-                is_index, extracted = _extract_sitemap_urls(direct_content)
+                direct_entries: list[SitemapEntry] = []
+                is_index, extracted = _extract_sitemap_entries(direct_content)
                 if is_index and extracted:
-                    for cu in extracted:
-                        cu = urljoin(origin, cu)
+                    for ce in extracted:
+                        cu = urljoin(origin, ce.url)
                         child = await _fetch(cu, session)
                         if child:
-                            _, child_urls = _extract_sitemap_urls(child)
-                            direct_urls.extend([urljoin(origin, u) for u in child_urls])
-                        if len(direct_urls) >= max_pages:
+                            _, child_entries = _extract_sitemap_entries(child)
+                            for che in child_entries:
+                                che.url = urljoin(origin, che.url)
+                                direct_entries.append(che)
+                        if len(direct_entries) >= max_pages:
                             break
                 elif not is_index and extracted:
-                    direct_urls.extend([urljoin(origin, u) for u in extracted])
+                    for pe in extracted:
+                        pe.url = urljoin(origin, pe.url)
+                        direct_entries.append(pe)
 
-                if direct_urls:
-                    # Save sitemap to disk
-                    if job_dir:
-                        os.makedirs(job_dir, exist_ok=True)
-                        with open(os.path.join(job_dir, "sitemap.xml"), "wb") as f:
-                            f.write(direct_content)
-                        logger.info(f"[Sitemap] Saved direct sitemap.xml to {job_dir}")
-
+                if direct_entries:
                     # Deduplicate, same-domain filter, cap
                     seen: set[str] = set()
-                    result: list[str] = []
-                    for url in direct_urls:
+                    result: list[SitemapEntry] = []
+                    for entry in direct_entries:
+                        url = entry.url
                         parsed_url = urlparse(url)
                         ext = parsed_url.path.lower()
                         if ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip', '.xml', '.xsl')):
                             continue
                         if url not in seen and parsed_url.netloc == parsed.netloc:
                             seen.add(url)
-                            result.append(url)
+                            result.append(entry)
                         if len(result) >= max_pages:
                             break
+
+                    # Save sitemap to disk
+                    if job_dir:
+                        os.makedirs(job_dir, exist_ok=True)
+                        sitemap_dest = os.path.join(job_dir, "sitemap.xml")
+                        if not is_index and direct_content.strip().startswith(b"<?xml") and b"<url" in direct_content:
+                            with open(sitemap_dest, "wb") as f:
+                                f.write(direct_content)
+                        else:
+                            with open(sitemap_dest, "w", encoding="utf-8") as f:
+                                f.write(generate_sitemap_xml(result))
+                        logger.info(f"[Sitemap] Saved direct sitemap.xml to {job_dir}")
 
                     logger.info(f"[Sitemap] {len(result)} URLs from direct sitemap {base_url}")
                     return result
@@ -277,31 +381,37 @@ async def discover_sitemap_urls(
 
     raw_xml: bytes | None = None
     sitemap_url_used: str | None = None
-    all_urls: list[str] = []
+    all_entries: list[SitemapEntry] = []
+    used_is_index = False
 
     for sitemap_url in candidates:
         content = await _fetch(sitemap_url, session)
         if not content:
             continue
         try:
-            is_index, extracted = _extract_sitemap_urls(content)
+            is_index, extracted = _extract_sitemap_entries(content)
             if is_index and extracted:
+                used_is_index = True
                 # Sitemap index: expand child sitemaps
-                for cu in extracted:
-                    cu = urljoin(origin, cu)
+                for ce in extracted:
+                    cu = urljoin(origin, ce.url)
                     child = await _fetch(cu, session)
                     if child:
-                        _, child_urls = _extract_sitemap_urls(child)
-                        all_urls.extend([urljoin(origin, u) for u in child_urls])
-                    if len(all_urls) >= max_pages:
+                        _, child_entries = _extract_sitemap_entries(child)
+                        for che in child_entries:
+                            che.url = urljoin(origin, che.url)
+                            all_entries.append(che)
+                    if len(all_entries) >= max_pages:
                         break
-                if all_urls:
+                if all_entries:
                     raw_xml = content
                     sitemap_url_used = sitemap_url
                     break
             elif not is_index and extracted:
-                all_urls.extend([urljoin(origin, u) for u in extracted])
-                if all_urls:
+                for pe in extracted:
+                    pe.url = urljoin(origin, pe.url)
+                    all_entries.append(pe)
+                if all_entries:
                     raw_xml = content
                     sitemap_url_used = sitemap_url
                     break
@@ -310,25 +420,32 @@ async def discover_sitemap_urls(
         except Exception as e:
             logger.warning(f"[Sitemap] Parse error for {sitemap_url}: {e}")
 
-    if raw_xml and job_dir:
-        os.makedirs(job_dir, exist_ok=True)
-        with open(os.path.join(job_dir, "sitemap.xml"), "wb") as f:
-            f.write(raw_xml)
-        logger.info(f"[Sitemap] Saved sitemap.xml to {job_dir}")
-
     # Deduplicate, same-domain filter, cap at max_pages
     seen: set[str] = set()
-    result: list[str] = []
-    for url in all_urls:
+    result: list[SitemapEntry] = []
+    for entry in all_entries:
+        url = entry.url
         parsed_url = urlparse(url)
         ext = parsed_url.path.lower()
         if ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip', '.xml', '.xsl')):
             continue
         if url not in seen and parsed_url.netloc == parsed.netloc:
             seen.add(url)
-            result.append(url)
+            result.append(entry)
         if len(result) >= max_pages:
             break
+
+    # Guaranteed sitemap.xml saved to job_dir
+    if job_dir:
+        os.makedirs(job_dir, exist_ok=True)
+        sitemap_dest = os.path.join(job_dir, "sitemap.xml")
+        if raw_xml and not used_is_index and raw_xml.strip().startswith(b"<?xml") and b"<url" in raw_xml:
+            with open(sitemap_dest, "wb") as f:
+                f.write(raw_xml)
+        else:
+            with open(sitemap_dest, "w", encoding="utf-8") as f:
+                f.write(generate_sitemap_xml(result))
+        logger.info(f"[Sitemap] Saved sitemap.xml to {job_dir}")
 
     logger.info(f"[Sitemap] Discovered {len(result)} URLs via {sitemap_url_used or 'none'} for {base_url}")
     return result

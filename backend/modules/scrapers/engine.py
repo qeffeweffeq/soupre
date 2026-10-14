@@ -5,17 +5,73 @@ import logging
 import os
 import csv
 import re
+import time
+from typing import Optional
 from urllib.parse import urljoin
 from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
 from database.models import Page
+from modules.config import DOWNLOADS_DIR, BACKEND_DIR, PROJECT_ROOT
 from .fetcher import fetch_url_with_browser
 from modules.parsers.markdown_converter import convert_content_to_markdown
 from modules.utils.text_utils import sanitize_filename
 
 MIN_DELAY = 1.5
 MAX_DELAY = 4.5
+
+def determine_page_hreflang(
+    url: str,
+    soup: BeautifulSoup,
+    sitemap_hreflang: Optional[str] = None
+) -> Optional[str]:
+    """
+    Determine the page language (hreflang) using the fallback cascade:
+    1. Sitemap entry hreflang
+    2. HTML <head> tags (<html lang>, <link rel="alternate">, <meta og:locale>)
+    3. URL path prefix (/it/, /en/, /de/, /fr/)
+    """
+    # 1. Sitemap entry hreflang
+    if sitemap_hreflang:
+        clean = sitemap_hreflang.strip().lower()
+        if clean and clean != "x-default":
+            lang = clean.split("-")[0].split("_")[0]
+            if len(lang) == 2:
+                return lang
+
+    # 2. HTML head tags
+    # 2a. <html lang="...">
+    html_tag = soup.find("html")
+    if html_tag and html_tag.get("lang"):
+        lang = html_tag.get("lang").strip().lower().split("-")[0].split("_")[0]
+        if len(lang) == 2:
+            return lang
+
+    # 2b. <link rel="alternate" hreflang="..." href="..."> matching url
+    for link in soup.find_all("link", rel=lambda r: r and "alternate" in r):
+        href = link.get("href", "")
+        hreflang = link.get("hreflang", "")
+        if hreflang and hreflang.lower() != "x-default":
+            clean_hl = hreflang.strip().lower().split("-")[0].split("_")[0]
+            if len(clean_hl) == 2:
+                if href and urlparse(href).path == urlparse(url).path:
+                    return clean_hl
+
+    # 2c. <meta property="og:locale" content="...">
+    og_locale = soup.find("meta", property="og:locale") or soup.find("meta", attrs={"name": "og:locale"})
+    if og_locale and og_locale.get("content"):
+        content = og_locale.get("content").strip().lower()
+        lang = content.split("_")[0].split("-")[0]
+        if len(lang) == 2:
+            return lang
+
+    # 3. URL path prefix (e.g. /it/, /en/, /de/, /fr/)
+    parsed_path = urlparse(url).path
+    match = re.match(r"^/([a-z]{2})(/|$)", parsed_path.lower())
+    if match:
+        return match.group(1)
+
+    return None
 
 def get_best_image(element):
     """Extract the highest resolution image URL from an element (img or styled div)."""
@@ -60,13 +116,31 @@ def get_best_image(element):
                 
     return None
 
-async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None):
+async def scrape_page(
+    url: str,
+    job_id: int,
+    db_engine,
+    job_dir_name: str = None,
+    sitemap_hreflang: str = None,
+    sitemap_lastmod: str = None
+):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
     await asyncio.sleep(delay)
-    
-    html_content, screenshot_path, pw_cookies = await fetch_url_with_browser(url)
-    
+
+    domain = urlparse(url).netloc.replace(".", "_")
+    folder_name = job_dir_name if job_dir_name else f"{int(time.time())}_{domain}"
+    job_dir = os.path.join(DOWNLOADS_DIR, folder_name)
+    os.makedirs(job_dir, exist_ok=True)
+
+    # Save initial screenshot directly inside job_dir so it never touches _downloads/ root
+    temp_screenshot = os.path.join(job_dir, f"_temp_shot_{int(time.time() * 1000)}.png")
+    html_content, screenshot_path, pw_cookies = await fetch_url_with_browser(
+        url,
+        take_screenshot=True,
+        target_screenshot_path=temp_screenshot
+    )
+
     # Check if Playwright failed or hit a Cloudflare/Bot challenge
     pw_cookies = []
     needs_fallback = False
@@ -74,54 +148,66 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
         needs_fallback = True
     elif len(html_content) < 50000 or 'robot-suspicion' in html_content or 'cloudflare' in html_content.lower() or 'just a moment' in html_content.lower():
         needs_fallback = True
-        
+
     if needs_fallback:
         logging.warning(f"Playwright failed or hit bot challenge for {url}. Falling back to standard HTTP request...")
         import requests
         try:
             response = await asyncio.to_thread(
-                requests.get, 
-                url, 
+                requests.get,
+                url,
                 headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'},
                 timeout=15
             )
             response.raise_for_status()
             html_content = response.text
-            # Keep screenshot_path from Playwright so it gets moved into the job directory
-            
             if len(html_content) < 10000:
                 raise ValueError("Fallback request also returned a suspiciously small page (likely a bot challenge).")
-                
             logging.info(f"Fallback request successful for {url} ({len(html_content)} bytes)")
         except Exception as e:
             logging.error(f"Fallback fetch also failed for {url}: {e}. Proceeding with original Playwright content...")
-        
+
     soup = BeautifulSoup(html_content, 'html.parser')
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
-    
-    domain = urlparse(url).netloc.replace(".", "_")
-    folder_name = job_dir_name if job_dir_name else f"{timestamp}_{domain}"
-    
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    job_dir = os.path.join(base_dir, "_downloads", folder_name)
+
+    # Determine page hreflang
+    hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
 
     if job_dir_name:
         images_dir = os.path.join(job_dir, "_images")
-        page_dir = os.path.join(job_dir, safe_title)
-        if os.path.exists(page_dir):
-            existing_meta = os.path.join(page_dir, "metadata.csv")
-            if os.path.exists(existing_meta):
-                try:
-                    with open(existing_meta, "r", encoding="utf-8") as f:
-                        if url not in f.read():
-                            url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
-                            page_dir = os.path.join(job_dir, f"{safe_title}_{url_suffix}")
-                except Exception:
-                    pass
-        folder_page_name = os.path.basename(page_dir)
-        img_rel_prefix = "../_images"
-        db_markdown_path = f"../_downloads/{folder_name}/{folder_page_name}/{safe_title}.md"
+        if hreflang:
+            lang_dir = os.path.join(job_dir, hreflang)
+            os.makedirs(lang_dir, exist_ok=True)
+            page_dir = os.path.join(lang_dir, safe_title)
+            if os.path.exists(page_dir):
+                existing_meta = os.path.join(page_dir, "metadata.csv")
+                if os.path.exists(existing_meta):
+                    try:
+                        with open(existing_meta, "r", encoding="utf-8") as f:
+                            if url not in f.read():
+                                url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
+                                page_dir = os.path.join(lang_dir, f"{safe_title}_{url_suffix}")
+                    except Exception:
+                        pass
+            folder_page_name = os.path.basename(page_dir)
+            img_rel_prefix = "../../_images"
+            db_markdown_path = f"../_downloads/{folder_name}/{hreflang}/{folder_page_name}/{safe_title}.md"
+        else:
+            page_dir = os.path.join(job_dir, safe_title)
+            if os.path.exists(page_dir):
+                existing_meta = os.path.join(page_dir, "metadata.csv")
+                if os.path.exists(existing_meta):
+                    try:
+                        with open(existing_meta, "r", encoding="utf-8") as f:
+                            if url not in f.read():
+                                url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
+                                page_dir = os.path.join(job_dir, f"{safe_title}_{url_suffix}")
+                    except Exception:
+                        pass
+            folder_page_name = os.path.basename(page_dir)
+            img_rel_prefix = "../_images"
+            db_markdown_path = f"../_downloads/{folder_name}/{folder_page_name}/{safe_title}.md"
     else:
         images_dir = os.path.join(job_dir, "images")
         page_dir = job_dir
@@ -131,14 +217,18 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
 
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(page_dir, exist_ok=True)
-    
+
     if screenshot_path and os.path.exists(screenshot_path):
-        new_screenshot_path = os.path.join(page_dir, os.path.basename(screenshot_path))
+        final_screenshot_name = f"screenshot_{domain}_{int(time.time())}.png"
+        new_screenshot_path = os.path.join(page_dir, final_screenshot_name)
         os.rename(screenshot_path, new_screenshot_path)
         screenshot_path = new_screenshot_path
 
     if job_dir_name:
-        db_screenshot_path = f"../_downloads/{folder_name}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+        if hreflang:
+            db_screenshot_path = f"../_downloads/{folder_name}/{hreflang}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+        else:
+            db_screenshot_path = f"../_downloads/{folder_name}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
     else:
         db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
 
@@ -324,8 +414,21 @@ async def scrape_page(url: str, job_id: int, db_engine, job_dir_name: str = None
         page.url_path = urlparse(url).path or "/"
         page.url_depth = len([p for p in urlparse(url).path.split("/") if p])
         page.status = "completed"
+        if hreflang:
+            page.hreflang = hreflang
+        if sitemap_lastmod:
+            page.lastmod = sitemap_lastmod
         
         session.commit()
+
+    # Clean up any stray .png files in DOWNLOADS_DIR root
+    if os.path.exists(DOWNLOADS_DIR):
+        for fname in os.listdir(DOWNLOADS_DIR):
+            if fname.endswith(".png") and os.path.isfile(os.path.join(DOWNLOADS_DIR, fname)):
+                try:
+                    os.remove(os.path.join(DOWNLOADS_DIR, fname))
+                except Exception:
+                    pass
 
 async def run_scrape_job(
     job_id: int,
@@ -340,7 +443,7 @@ async def run_scrape_job(
 ):
     try:
         if scrape_mode == "sitemap":
-            from .sitemap_fetcher import discover_sitemap_urls
+            from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry
             from .fetcher import fetch_url_with_browser
             import logging
             from urllib.parse import urlparse
@@ -351,58 +454,136 @@ async def run_scrape_job(
 
             domain = urlparse(target_url).netloc.replace(".", "_")
             job_dir_name = f"job_{job_id}_{domain}"
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.abspath(__file__))))
-            job_dir = os.path.join(base_dir, "_downloads", job_dir_name)
+            job_dir = os.path.join(DOWNLOADS_DIR, job_dir_name)
+            os.makedirs(job_dir, exist_ok=True)
+
+            # Clean up legacy backend/_downloads if it exists
+            legacy_backend_downloads = os.path.join(BACKEND_DIR, "_downloads")
+            if os.path.exists(legacy_backend_downloads):
+                try:
+                    import shutil
+                    shutil.rmtree(legacy_backend_downloads)
+                except Exception:
+                    pass
+
+            # Clean up any stray .png files in DOWNLOADS_DIR root
+            if os.path.exists(DOWNLOADS_DIR):
+                for fname in os.listdir(DOWNLOADS_DIR):
+                    if fname.endswith(".png") and os.path.isfile(os.path.join(DOWNLOADS_DIR, fname)):
+                        try:
+                            os.remove(os.path.join(DOWNLOADS_DIR, fname))
+                        except Exception:
+                            pass
+
+            # Clearance cookie acquisition (take_screenshot=False)
+            clearance_cookies = None
+            try:
+                _, _, clearance_cookies = await fetch_url_with_browser(target_url, take_screenshot=False)
+            except Exception as e:
+                logging.warning(f"[Job {job_id}] Clearance cookie acquisition error: {e}")
+
+            logging.info(f"[Job {job_id}] Discovering sitemap URLs for {target_url}...")
+            entries: list[SitemapEntry] = await discover_sitemap_urls(
+                target_url,
+                job_dir=job_dir,
+                max_pages=max_pages,
+                cookies=clearance_cookies
+            )
 
             with Session(db_engine) as s:
                 existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
-                if existing_pages:
-                    logging.info(f"[Job {job_id}] Resuming sitemap job.")
-                    pending_urls = [p.url for p in existing_pages if p.status == "pending"]
+                pages_by_url = {p.url: p for p in existing_pages}
+
+                if not entries and not existing_pages:
                     job = s.get(ScrapeJob, job_id)
                     if job:
-                        job.total_pages = len(existing_pages)
-                        job.status = "running"
+                        job.status = "failed"
                         s.commit()
-                else:
-                    logging.info(f"[Job {job_id}] Discovering sitemap URLs for {target_url}...")
-                    urls = await discover_sitemap_urls(
-                        target_url,
-                        job_dir=job_dir,
-                        max_pages=max_pages
-                    )
-                    if not urls:
-                        job = s.get(ScrapeJob, job_id)
-                        if job:
-                            job.status = "failed"
-                            s.commit()
-                        logging.error(f"[Job {job_id}] No sitemap found for {target_url}")
-                        return
+                    logging.error(f"[Job {job_id}] No sitemap found for {target_url}")
+                    return
 
-                    for u in urls:
-                        parsed_path = urlparse(u).path
+                # Synchronize entries into Page table
+                for entry in entries:
+                    u = entry.url
+                    parsed_path = urlparse(u).path
+                    depth = len([part for part in (parsed_path or "").split("/") if part])
+
+                    if u not in pages_by_url:
                         p = Page(
                             job_id=job_id,
                             url=u,
                             title=(parsed_path or u),
                             url_path=(parsed_path or "/"),
-                            url_depth=len([part for part in (parsed_path or "").split("/") if part]),
-                            status="pending"
+                            url_depth=depth,
+                            status="pending",
+                            hreflang=entry.hreflang,
+                            lastmod=entry.lastmod,
                         )
                         s.add(p)
+                        pages_by_url[u] = p
+                    else:
+                        p = pages_by_url[u]
+                        if entry.hreflang and not p.hreflang:
+                            p.hreflang = entry.hreflang
+
+                        # Incremental scrape logic
+                        if p.status == "completed":
+                            is_newer = False
+                            if entry.lastmod and p.lastmod:
+                                if entry.lastmod > p.lastmod:
+                                    is_newer = True
+                            elif entry.lastmod and not p.lastmod:
+                                p.lastmod = entry.lastmod
+
+                            # Check disk file
+                            file_missing = True
+                            if p.markdown_path:
+                                rel = p.markdown_path.lstrip("./").lstrip("/")
+                                if rel.startswith("_downloads/"):
+                                    disk_path = os.path.join(DOWNLOADS_DIR, rel.replace("_downloads/", "", 1))
+                                elif rel.startswith("../_downloads/"):
+                                    disk_path = os.path.join(DOWNLOADS_DIR, rel.replace("../_downloads/", "", 1))
+                                else:
+                                    disk_path = os.path.join(job_dir, rel)
+                                if os.path.exists(disk_path):
+                                    file_missing = False
+
+                            if is_newer or file_missing:
+                                p.status = "pending"
+                                if entry.lastmod:
+                                    p.lastmod = entry.lastmod
+                        elif p.status == "failed":
+                            p.status = "pending"
+
+                        s.add(p)
+
+                s.commit()
+
+                all_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
+                completed_pages = [p for p in all_pages if p.status == "completed"]
+                pending_pages = [p for p in all_pages if p.status == "pending"]
+
+                job = s.get(ScrapeJob, job_id)
+                if job:
+                    job.total_pages = len(all_pages)
+                    job.scraped_pages = len(completed_pages)
+                    job.status = "running"
                     s.commit()
 
-                    job = s.get(ScrapeJob, job_id)
-                    if job:
-                        job.total_pages = len(urls)
-                        job.status = "running"
-                        s.commit()
-                    
-                    pending_urls = urls
+                logging.info(
+                    f"[Job {job_id}] Total pages: {len(all_pages)}, "
+                    f"Already completed: {len(completed_pages)}, "
+                    f"Pending to scrape: {len(pending_pages)}"
+                )
 
-            for i, url in enumerate(pending_urls):
-                # Large-sitemap pause every large_threshold pages (skip i==0)
+            for i, p_record in enumerate(pending_pages):
+                url = p_record.url
+                with Session(db_engine) as s:
+                    job = s.get(ScrapeJob, job_id)
+                    if not job or job.status in ("cancelled", "paused"):
+                        logging.info(f"[Job {job_id}] Job {getattr(job, 'status', 'deleted')}. Stopping loop.")
+                        break
+
                 if i > 0 and i % large_threshold == 0 and large_pause_sec > 0:
                     logging.info(
                         f"[Job {job_id}] Large-sitemap pause: {large_pause_sec}s after {i} pages"
@@ -413,16 +594,21 @@ async def run_scrape_job(
                     await asyncio.sleep(delay)
 
                 try:
-                    await scrape_page(url, job_id, db_engine, job_dir_name=job_dir_name)
+                    await scrape_page(
+                        url,
+                        job_id,
+                        db_engine,
+                        job_dir_name=job_dir_name,
+                        sitemap_hreflang=p_record.hreflang,
+                        sitemap_lastmod=p_record.lastmod
+                    )
                 except Exception as e:
                     logging.error(f"[Job {job_id}] Error scraping page {url}: {e}")
                     with Session(db_engine) as s:
                         page = s.exec(select(Page).where(Page.job_id == job_id, Page.url == url)).first()
                         if page:
                             page.status = "failed"
-                        else:
-                            s.add(Page(job_id=job_id, url=url, status="failed"))
-                        s.commit()
+                            s.commit()
 
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
