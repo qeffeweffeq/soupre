@@ -134,15 +134,22 @@ async def scrape_page(
     os.makedirs(job_dir, exist_ok=True)
 
     # Save initial screenshot directly inside job_dir so it never touches _downloads/ root
-    temp_screenshot = os.path.join(job_dir, f"_temp_shot_{int(time.time() * 1000)}.png")
-    html_content, screenshot_path, pw_cookies = await fetch_url_with_browser(
-        url,
-        take_screenshot=True,
-        target_screenshot_path=temp_screenshot
-    )
+    try:
+        html_content, screenshot_path, pw_cookies = await asyncio.wait_for(
+            fetch_url_with_browser(
+                url,
+                take_screenshot=True,
+                target_screenshot_path=temp_screenshot
+            ),
+            timeout=60.0
+        )
+    except asyncio.TimeoutError:
+        logging.warning(f"Playwright timed out after 60s for {url}. Falling back to standard HTTP request...")
+        html_content = ""
+        screenshot_path = ""
+        pw_cookies = []
 
     # Check if Playwright failed or hit a Cloudflare/Bot challenge
-    pw_cookies = []
     needs_fallback = False
     if not html_content:
         needs_fallback = True

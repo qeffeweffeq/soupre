@@ -76,7 +76,10 @@ async def fetch_url_with_browser(
                         )
                         # Wait an additional 3 seconds for the actual DOM to settle after redirect
                         await asyncio.sleep(3)
-                        await page.wait_for_load_state('domcontentloaded')
+                        try:
+                            await page.wait_for_load_state('domcontentloaded', timeout=5000)
+                        except Exception:
+                            pass
                     except Exception as e:
                         logger.warning(f"[Browser] Bot challenge wait timed out or failed: {e}")
                 
@@ -108,16 +111,10 @@ async def fetch_url_with_browser(
                 # Auto-expand "Load more" / infinite scroll pagination if present
                 load_more_selector = '#load_more_button, [id*="load_more" i], [title*="Load more" i], .load-more'
                 try:
-                    await page.wait_for_load_state('load', timeout=6000)
+                    load_more_btn = page.locator(load_more_selector).first
+                    has_load_more = await load_more_btn.is_visible(timeout=1000)
                 except Exception:
-                    pass
-
-                has_load_more = await page.evaluate(f'''() => {{
-                    const btn = document.querySelector('{load_more_selector}');
-                    if (!btn) return false;
-                    const style = window.getComputedStyle(btn);
-                    return style.display !== 'none' && style.visibility !== 'hidden';
-                }}''')
+                    has_load_more = False
 
                 if has_load_more:
                     logger.info(f"[Browser] Detected 'Load more' button on {url}. Expanding infinite content...")
@@ -126,40 +123,34 @@ async def fetch_url_with_browser(
                     consecutive_failures = 0
 
                     while clicks < max_clicks:
-                        prev_count = await page.evaluate('''() => {
-                            return document.querySelectorAll('.post, article, .item, .entry').length;
-                        }''')
-
-                        clicked = await page.evaluate(f'''() => {{
-                            const btn = document.querySelector('{load_more_selector}');
-                            if (!btn) return false;
-                            const style = window.getComputedStyle(btn);
-                            if (style.display === 'none' || style.visibility === 'hidden') return false;
-                            btn.scrollIntoView({{ behavior: 'instant', block: 'center' }});
-                            btn.click();
-                            return true;
-                        }}''')
-
-                        if not clicked:
-                            logger.info(f"[Browser] 'Load more' button no longer active after {clicks} clicks.")
-                            break
-
                         try:
-                            await page.wait_for_function(
-                                f"document.querySelectorAll('.post, article, .item, .entry').length > {prev_count}",
-                                timeout=5000
-                            )
-                            clicks += 1
-                            consecutive_failures = 0
-                            if clicks % 10 == 0:
-                                curr_count = await page.evaluate("document.querySelectorAll('.post, article, .item, .entry').length")
-                                logger.info(f"[Browser] Loaded more content: {clicks} clicks ({curr_count} items)...")
-                        except Exception:
-                            consecutive_failures += 1
-                            if consecutive_failures >= 2:
-                                logger.info(f"[Browser] Finished loading more content after {clicks} clicks.")
+                            prev_count = await page.locator('.post, article, .item, .entry').count()
+                            if not await load_more_btn.is_visible(timeout=1000):
+                                logger.info(f"[Browser] 'Load more' button no longer visible after {clicks} clicks.")
                                 break
-                            await asyncio.sleep(1)
+
+                            await load_more_btn.scroll_into_view_if_needed(timeout=2000)
+                            await load_more_btn.click(timeout=2000)
+
+                            try:
+                                await page.wait_for_function(
+                                    f"document.querySelectorAll('.post, article, .item, .entry').length > {prev_count}",
+                                    timeout=5000
+                                )
+                                clicks += 1
+                                consecutive_failures = 0
+                                if clicks % 10 == 0:
+                                    curr_count = await page.locator('.post, article, .item, .entry').count()
+                                    logger.info(f"[Browser] Loaded more content: {clicks} clicks ({curr_count} items)...")
+                            except Exception:
+                                consecutive_failures += 1
+                                if consecutive_failures >= 2:
+                                    logger.info(f"[Browser] Finished loading more content after {clicks} clicks.")
+                                    break
+                                await asyncio.sleep(1)
+                        except Exception as e:
+                            logger.debug(f"[Browser] Load more expansion ended: {e}")
+                            break
 
                 html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url}")
