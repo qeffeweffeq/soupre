@@ -134,6 +134,7 @@ async def scrape_page(
     os.makedirs(job_dir, exist_ok=True)
 
     # Save initial screenshot directly inside job_dir so it never touches _downloads/ root
+    temp_screenshot = os.path.join(job_dir, f"_temp_shot_{int(time.time() * 1000)}.png")
     try:
         html_content, screenshot_path, pw_cookies = await asyncio.wait_for(
             fetch_url_with_browser(
@@ -278,10 +279,6 @@ async def scrape_page(
     abs_markdown_path = os.path.join(page_dir, f"{safe_title}.md")
     
     # Extract all image URLs from markdown
-    import re
-    
-    import time
-    
     # regex to find markdown images ![alt](url)
     img_matches = re.findall(r'!\[(.*?)\]\((.*?)\)', final_markdown)
     
