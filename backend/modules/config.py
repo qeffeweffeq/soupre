@@ -116,3 +116,7 @@ RAW_URL_PATTERN = r'(?<![\(\[])https?://[^\s<>"]+(?![\]\)])'
 # Rate limiting configuration (seconds)
 SCRAPE_DELAY_MIN = float(os.environ.get('SCRAPE_DELAY_MIN', 2.0))
 SCRAPE_DELAY_MAX = float(os.environ.get('SCRAPE_DELAY_MAX', 5.0))
+
+# Browser engine configuration: "auto" (default: Camoufox with Chromium fallback), "camoufox", or "chromium"
+SOUPRE_BROWSER_ENGINE = os.environ.get("SOUPRE_BROWSER_ENGINE", "auto")
+

@@ -276,16 +276,13 @@ async def scrape_page(
     downloaded_media = []
     
     if img_matches:
-        logging.info(f"Attempting to download {len(img_matches)} images using Playwright...")
-        from playwright.async_api import async_playwright
-        from playwright_stealth import Stealth
+        logging.info(f"Attempting to download {len(img_matches)} images using browser engine...")
+        from modules.scrapers.browser_engine import get_browser
         
         async def download_images_pw():
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                context = await browser.new_context(user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
-                page = await context.new_page()
-                await Stealth().apply_stealth_async(page)
+            async with get_browser(headless=True) as session:
+                context = await session.create_context()
+                page = await session.new_page(context=context)
                 
                 # Navigate to base URL to clear Captcha
                 try:
@@ -356,8 +353,6 @@ async def scrape_page(
 
                     tasks = [download_one(alt, src, i) for i, (alt, src) in enumerate(unique_images)]
                     await asyncio.gather(*tasks)
-
-                await browser.close()
                 
         await download_images_pw()
         
