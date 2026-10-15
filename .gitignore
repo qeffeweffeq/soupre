@@ -81,3 +81,4 @@ yarn-error.log*
 *.db
 scraper.log
 uvicorn.log
+no-db-man

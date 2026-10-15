@@ -37,6 +37,21 @@ def get_best_image(element):
             
     # Check the element itself
     parse_srcset(element.get('data-srcset') or element.get('srcset'))
+
+    # Check high-res attributes on element itself (e.g. USM data-lightbox-src, zoom images)
+    for big_attr in [
+        'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+        'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+        'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd'
+    ]:
+        val = element.get(big_attr) if hasattr(element, 'get') else None
+        if val and not val.startswith('data:'):
+            candidates.append((3000, val))
+
+    # If the src contains downscaled thumbnail dimensions (e.g. USM 550x550), provide the high-res 1140x1140 counterpart
+    src_val = element.get('src') if hasattr(element, 'get') else None
+    if src_val and not src_val.startswith('data:') and '.550x550_' in src_val:
+        candidates.append((2500, src_val.replace('.550x550_', '.1140x1140_')))
     
     # If it's an img, check its parent picture sources and parent div data-media-url
     if element.name == 'img':
@@ -60,6 +75,16 @@ def get_best_image(element):
                         if w_match:
                             width = int(w_match.group(1))
                         candidates.append((width, u))
+
+            # check high-res attributes on parent (e.g. Tumblr data-big-photo, USM data-lightbox-src)
+            for big_attr in [
+                'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+                'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+                'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd'
+            ]:
+                big_url = parent.get(big_attr)
+                if big_url and not big_url.startswith('data:'):
+                    candidates.append((3000, big_url))
                         
             parent = parent.parent
             
@@ -69,7 +94,12 @@ def get_best_image(element):
         if best_src and not best_src.startswith('data:'):
             return best_src
         
-    for attr in ['data-media-url', 'data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
+    for attr in [
+        'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
+        'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
+        'data-media-url', 'data-large_image', 'data-large', 'data-full-url',
+        'data-src', 'data-lazy-src', 'src'
+    ]:
         val = element.get(attr)
         if val and not val.startswith('data:'):
             if attr == 'data-media-url' and ',' in val:
@@ -124,17 +154,29 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(text) if text.strip() else ''
 
         # Skip form elements and inputs
-        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript']:
+        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe']:
             return ""
 
         # Skip elements with certain classes/IDs that indicate non-content
         element_classes = get_element_attr_as_string(element, 'class')
         element_id = get_element_attr_as_string(element, 'id')
+        classes_lower = element_classes.lower()
+        id_lower = element_id.lower()
+        tag_name = getattr(element, 'name', '') or ''
+
+        # Exception: do not skip gallery media, modal openers, or lightboxes
+        is_media_container = (
+            'modal-opener' in tag_name or
+            'modal-opener' in classes_lower or
+            'product__media' in classes_lower or
+            'lightbox' in classes_lower or
+            tag_name == 'img'
+        )
 
         skip_patterns = ['cookie', 'consent', 'popup', 'modal', 'banner', 'sidebar',
                          'footer', 'header', 'menu', 'nav', 'search', 'cart', 'login']
 
-        if any(pattern in element_classes.lower() or pattern in element_id.lower() for pattern in skip_patterns):
+        if not is_media_container and any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
             return ""
 
         # Process headings with proper spacing
@@ -161,25 +203,33 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process links with proper spacing
         elif element.name == 'a':
+            # Extract images within the link first
+            img_md = ""
+            if element.find('img'):
+                seen_img_urls = set()
+                for img in element.find_all('img'):
+                    if img.find_parent('noscript'):
+                        continue
+                    src = get_best_image(img)
+                    if src:
+                        full_src = urljoin(base_url, src)
+                        if full_src in seen_img_urls:
+                            continue
+                        seen_img_urls.add(full_src)
+                    img_md += html_to_markdown(img, base_url, driver, page_dir, processed_elements)
+
             href = element.get('href', '')
-            if href:
-                # Skip links to javascript, mailto, tel
-                if href.startswith(('javascript:', 'mailto:', 'tel:')):
-                    return clean_text(element.get_text(separator=" "))
+            link_text = clean_text(element.get_text(separator=" "))
 
-                # Convert relative URLs to absolute
+            if href and not href.startswith(('javascript:', 'mailto:', 'tel:')):
                 href = urljoin(base_url, href)
-                link_text = clean_text(element.get_text(separator=" "))
-
-                # If the link has no text but has an image, process the image
-                if not link_text and element.find('img'):
-                    img = element.find('img')
-                    return html_to_markdown(img, base_url, driver, page_dir, processed_elements)
-
-                # Return formatted link if it has text
                 if link_text:
-                    return f"[{link_text}]({href})\n\n"
-            return clean_text(element.get_text(separator=" "))
+                    return img_md + f"[{link_text}]({href})\n\n"
+                return img_md
+            else:
+                if img_md:
+                    return img_md + (f"{link_text}\n\n" if link_text else "")
+                return clean_text(link_text)
 
         # Process images with better handling
         elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and (element.has_attr('data-media-video') or element.has_attr('data-media-autoplayvideo') or (element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))))):
@@ -213,19 +263,31 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process lists with proper formatting
         elif element.name == 'ul':
+            has_media = bool(element.find('img') or element.find(attrs={'data-media-video': True}))
             md = "\n\n"
             for li in element.find_all('li', recursive=False):
-                li_text = clean_text(li.get_text(separator=" "))
-                if li_text:
-                    md += f"* {li_text}\n"
+                if has_media and (li.find('img') or li.find(attrs={'data-media-video': True})):
+                    li_content = process_children_recursively(li, base_url, driver, page_dir, processed_elements)
+                    if li_content and li_content.strip():
+                        md += f"{li_content.strip()}\n\n"
+                else:
+                    li_text = clean_text(li.get_text(separator=" "))
+                    if li_text:
+                        md += f"* {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
 
         elif element.name == 'ol':
+            has_media = bool(element.find('img') or element.find(attrs={'data-media-video': True}))
             md = "\n\n"
             for i, li in enumerate(element.find_all('li', recursive=False), 1):
-                li_text = clean_text(li.get_text(separator=" "))
-                if li_text:
-                    md += f"{i}. {li_text}\n"
+                if has_media and (li.find('img') or li.find(attrs={'data-media-video': True})):
+                    li_content = process_children_recursively(li, base_url, driver, page_dir, processed_elements)
+                    if li_content and li_content.strip():
+                        md += f"{li_content.strip()}\n\n"
+                else:
+                    li_text = clean_text(li.get_text(separator=" "))
+                    if li_text:
+                        md += f"{i}. {li_text}\n"
             return md + "\n" if md != "\n\n" else ""
 
         # Process blockquotes
@@ -414,6 +476,9 @@ def meta_to_markdown_table(meta_data, title):
 
 def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     """Convert page content to markdown with improved formatting and error handling"""
+    for tag in soup.find_all(['noscript', 'script', 'style']):
+        tag.decompose()
+
     # Start building markdown content
     title = soup.title.string if soup.title else "Untitled Page"
     markdown_content = ""
@@ -508,6 +573,10 @@ def post_process_markdown(markdown):
     for pattern in UNWANTED_CONTENT_PATTERNS:
         # Match the pattern, potentially surrounded by some common prefixes or as standalone lines
         markdown = re.sub(rf'(?i)^.*{pattern}.*$\n?', '', markdown, flags=re.MULTILINE)
+
+    # Deduplicate consecutive identical markdown image tags
+    while re.search(r'(!\[.*?\]\([^\)]+\))\s*\1', markdown):
+        markdown = re.sub(r'(!\[.*?\]\([^\)]+\))\s*\1', r'\1', markdown)
 
     # Fix newlines
     markdown = re.sub(r'\n{3,}', '\n\n', markdown)  # Replace 3+ newlines with 2

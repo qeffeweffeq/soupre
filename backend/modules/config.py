@@ -12,6 +12,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Directories
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
+DOWNLOADS_DIR = os.path.join(PROJECT_ROOT, "_downloads")
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
 # Default archive directory name
 DEFAULT_ARCHIVE_DIR = "_soups"
 

@@ -1,20 +1,26 @@
 import asyncio
 import os
 import time
+from typing import Optional
 from urllib.parse import urlparse
 import logging
 from playwright.async_api import async_playwright
 from playwright_stealth import Stealth
+from modules.config import DOWNLOADS_DIR
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 
-async def fetch_url_with_browser(url):
+async def fetch_url_with_browser(
+    url: str,
+    take_screenshot: bool = True,
+    target_screenshot_path: Optional[str] = None
+):
     """
     Fetch a URL using Playwright (Chromium) and return its rendered HTML.
     Includes playwright-stealth to bypass Cloudflare/Bot Challenges.
     """
-    logger.info(f"[Browser] Fetching page: {url}")
+    logger.info(f"[Browser] Fetching page: {url} (screenshot={take_screenshot})")
     
     html_content = ""
     cookies_list = []
@@ -53,7 +59,10 @@ async def fetch_url_with_browser(url):
                     html_check = await page.content()
                 except Exception as e:
                     logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
-                    await page.wait_for_load_state('networkidle', timeout=15000)
+                    try:
+                        await page.wait_for_load_state('domcontentloaded', timeout=10000)
+                    except Exception:
+                        pass
                     html_check = await page.content()
                     
                 # Check for SiteGround / Cloudflare bot challenges
@@ -67,26 +76,83 @@ async def fetch_url_with_browser(url):
                         )
                         # Wait an additional 3 seconds for the actual DOM to settle after redirect
                         await asyncio.sleep(3)
-                        await page.wait_for_load_state('domcontentloaded')
+                        try:
+                            await page.wait_for_load_state('domcontentloaded', timeout=5000)
+                        except Exception:
+                            pass
                     except Exception as e:
                         logger.warning(f"[Browser] Bot challenge wait timed out or failed: {e}")
                 
                     await page.mouse.wheel(0, 500)
                     await asyncio.sleep(0.5)
                 
-                html_content = await page.content()
-                
-                # Take screenshot for the UI
-                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-                temp_media_dir = os.path.join(base_dir, "_downloads")
-                os.makedirs(temp_media_dir, exist_ok=True)
-                
+                # Acquire cookies
                 cookies_list = await context.cookies()
-                domain = urlparse(url).netloc.replace(".", "_")
-                filename = f"screenshot_{domain}_{int(time.time())}.png"
-                screenshot_path = os.path.join(temp_media_dir, filename)
-                
-                await page.screenshot(path=screenshot_path, full_page=False)
+
+                # Take screenshot for the UI if requested
+                if take_screenshot:
+                    if target_screenshot_path:
+                        screenshot_path = target_screenshot_path
+                        os.makedirs(os.path.dirname(os.path.abspath(screenshot_path)), exist_ok=True)
+                    else:
+                        domain = urlparse(url).netloc.replace(".", "_")
+                        filename = f"screenshot_{domain}_{int(time.time())}.png"
+                        screenshot_path = os.path.join(DOWNLOADS_DIR, filename)
+                        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+                    try:
+                        await page.screenshot(path=screenshot_path, full_page=False)
+                    except Exception as e:
+                        logger.warning(f"[Browser] Failed to take screenshot for {url}: {e}")
+                        screenshot_path = ""
+                else:
+                    screenshot_path = ""
+
+                # Auto-expand "Load more" / infinite scroll pagination if present
+                load_more_selector = '#load_more_button, [id*="load_more" i], [title*="Load more" i], .load-more'
+                try:
+                    load_more_btn = page.locator(load_more_selector).first
+                    has_load_more = await load_more_btn.is_visible(timeout=1000)
+                except Exception:
+                    has_load_more = False
+
+                if has_load_more:
+                    logger.info(f"[Browser] Detected 'Load more' button on {url}. Expanding infinite content...")
+                    clicks = 0
+                    max_clicks = 200
+                    consecutive_failures = 0
+
+                    while clicks < max_clicks:
+                        try:
+                            prev_count = await page.locator('.post, article, .item, .entry').count()
+                            if not await load_more_btn.is_visible(timeout=1000):
+                                logger.info(f"[Browser] 'Load more' button no longer visible after {clicks} clicks.")
+                                break
+
+                            await load_more_btn.scroll_into_view_if_needed(timeout=2000)
+                            await load_more_btn.click(timeout=2000)
+
+                            try:
+                                await page.wait_for_function(
+                                    f"document.querySelectorAll('.post, article, .item, .entry').length > {prev_count}",
+                                    timeout=5000
+                                )
+                                clicks += 1
+                                consecutive_failures = 0
+                                if clicks % 10 == 0:
+                                    curr_count = await page.locator('.post, article, .item, .entry').count()
+                                    logger.info(f"[Browser] Loaded more content: {clicks} clicks ({curr_count} items)...")
+                            except Exception:
+                                consecutive_failures += 1
+                                if consecutive_failures >= 2:
+                                    logger.info(f"[Browser] Finished loading more content after {clicks} clicks.")
+                                    break
+                                await asyncio.sleep(1)
+                        except Exception as e:
+                            logger.debug(f"[Browser] Load more expansion ended: {e}")
+                            break
+
+                html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url}")
                 
             except Exception as nav_e:

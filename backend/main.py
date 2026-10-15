@@ -9,9 +9,11 @@ import os
 import asyncio
 import logging
 from collections import defaultdict
+from urllib.parse import urlparse
+from modules.config import DOWNLOADS_DIR, PROJECT_ROOT
 
 # Create downloads directory if it doesn't exist
-os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads"), exist_ok=True)
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 sqlite_url = "sqlite:////Users/admin/webapps/soupre/soupre.db"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
@@ -50,20 +52,18 @@ def _migrate_db(engine) -> None:
         ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
         ("page",      "url_path",      "TEXT"),
         ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
+        ("page",      "hreflang",      "TEXT"),
+        ("page",      "lastmod",       "TEXT"),
+        ("page",      "content_type",  "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
-            # Check if column already exists via PRAGMA
-            result = conn.execute(
-                text(f"PRAGMA table_info({table})")
-            )
+            result = conn.execute(text(f"PRAGMA table_info({table})"))
             existing = [row[1] for row in result.fetchall()]
             if column not in existing:
-                conn.execute(text(
-                    f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
-                ))
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                 conn.commit()
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/downloads", StaticFiles(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_downloads")), name="downloads")
+app.mount("/downloads", StaticFiles(directory=DOWNLOADS_DIR), name="downloads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,12 +88,16 @@ def get_session():
 
 
 async def _run_job_with_logging(
-    job_id: int, 
+    job_id: int,
     target_url: str,
     scrape_mode: str = "single",
-    max_pages: int = 50,
-    delay_min: float = 1.5,
-    delay_max: float = 4.5,
+    max_pages: int = 0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
     large_threshold: int = 20,
     large_pause_sec: int = 120,
 ):
@@ -107,11 +111,36 @@ async def _run_job_with_logging(
 
     from modules.scrapers.engine import run_scrape_job
     try:
-        await run_scrape_job(job_id, target_url, engine, scrape_mode, max_pages, delay_min, delay_max, large_threshold, large_pause_sec)
+        await run_scrape_job(
+            job_id,
+            target_url,
+            engine,
+            scrape_mode,
+            max_pages,
+            delay_min,
+            delay_max,
+            session_min,
+            session_max,
+            cooldown_min,
+            cooldown_max,
+            large_threshold,
+            large_pause_sec,
+        )
     finally:
         root_logger.removeHandler(handler)
         # Signal SSE consumers that this job stream is finished
         await job_log_queues[job_id].put(_DONE_SENTINEL)
+
+
+def _normalize_target_url(url: str) -> str:
+    url = url.strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc.lower()
+    path = parsed.path.rstrip("/")
+    return f"{scheme}://{netloc}{path}"
 
 
 @app.post("/api/jobs")
@@ -119,25 +148,82 @@ def create_job(
     target_url: str,
     background_tasks: BackgroundTasks,
     scrape_mode: str = "single",
-    max_pages: int = 50,
-    delay_min: float = 1.5,
-    delay_max: float = 4.5,
+    max_pages: int = 0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
     large_threshold: int = 20,
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
+    if scrape_mode == "sitemap":
+        norm_target = _normalize_target_url(target_url)
+        existing_jobs = session.exec(
+            select(ScrapeJob).where(ScrapeJob.scrape_mode == "sitemap")
+        ).all()
+        existing = None
+        for j in existing_jobs:
+            if _normalize_target_url(j.target_url) == norm_target:
+                existing = j
+                break
+
+        if existing:
+            if existing.status == "running":
+                return {"job_id": existing.id, "status": "already_running"}
+
+            # Restore existing job
+            failed_pages = session.exec(
+                select(Page).where(Page.job_id == existing.id, Page.status == "failed")
+            ).all()
+            for p in failed_pages:
+                p.status = "pending"
+                session.add(p)
+
+            existing.status = "running"
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            background_tasks.add_task(
+                _run_job_with_logging,
+                existing.id,
+                existing.target_url,
+                scrape_mode,
+                max_pages,
+                delay_min,
+                delay_max,
+                session_min,
+                session_max,
+                cooldown_min,
+                cooldown_max,
+                large_threshold,
+                large_pause_sec,
+            )
+            return {"job_id": existing.id, "status": "restored"}
+
     job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
     session.add(job)
     session.commit()
     session.refresh(job)
-
     background_tasks.add_task(
         _run_job_with_logging,
-        job.id, target_url,
-        scrape_mode, max_pages, delay_min, delay_max,
-        large_threshold, large_pause_sec,
+        job.id,
+        target_url,
+        scrape_mode,
+        max_pages,
+        delay_min,
+        delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
+        large_threshold,
+        large_pause_sec,
     )
     return {"job_id": job.id, "status": "started"}
+
 
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: int, session: Session = Depends(get_session)):
@@ -146,7 +232,6 @@ def get_job(job_id: int, session: Session = Depends(get_session)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
-
 
 
 @app.get("/api/jobs/{job_id}/logs")
@@ -203,6 +288,63 @@ def cancel_job(job_id: int, session: Session = Depends(get_session)):
     return {"status": "cancelled"}
 
 
+@app.post("/api/jobs/{job_id}/pause")
+def pause_job(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        return {"status": "not found"}
+    if job.status == "running":
+        job.status = "paused"
+        session.commit()
+    return {"status": "paused"}
+
+
+@app.post("/api/jobs/{job_id}/resume")
+def resume_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session: Session = Depends(get_session),
+):
+    from fastapi import HTTPException
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status == "running":
+        raise HTTPException(status_code=400, detail="Job is already running")
+
+    failed_pages = session.exec(
+        select(Page).where(Page.job_id == job_id, Page.status == "failed")
+    ).all()
+    for p in failed_pages:
+        p.status = "pending"
+        session.add(p)
+
+    job.status = "running"
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    max_pages = max(0, job.total_pages or 0)
+    background_tasks.add_task(
+        _run_job_with_logging,
+        job.id,
+        job.target_url,
+        job.scrape_mode,
+        max_pages,
+        delay_min,
+        delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
+    )
+    return {"status": "resumed"}
 @app.delete("/api/jobs/{job_id}")
 async def delete_job(job_id: int, session: Session = Depends(get_session)):
     job = session.get(ScrapeJob, job_id)
@@ -220,20 +362,21 @@ async def delete_job(job_id: int, session: Session = Depends(get_session)):
     job_log_queues.pop(job_id, None)
 
     # 2. Determine folder to delete (Sitemap jobs use a predictable folder name)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     domain = urlparse(job.target_url).netloc.replace(".", "_")
-    folder_to_delete = os.path.join(base_dir, "_downloads", f"job_{job_id}_{domain}")
+    folder_to_delete = os.path.join(DOWNLOADS_DIR, f"job_{job_id}_{domain}")
 
     # Fallback to checking page paths for single page scrapes
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
         if not os.path.exists(folder_to_delete):
             path = page.markdown_path or page.screenshot_path
-            if path and "../_downloads/" in path:
+            if path and "_downloads/" in path:
                 parts = path.split("/")
-                if len(parts) >= 3:
-                    folder_name = parts[2]
-                    folder_to_delete = os.path.join(base_dir, "_downloads", folder_name)
+                if "_downloads" in parts:
+                    idx = parts.index("_downloads")
+                    if idx + 1 < len(parts):
+                        folder_name = parts[idx + 1]
+                        folder_to_delete = os.path.join(DOWNLOADS_DIR, folder_name)
         session.delete(page)
 
     if os.path.exists(folder_to_delete):
