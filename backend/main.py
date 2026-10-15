@@ -55,6 +55,7 @@ def _migrate_db(engine) -> None:
         ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
         ("page",      "hreflang",      "TEXT"),
         ("page",      "lastmod",       "TEXT"),
+        ("page",      "content_type",  "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:

@@ -24,6 +24,7 @@ class Page(SQLModel, table=True):
     url_depth: int = Field(default=0)                # depth in URL hierarchy
     hreflang: Optional[str] = None                   # e.g. "it", "en", "de", "fr"
     lastmod: Optional[str] = None                    # e.g. "2026-08-31T15:16:29+00:00"
+    content_type: Optional[str] = None               # e.g. "blog", "experiences", "pages"
     job: Optional[ScrapeJob] = Relationship(back_populates="pages")
     media_items: List["MediaItem"] = Relationship(back_populates="page")
 

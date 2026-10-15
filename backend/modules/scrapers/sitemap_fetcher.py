@@ -16,9 +16,58 @@ class SitemapEntry:
     url: str
     lastmod: Optional[str] = None
     hreflang: Optional[str] = None
+    content_type: Optional[str] = None
 
     def __str__(self):
         return self.url
+
+
+def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
+    parsed = urlparse(url)
+    path = parsed.path.lower().strip("/")
+    segments = path.split("/")
+
+    # Strip language prefix if present (it, en, de, fr, etc.)
+    if segments and re.match(r"^[a-z]{2}(-[a-z]{2})?$", segments[0]):
+        segments = segments[1:]
+
+    if not segments or segments == [""]:
+        return "pages"
+
+    first_seg = segments[0]
+
+    # Canonical content type mappings
+    if first_seg in ("blog", "post", "posts", "articoli", "artikel", "actualites"):
+        return "blog"
+    if first_seg in ("experiences", "esperienze", "erlebnisse", "erlebnis", "activities", "attivita"):
+        return "experiences"
+    if first_seg in ("news", "notizie", "neuigkeiten"):
+        return "news"
+    if first_seg in ("events", "eventi", "evenements", "veranstaltungen"):
+        return "events"
+    if first_seg in ("products", "prodotti", "produkte", "shop", "negozio"):
+        return "products"
+    if first_seg in ("rooms", "camere", "zimmer", "chambres"):
+        return "rooms"
+    if first_seg in ("services", "servizi", "leistungen"):
+        return "services"
+
+    # Fallback to child sitemap name hint if available
+    if sitemap_hint:
+        hint = sitemap_hint.lower()
+        if "post" in hint:
+            return "blog"
+        if "page" in hint:
+            return "pages"
+        clean_hint = re.sub(r"[-_]sitemap(\d+)?(\.xml)?", "", hint)
+        if clean_hint:
+            return clean_hint
+
+    # Multi-segment fallback (first directory is the category/type)
+    if len(segments) > 1 and first_seg:
+        return re.sub(r"[^a-zA-Z0-9_\-]", "", first_seg).lower()
+
+    return "pages"
 
 COMMON_PATHS = [
     # Standard
@@ -113,7 +162,7 @@ async def _fetch(url: str, session: requests.Session) -> bytes | None:
     return None
 
 
-def _extract_sitemap_entries(content: bytes) -> tuple[bool, list[SitemapEntry]]:
+def _extract_sitemap_entries(content: bytes, sitemap_hint: Optional[str] = None) -> tuple[bool, list[SitemapEntry]]:
     """
     Extract (is_index, entries) from content (XML or HTML).
     Handles:
@@ -173,14 +222,24 @@ def _extract_sitemap_entries(content: bytes) -> tuple[bool, list[SitemapEntry]]:
                     if match:
                         hreflang = match.group(1)
 
-                page_entries.append(SitemapEntry(url=url, lastmod=lastmod, hreflang=hreflang))
+                page_entries.append(SitemapEntry(
+                    url=url,
+                    lastmod=lastmod,
+                    hreflang=hreflang,
+                    content_type=determine_content_type(url, sitemap_hint)
+                ))
             if page_entries:
                 return False, page_entries
 
         all_locs = [u.strip() for u in root.xpath("//*[local-name()='loc']/text()") if u.strip()]
         if all_locs:
             is_index = "index" in root.tag.lower() or bool(sitemap_nodes)
-            return is_index, [SitemapEntry(url=u) for u in all_locs]
+            return is_index, [
+                SitemapEntry(
+                    url=u,
+                    content_type=determine_content_type(u, sitemap_hint) if not is_index else None
+                ) for u in all_locs
+            ]
     except Exception:
         pass
 
@@ -223,7 +282,12 @@ def _extract_sitemap_entries(content: bytes) -> tuple[bool, list[SitemapEntry]]:
                     parsed_path = urlparse(h).path
                     match = re.match(r"^/([a-z]{2})(/|$)", parsed_path.lower())
                     hreflang = match.group(1) if match else None
-                    page_entries.append(SitemapEntry(url=h, lastmod=lastmod, hreflang=hreflang))
+                    page_entries.append(SitemapEntry(
+                        url=h,
+                        lastmod=lastmod,
+                        hreflang=hreflang,
+                        content_type=determine_content_type(h, sitemap_hint)
+                    ))
 
             if child_sitemaps:
                 return True, child_sitemaps
@@ -237,7 +301,12 @@ def _extract_sitemap_entries(content: bytes) -> tuple[bool, list[SitemapEntry]]:
     loc_matches = [m.strip() for m in re.findall(r'<loc>\s*(https?://[^\s<]+)\s*</loc>', content_str, re.IGNORECASE) if m.strip()]
     if loc_matches:
         is_index = "<sitemap>" in content_str.lower() or "sitemapindex" in content_str.lower()
-        return is_index, [SitemapEntry(url=u) for u in loc_matches]
+        return is_index, [
+            SitemapEntry(
+                url=u,
+                content_type=determine_content_type(u, sitemap_hint) if not is_index else None
+            ) for u in loc_matches
+        ]
 
     return False, []
 
@@ -310,15 +379,16 @@ async def discover_sitemap_urls(
         if direct_content:
             try:
                 direct_entries: list[SitemapEntry] = []
-                is_index, extracted = _extract_sitemap_entries(direct_content)
+                is_index, extracted = _extract_sitemap_entries(direct_content, sitemap_hint=os.path.basename(base_url))
                 if is_index and extracted:
                     for ce in extracted:
                         cu = urljoin(origin, ce.url)
                         child = await _fetch(cu, session)
                         if child:
-                            _, child_entries = _extract_sitemap_entries(child)
+                            _, child_entries = _extract_sitemap_entries(child, sitemap_hint=os.path.basename(cu))
                             for che in child_entries:
                                 che.url = urljoin(origin, che.url)
+                                che.content_type = determine_content_type(che.url, sitemap_hint=os.path.basename(cu))
                                 direct_entries.append(che)
                         if len(direct_entries) >= max_pages:
                             break
@@ -389,7 +459,7 @@ async def discover_sitemap_urls(
         if not content:
             continue
         try:
-            is_index, extracted = _extract_sitemap_entries(content)
+            is_index, extracted = _extract_sitemap_entries(content, sitemap_hint=os.path.basename(sitemap_url))
             if is_index and extracted:
                 used_is_index = True
                 # Sitemap index: expand child sitemaps
@@ -397,9 +467,10 @@ async def discover_sitemap_urls(
                     cu = urljoin(origin, ce.url)
                     child = await _fetch(cu, session)
                     if child:
-                        _, child_entries = _extract_sitemap_entries(child)
+                        _, child_entries = _extract_sitemap_entries(child, sitemap_hint=os.path.basename(cu))
                         for che in child_entries:
                             che.url = urljoin(origin, che.url)
+                            che.content_type = determine_content_type(che.url, sitemap_hint=os.path.basename(cu))
                             all_entries.append(che)
                     if len(all_entries) >= max_pages:
                         break

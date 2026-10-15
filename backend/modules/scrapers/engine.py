@@ -14,6 +14,7 @@ from sqlmodel import Session
 from database.models import Page
 from modules.config import DOWNLOADS_DIR, BACKEND_DIR, PROJECT_ROOT
 from .fetcher import fetch_url_with_browser
+from .sitemap_fetcher import determine_content_type
 from modules.parsers.markdown_converter import convert_content_to_markdown
 from modules.utils.text_utils import sanitize_filename
 
@@ -122,7 +123,8 @@ async def scrape_page(
     db_engine,
     job_dir_name: str = None,
     sitemap_hreflang: str = None,
-    sitemap_lastmod: str = None
+    sitemap_lastmod: str = None,
+    sitemap_content_type: str = None
 ):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
@@ -179,49 +181,40 @@ async def scrape_page(
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
-    # Determine page hreflang
+    # Determine page hreflang and content_type
     hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
+    content_type = sitemap_content_type or determine_content_type(url)
 
     if job_dir_name:
         images_dir = os.path.join(job_dir, "_images")
-        if hreflang:
-            lang_dir = os.path.join(job_dir, hreflang)
-            os.makedirs(lang_dir, exist_ok=True)
-            page_dir = os.path.join(lang_dir, safe_title)
-            if os.path.exists(page_dir):
-                existing_meta = os.path.join(page_dir, "metadata.csv")
-                if os.path.exists(existing_meta):
-                    try:
-                        with open(existing_meta, "r", encoding="utf-8") as f:
-                            if url not in f.read():
-                                url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
-                                page_dir = os.path.join(lang_dir, f"{safe_title}_{url_suffix}")
-                    except Exception:
-                        pass
-            folder_page_name = os.path.basename(page_dir)
-            img_rel_prefix = "../../_images"
-            db_markdown_path = f"../_downloads/{folder_name}/{hreflang}/{folder_page_name}/{safe_title}.md"
-        else:
-            page_dir = os.path.join(job_dir, safe_title)
-            if os.path.exists(page_dir):
-                existing_meta = os.path.join(page_dir, "metadata.csv")
-                if os.path.exists(existing_meta):
-                    try:
-                        with open(existing_meta, "r", encoding="utf-8") as f:
-                            if url not in f.read():
-                                url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
-                                page_dir = os.path.join(job_dir, f"{safe_title}_{url_suffix}")
-                    except Exception:
-                        pass
-            folder_page_name = os.path.basename(page_dir)
-            img_rel_prefix = "../_images"
-            db_markdown_path = f"../_downloads/{folder_name}/{folder_page_name}/{safe_title}.md"
+        lang_code = hreflang or "default"
+        lang_dir = os.path.join(job_dir, lang_code)
+        type_dir = os.path.join(lang_dir, content_type)
+        os.makedirs(type_dir, exist_ok=True)
+
+        page_dir = os.path.join(type_dir, safe_title)
+        if os.path.exists(page_dir):
+            existing_meta = os.path.join(page_dir, "metadata.csv")
+            if os.path.exists(existing_meta):
+                try:
+                    with open(existing_meta, "r", encoding="utf-8") as f:
+                        if url not in f.read():
+                            url_suffix = sanitize_filename(urlparse(url).path.strip("/").replace("/", "_")) or str(int(time.time()))
+                            page_dir = os.path.join(type_dir, f"{safe_title}_{url_suffix}")
+                except Exception:
+                    pass
+
+        folder_page_name = os.path.basename(page_dir)
+        img_rel_prefix = "../../../_images"
+        db_markdown_path = f"../_downloads/{folder_name}/{lang_code}/{content_type}/{folder_page_name}/{safe_title}.md"
+        db_screenshot_path = f"../_downloads/{folder_name}/{lang_code}/{content_type}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
     else:
         images_dir = os.path.join(job_dir, "images")
         page_dir = job_dir
         folder_page_name = ""
         img_rel_prefix = "images"
         db_markdown_path = f"../_downloads/{folder_name}/{safe_title}.md"
+        db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
 
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(page_dir, exist_ok=True)
@@ -231,14 +224,11 @@ async def scrape_page(
         new_screenshot_path = os.path.join(page_dir, final_screenshot_name)
         os.rename(screenshot_path, new_screenshot_path)
         screenshot_path = new_screenshot_path
-
-    if job_dir_name:
-        if hreflang:
-            db_screenshot_path = f"../_downloads/{folder_name}/{hreflang}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+        if job_dir_name:
+            db_screenshot_path = f"../_downloads/{folder_name}/{lang_code}/{content_type}/{folder_page_name}/{final_screenshot_name}"
         else:
-            db_screenshot_path = f"../_downloads/{folder_name}/{folder_page_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
-    else:
-        db_screenshot_path = f"../_downloads/{folder_name}/{os.path.basename(screenshot_path)}" if screenshot_path else ""
+            db_screenshot_path = f"../_downloads/{folder_name}/{final_screenshot_name}"
+
 
     metadata = {
         "URL": url,
@@ -418,6 +408,7 @@ async def scrape_page(
         page.url_path = urlparse(url).path or "/"
         page.url_depth = len([p for p in urlparse(url).path.split("/") if p])
         page.status = "completed"
+        page.content_type = content_type
         if hreflang:
             page.hreflang = hreflang
         if sitemap_lastmod:
@@ -527,6 +518,7 @@ async def run_scrape_job(
                             status="pending",
                             hreflang=entry.hreflang,
                             lastmod=entry.lastmod,
+                            content_type=entry.content_type,
                         )
                         s.add(p)
                         pages_by_url[u] = p
@@ -534,6 +526,8 @@ async def run_scrape_job(
                         p = pages_by_url[u]
                         if entry.hreflang and not p.hreflang:
                             p.hreflang = entry.hreflang
+                        if entry.content_type and not p.content_type:
+                            p.content_type = entry.content_type
 
                         # Incremental scrape logic
                         if p.status == "completed":
@@ -576,6 +570,7 @@ async def run_scrape_job(
                         "url": p.url,
                         "hreflang": p.hreflang,
                         "lastmod": p.lastmod,
+                        "content_type": p.content_type,
                     }
                     for p in all_pages
                     if p.status == "pending"
@@ -618,7 +613,8 @@ async def run_scrape_job(
                         db_engine,
                         job_dir_name=job_dir_name,
                         sitemap_hreflang=item["hreflang"],
-                        sitemap_lastmod=item["lastmod"]
+                        sitemap_lastmod=item["lastmod"],
+                        sitemap_content_type=item.get("content_type")
                     )
                 except Exception as e:
                     logging.error(f"[Job {job_id}] Error scraping page {url}: {e}")
