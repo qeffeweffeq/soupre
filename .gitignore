@@ -5,7 +5,9 @@
 
 .DS_Store
 _downloads/
-no-db-man/
+no-db-man
+dom-raider
+websoup
 
 
 # Python
