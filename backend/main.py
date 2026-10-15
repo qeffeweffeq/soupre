@@ -91,9 +91,13 @@ async def _run_job_with_logging(
     job_id: int,
     target_url: str,
     scrape_mode: str = "single",
-    max_pages: int = 50,
-    delay_min: float = 1.5,
-    delay_max: float = 4.5,
+    max_pages: int = 0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
     large_threshold: int = 20,
     large_pause_sec: int = 120,
 ):
@@ -115,6 +119,10 @@ async def _run_job_with_logging(
             max_pages,
             delay_min,
             delay_max,
+            session_min,
+            session_max,
+            cooldown_min,
+            cooldown_max,
             large_threshold,
             large_pause_sec,
         )
@@ -140,9 +148,13 @@ def create_job(
     target_url: str,
     background_tasks: BackgroundTasks,
     scrape_mode: str = "single",
-    max_pages: int = 50,
-    delay_min: float = 1.5,
-    delay_max: float = 4.5,
+    max_pages: int = 0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
     large_threshold: int = 20,
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
@@ -182,6 +194,10 @@ def create_job(
                 max_pages,
                 delay_min,
                 delay_max,
+                session_min,
+                session_max,
+                cooldown_min,
+                cooldown_max,
                 large_threshold,
                 large_pause_sec,
             )
@@ -199,6 +215,10 @@ def create_job(
         max_pages,
         delay_min,
         delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
         large_threshold,
         large_pause_sec,
     )
@@ -280,7 +300,17 @@ def pause_job(job_id: int, session: Session = Depends(get_session)):
 
 
 @app.post("/api/jobs/{job_id}/resume")
-def resume_job(job_id: int, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+def resume_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session: Session = Depends(get_session),
+):
     from fastapi import HTTPException
     job = session.get(ScrapeJob, job_id)
     if not job:
@@ -300,13 +330,19 @@ def resume_job(job_id: int, background_tasks: BackgroundTasks, session: Session 
     session.commit()
     session.refresh(job)
 
-    max_pages = max(50, job.total_pages or 50)
+    max_pages = max(0, job.total_pages or 0)
     background_tasks.add_task(
         _run_job_with_logging,
         job.id,
         job.target_url,
         job.scrape_mode,
         max_pages,
+        delay_min,
+        delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
     )
     return {"status": "resumed"}
 @app.delete("/api/jobs/{job_id}")

@@ -235,6 +235,7 @@ async def scrape_page(
         "Title": page_title,
         "Description": "",
         "Keywords": "",
+        "Sitemap Last Modified": sitemap_lastmod or "",
         "Scraped At": datetime.now().isoformat()
     }
     desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", property="og:description")
@@ -430,9 +431,13 @@ async def run_scrape_job(
     target_url: str,
     db_engine,
     scrape_mode: str = "single",
-    max_pages: int = 50,
-    delay_min: float = 1.5,
-    delay_max: float = 4.5,
+    max_pages: int = 0,
+    delay_min: float = 60.0,       # 1 min default
+    delay_max: float = 120.0,      # 2 min default
+    session_min: int = 30,         # 30 pages min per session
+    session_max: int = 50,         # 50 pages max per session
+    cooldown_min: float = 180.0,   # 3 min default (180s)
+    cooldown_max: float = 300.0,   # 5 min default (300s)
     large_threshold: int = 20,
     large_pause_sec: int = 120,
 ):
@@ -564,17 +569,6 @@ async def run_scrape_job(
 
                 all_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 completed_pages = [p for p in all_pages if p.status == "completed"]
-                pending_items = [
-                    {
-                        "id": p.id,
-                        "url": p.url,
-                        "hreflang": p.hreflang,
-                        "lastmod": p.lastmod,
-                        "content_type": p.content_type,
-                    }
-                    for p in all_pages
-                    if p.status == "pending"
-                ]
 
                 job = s.get(ScrapeJob, job_id)
                 if job:
@@ -585,54 +579,103 @@ async def run_scrape_job(
 
                 logging.info(
                     f"[Job {job_id}] Total pages: {len(all_pages)}, "
-                    f"Already completed: {len(completed_pages)}, "
-                    f"Pending to scrape: {len(pending_items)}"
+                    f"Already completed: {len(completed_pages)}"
                 )
 
-            for i, item in enumerate(pending_items):
-                url = item["url"]
+            while True:
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
                     if not job or job.status in ("cancelled", "paused"):
-                        logging.info(f"[Job {job_id}] Job {getattr(job, 'status', 'deleted')}. Stopping loop.")
+                        logging.info(f"[Job {job_id}] Job {getattr(job, 'status', 'stopped')}. Stopping loop.")
                         break
+                    all_pending = s.exec(
+                        select(Page)
+                        .where(Page.job_id == job_id, Page.status == "pending")
+                        .order_by(Page.id.asc())
+                    ).all()
+                    pending_items = [
+                        {
+                            "id": p.id,
+                            "url": p.url,
+                            "hreflang": p.hreflang,
+                            "lastmod": p.lastmod,
+                            "content_type": p.content_type,
+                        }
+                        for p in all_pending
+                    ]
 
-                if i > 0 and i % large_threshold == 0 and large_pause_sec > 0:
-                    logging.info(
-                        f"[Job {job_id}] Large-sitemap pause: {large_pause_sec}s after {i} pages"
-                    )
-                    await asyncio.sleep(large_pause_sec)
-                else:
-                    delay = round(random.uniform(delay_min, delay_max), 2)
-                    await asyncio.sleep(delay)
-
-                try:
-                    await scrape_page(
-                        url,
-                        job_id,
-                        db_engine,
-                        job_dir_name=job_dir_name,
-                        sitemap_hreflang=item["hreflang"],
-                        sitemap_lastmod=item["lastmod"],
-                        sitemap_content_type=item.get("content_type")
-                    )
-                except Exception as e:
-                    logging.error(f"[Job {job_id}] Error scraping page {url}: {e}")
+                if not pending_items:
                     with Session(db_engine) as s:
-                        page = s.exec(select(Page).where(Page.job_id == job_id, Page.url == url)).first()
-                        if page:
-                            page.status = "failed"
+                        job = s.get(ScrapeJob, job_id)
+                        if job and job.status not in ("cancelled", "paused"):
+                            job.status = "completed"
                             s.commit()
+                    break
 
+                # Pick randomized session size between session_min and session_max (30 to 50 pages, never exceeding 50)
+                actual_max = min(50, session_max)
+                actual_min = min(session_min, actual_max)
+                session_size = min(len(pending_items), random.randint(actual_min, actual_max))
+                current_session = pending_items[:session_size]
+
+                logging.info(f"[Job {job_id}] Starting session of {session_size} pages ({len(pending_items)} total pending)...")
+
+                for idx, item in enumerate(current_session):
+                    with Session(db_engine) as s:
+                        job = s.get(ScrapeJob, job_id)
+                        if not job or job.status in ("cancelled", "paused"):
+                            break
+
+                    page_delay = round(random.uniform(delay_min, delay_max), 1)
+                    logging.info(f"[Job {job_id}] Human-like delay: {page_delay}s ({page_delay/60:.2f}m) before scraping page {idx + 1}/{session_size}: {item['url']}...")
+                    await asyncio.sleep(page_delay)
+
+                    try:
+                        await scrape_page(
+                            item["url"],
+                            job_id,
+                            db_engine,
+                            job_dir_name=job_dir_name,
+                            sitemap_hreflang=item["hreflang"],
+                            sitemap_lastmod=item["lastmod"],
+                            sitemap_content_type=item["content_type"]
+                        )
+                    except Exception as e:
+                        logging.error(f"[Job {job_id}] Error scraping page {item['url']}: {e}")
+                        with Session(db_engine) as s:
+                            p = s.get(Page, item["id"])
+                            if p:
+                                p.status = "failed"
+                                s.commit()
+
+                    with Session(db_engine) as s:
+                        job = s.get(ScrapeJob, job_id)
+                        if not job or job.status in ("cancelled", "paused"):
+                            break
+                        completed_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status.in_(["completed", "failed"]))).all())
+                        job.scraped_pages = completed_count
+                        s.commit()
+
+                # After session finishes, check remaining pending pages
                 with Session(db_engine) as s:
                     job = s.get(ScrapeJob, job_id)
                     if not job or job.status in ("cancelled", "paused"):
-                        logging.info(f"[Job {job_id}] Job {getattr(job, 'status', 'deleted')}. Stopping loop.")
                         break
-                    completed_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status.in_(["completed", "failed"]))).all())
-                    job.status = "running"
-                    job.scraped_pages = completed_count
-                    s.commit()
+                    rem_count = len(s.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all())
+
+                if rem_count > 0:
+                    # Random cooldown between 3 and 5 minutes (180s to 300s)
+                    cooldown_sec = round(random.uniform(cooldown_min, cooldown_max), 1)
+                    cooldown_min_disp = cooldown_sec / 60.0
+                    logging.info(f"[Job {job_id}] Session completed ({session_size} pages). Cooling down for {cooldown_sec}s ({cooldown_min_disp:.1f} minutes). Will auto-resume next session...")
+                    slept = 0.0
+                    while slept < cooldown_sec:
+                        await asyncio.sleep(2.0)
+                        slept += 2.0
+                        with Session(db_engine) as s:
+                            job = s.get(ScrapeJob, job_id)
+                            if not job or job.status in ("cancelled", "paused"):
+                                break
         else:
             await scrape_page(target_url, job_id, db_engine)
 

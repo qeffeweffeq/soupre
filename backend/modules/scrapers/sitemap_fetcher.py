@@ -37,6 +37,10 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
     first_seg = segments[0]
 
     # Canonical content type mappings
+    if first_seg in ("category", "categories", "categoria", "categorie"):
+        return "categories"
+    if first_seg in ("tag", "tags"):
+        return "tags"
     if first_seg in ("blog", "post", "posts", "articoli", "artikel", "actualites"):
         return "blog"
     if first_seg in ("experiences", "esperienze", "erlebnisse", "erlebnis", "activities", "attivita"):
@@ -55,6 +59,10 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
     # Fallback to child sitemap name hint if available
     if sitemap_hint:
         hint = sitemap_hint.lower()
+        if any(w in hint for w in ("category", "categories", "categoria", "categorie")):
+            return "categories"
+        if any(w in hint for w in ("tag", "tags")):
+            return "tags"
         if "post" in hint:
             return "blog"
         if "page" in hint:
@@ -348,14 +356,14 @@ def generate_sitemap_xml(entries: list[SitemapEntry]) -> str:
 async def discover_sitemap_urls(
     base_url: str,
     job_dir: str,
-    max_pages: int = 50,
+    max_pages: int = 0,
     cookies: list[dict] | None = None
 ) -> list[SitemapEntry]:
     """
     Discover all page URLs from base_url's sitemap.
     Strategy: robots.txt Sitemap: directive → common paths → fail gracefully.
-    Guaranteed to save valid sitemap XML to {job_dir}/sitemap.xml.
-    Returns up to max_pages same-domain SitemapEntry objects, or [] if no sitemap found.
+    Guaranteed to save valid sitemap XML containing all unique URLs to {job_dir}/sitemap.xml.
+    Returns all discovered same-domain SitemapEntry objects, or [] if no sitemap found.
     """
     session = requests.Session()
     session.headers.update({
@@ -390,15 +398,13 @@ async def discover_sitemap_urls(
                                 che.url = urljoin(origin, che.url)
                                 che.content_type = determine_content_type(che.url, sitemap_hint=os.path.basename(cu))
                                 direct_entries.append(che)
-                        if len(direct_entries) >= max_pages:
-                            break
                 elif not is_index and extracted:
                     for pe in extracted:
                         pe.url = urljoin(origin, pe.url)
                         direct_entries.append(pe)
 
                 if direct_entries:
-                    # Deduplicate, same-domain filter, cap
+                    # Deduplicate, same-domain filter
                     seen: set[str] = set()
                     result: list[SitemapEntry] = []
                     for entry in direct_entries:
@@ -410,8 +416,6 @@ async def discover_sitemap_urls(
                         if url not in seen and parsed_url.netloc == parsed.netloc:
                             seen.add(url)
                             result.append(entry)
-                        if len(result) >= max_pages:
-                            break
 
                     # Save sitemap to disk
                     if job_dir:
@@ -472,8 +476,6 @@ async def discover_sitemap_urls(
                             che.url = urljoin(origin, che.url)
                             che.content_type = determine_content_type(che.url, sitemap_hint=os.path.basename(cu))
                             all_entries.append(che)
-                    if len(all_entries) >= max_pages:
-                        break
                 if all_entries:
                     raw_xml = content
                     sitemap_url_used = sitemap_url
@@ -491,7 +493,7 @@ async def discover_sitemap_urls(
         except Exception as e:
             logger.warning(f"[Sitemap] Parse error for {sitemap_url}: {e}")
 
-    # Deduplicate, same-domain filter, cap at max_pages
+    # Deduplicate, same-domain filter
     seen: set[str] = set()
     result: list[SitemapEntry] = []
     for entry in all_entries:
@@ -503,8 +505,6 @@ async def discover_sitemap_urls(
         if url not in seen and parsed_url.netloc == parsed.netloc:
             seen.add(url)
             result.append(entry)
-        if len(result) >= max_pages:
-            break
 
     # Guaranteed sitemap.xml saved to job_dir
     if job_dir:
