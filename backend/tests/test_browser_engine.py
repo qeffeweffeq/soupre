@@ -93,3 +93,33 @@ async def test_fetch_url_with_browser(tmp_path):
     assert os.path.exists(target_screenshot)
     assert os.path.getsize(target_screenshot) > 0
     assert isinstance(cookies, list)
+
+
+@pytest.mark.asyncio
+async def test_wait_for_preloaders_and_dismiss_consent():
+    """Verify dismiss_consent_banners and wait_for_preloaders_to_hide remove overlays."""
+    from modules.scrapers.fetcher import dismiss_consent_banners, wait_for_preloaders_to_hide
+    async with get_browser(headless=True) as session:
+        context = await session.create_context()
+        page = await session.new_page(context=context)
+        html = """
+        <html>
+          <body>
+            <button id="CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll" onclick="this.remove()">Accept All</button>
+            <div class="blocco-loader" style="opacity: 0.98;">Loading...</div>
+          </body>
+        </html>
+        """
+        await page.set_content(html)
+        await dismiss_consent_banners(page)
+        # Cookie banner should have been clicked and removed
+        btn_count = await page.locator("#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll").count()
+        assert btn_count == 0
+
+        await wait_for_preloaders_to_hide(page)
+        preloader_display = await page.evaluate("() => document.querySelector('.blocco-loader').style.display")
+        assert preloader_display == "none"
+
+        await page.close()
+        await context.close()
+
