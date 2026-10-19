@@ -10,6 +10,74 @@ from .browser_engine import get_browser
 # Initialize logging
 logger = logging.getLogger(__name__)
 
+PRELOADER_SELECTORS = [
+    ".blocco-loader",
+    "[class*='preloader' i]",
+    "[id*='preloader' i]",
+    "[class*='loader-overlay' i]",
+    "[class*='splash-screen' i]",
+    ".loading-mask",
+    ".page-loader",
+]
+
+CONSENT_SELECTORS = [
+    "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll",
+    "#onetrust-accept-btn-handler",
+    "button#accept-all",
+    "button[id*='cookie-accept' i]",
+    "button[class*='cookie-accept' i]",
+    "button[id*='acceptAll' i]",
+    "button[id*='accept-cookies' i]",
+    "button:has-text('Accept all')",
+    "button:has-text('Accetta tutti')",
+    "button:has-text('Allow all')",
+    "button:has-text('Accetta')",
+    "button:has-text('Accept')",
+    "button:has-text('Alle akzeptieren')",
+    "button:has-text('Tout accepter')",
+]
+
+
+async def dismiss_consent_banners(page) -> None:
+    """Attempt to auto-dismiss common cookie consent banners to clear overlays."""
+    for sel in CONSENT_SELECTORS:
+        try:
+            loc = page.locator(sel).first
+            if await loc.is_visible(timeout=400):
+                await loc.click(timeout=1000)
+                logger.info(f"[Browser] Dismissed consent banner with selector '{sel}'")
+                await asyncio.sleep(0.3)
+                break
+        except Exception:
+            pass
+
+
+async def wait_for_preloaders_to_hide(page) -> None:
+    """Wait for preloader / splash screen overlays to hide or detach."""
+    for sel in PRELOADER_SELECTORS:
+        try:
+            loc = page.locator(sel).first
+            if await loc.count() > 0 and await loc.is_visible(timeout=400):
+                logger.info(f"[Browser] Detected active preloader '{sel}', waiting for it to hide...")
+                try:
+                    await loc.wait_for(state="hidden", timeout=6000)
+                    logger.info(f"[Browser] Preloader '{sel}' hidden successfully.")
+                except Exception:
+                    logger.warning(f"[Browser] Preloader '{sel}' still visible after 6s. Force hiding via DOM...")
+                    await page.evaluate(f"""
+                        () => {{
+                            document.querySelectorAll('{sel}').forEach(el => {{
+                                el.style.setProperty('display', 'none', 'important');
+                                el.style.setProperty('opacity', '0', 'important');
+                                el.style.setProperty('visibility', 'hidden', 'important');
+                                el.style.setProperty('pointer-events', 'none', 'important');
+                            }});
+                        }}
+                    """)
+        except Exception:
+            pass
+
+
 async def fetch_url_with_browser(
     url: str,
     take_screenshot: bool = True,
@@ -66,6 +134,11 @@ async def fetch_url_with_browser(
                 
                 # Acquire cookies
                 cookies_list = await context.cookies()
+
+                # Auto-dismiss consent banners & wait for splash preloader overlays to clear
+                await dismiss_consent_banners(page)
+                await wait_for_preloaders_to_hide(page)
+                await asyncio.sleep(1.0)
 
                 # Take screenshot for the UI if requested
                 if take_screenshot:

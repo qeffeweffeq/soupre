@@ -22,58 +22,72 @@ class SitemapEntry:
         return self.url
 
 
+GENERIC_SITEMAP_PATTERNS = re.compile(
+    r"^(sitemap[-_]?(index|\d+)?|index|urllist|sitemap)(\.xml|\.txt)?(\.gz)?$",
+    re.IGNORECASE
+)
+
+
 def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
     parsed = urlparse(url)
     path = parsed.path.lower().strip("/")
-    segments = path.split("/")
+    segments = [s for s in path.split("/") if s]
 
     # Strip language prefix if present (it, en, de, fr, etc.)
     if segments and re.match(r"^[a-z]{2}(-[a-z]{2})?$", segments[0]):
         segments = segments[1:]
 
-    if not segments or segments == [""]:
-        return "pages"
+    first_seg = segments[0] if segments else ""
 
-    first_seg = segments[0]
-
-    # Canonical content type mappings
-    if first_seg in ("category", "categories", "categoria", "categorie"):
-        return "categories"
-    if first_seg in ("tag", "tags"):
-        return "tags"
-    if first_seg in ("blog", "post", "posts", "articoli", "artikel", "actualites"):
-        return "blog"
-    if first_seg in ("experiences", "esperienze", "erlebnisse", "erlebnis", "activities", "attivita"):
-        return "experiences"
-    if first_seg in ("news", "notizie", "neuigkeiten"):
-        return "news"
-    if first_seg in ("events", "eventi", "evenements", "veranstaltungen"):
-        return "events"
-    if first_seg in ("products", "prodotti", "produkte", "shop", "negozio"):
-        return "products"
-    if first_seg in ("rooms", "camere", "zimmer", "chambres"):
-        return "rooms"
-    if first_seg in ("services", "servizi", "leistungen"):
-        return "services"
-
-    # Fallback to child sitemap name hint if available
-    if sitemap_hint:
-        hint = sitemap_hint.lower()
-        if any(w in hint for w in ("category", "categories", "categoria", "categorie")):
+    # Canonical content type mappings based on URL segment
+    if first_seg:
+        if first_seg in ("category", "categories", "categoria", "categorie"):
             return "categories"
-        if any(w in hint for w in ("tag", "tags")):
+        if first_seg in ("tag", "tags"):
             return "tags"
-        if "post" in hint:
+        if first_seg in ("blog", "post", "posts", "articoli", "artikel", "actualites", "news", "notizie", "neuigkeiten"):
             return "blog"
-        if "page" in hint:
-            return "pages"
-        clean_hint = re.sub(r"[-_]sitemap(\d+)?(\.xml)?", "", hint)
-        if clean_hint:
-            return clean_hint
+        if first_seg in ("experiences", "esperienze", "erlebnisse", "erlebnis", "activities", "attivita"):
+            return "experiences"
+        if first_seg in ("events", "eventi", "evenements", "veranstaltungen"):
+            return "events"
+        if first_seg in ("products", "prodotti", "produkte", "shop", "negozio"):
+            return "products"
+        if any(r in first_seg for r in ("room", "camera", "zimmer", "chambre", "suite", "villa")):
+            return "rooms"
+        if any(d in first_seg for d in ("dining", "ristorant", "restaurant", "food", "cuisine")):
+            return "dining"
+        if any(w in first_seg for w in ("spa", "wellness", "benessere")):
+            return "wellness"
+        if first_seg in ("hotel", "hotels", "albergo", "alberghi"):
+            return "hotels"
+        if first_seg in ("offers", "offerte", "angebote"):
+            return "offers"
+        if first_seg in ("services", "servizi", "leistungen"):
+            return "services"
+
+    # Fallback to child sitemap name hint if available and NOT a generic sitemap
+    if sitemap_hint:
+        hint = sitemap_hint.lower().strip()
+        if not GENERIC_SITEMAP_PATTERNS.match(hint) and hint not in ("sitemap", "sitemap.xml", "sitemap_index.xml"):
+            if any(w in hint for w in ("category", "categories", "categoria", "categorie")):
+                return "categories"
+            if any(w in hint for w in ("tag", "tags")):
+                return "tags"
+            if "post" in hint:
+                return "blog"
+            if "page" in hint:
+                return "pages"
+            clean_hint = re.sub(r"^sitemap[-_]?|[-_]sitemap(\d+)?(\.xml(\.gz)?)?$|\.xml(\.gz)?$", "", hint).strip("-_")
+            clean_hint = re.sub(r"[^a-zA-Z0-9_\-]", "", clean_hint).lower()
+            if clean_hint and "sitemap" not in clean_hint:
+                return clean_hint
 
     # Multi-segment fallback (first directory is the category/type)
     if len(segments) > 1 and first_seg:
-        return re.sub(r"[^a-zA-Z0-9_\-]", "", first_seg).lower()
+        candidate = re.sub(r"[^a-zA-Z0-9_\-]", "", first_seg).lower()
+        if candidate and "sitemap" not in candidate:
+            return candidate
 
     return "pages"
 

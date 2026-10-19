@@ -184,6 +184,10 @@ async def scrape_page(
     # Determine page hreflang and content_type
     hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
     content_type = sitemap_content_type or determine_content_type(url)
+    if not content_type or "sitemap" in content_type.lower() or content_type.lower().endswith(".xml"):
+        content_type = determine_content_type(url)
+    if not content_type or "sitemap" in content_type.lower() or content_type.lower().endswith(".xml"):
+        content_type = "pages"
 
     if job_dir_name:
         images_dir = os.path.join(job_dir, "_images")
@@ -515,6 +519,10 @@ async def run_scrape_job(
                     parsed_path = urlparse(u).path
                     depth = len([part for part in (parsed_path or "").split("/") if part])
 
+                    ct = entry.content_type
+                    if not ct or "sitemap" in ct.lower() or ct.lower().endswith(".xml"):
+                        ct = determine_content_type(u)
+
                     if u not in pages_by_url:
                         p = Page(
                             job_id=job_id,
@@ -525,7 +533,7 @@ async def run_scrape_job(
                             status="pending",
                             hreflang=entry.hreflang,
                             lastmod=entry.lastmod,
-                            content_type=entry.content_type,
+                            content_type=ct,
                         )
                         s.add(p)
                         pages_by_url[u] = p
@@ -533,8 +541,8 @@ async def run_scrape_job(
                         p = pages_by_url[u]
                         if entry.hreflang and not p.hreflang:
                             p.hreflang = entry.hreflang
-                        if entry.content_type and not p.content_type:
-                            p.content_type = entry.content_type
+                        if ct and (not p.content_type or "sitemap" in p.content_type.lower()):
+                            p.content_type = ct
 
                         # Incremental scrape logic
                         if p.status == "completed":
