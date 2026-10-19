@@ -9,6 +9,7 @@ class ScrapeJob(SQLModel, table=True):
     scrape_mode: str = Field(default="single")       # "single" | "sitemap"
     total_pages: Optional[int] = Field(default=None)  # total URLs in sitemap
     scraped_pages: int = Field(default=0)              # progress counter
+    log_path: Optional[str] = Field(default=None)      # relative path to job.log
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     pages: List["Page"] = Relationship(back_populates="job")
 

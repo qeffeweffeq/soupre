@@ -18,28 +18,25 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 sqlite_url = "sqlite:////Users/admin/webapps/soupre/soupre.db"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
-# ---------------------------------------------------------------------------
-# Per-job log queues (job_id -> asyncio.Queue of log line strings)
-# ---------------------------------------------------------------------------
-job_log_queues: dict[int, asyncio.Queue] = defaultdict(asyncio.Queue)
-# Sentinel value to signal the SSE stream that the job is done
-_DONE_SENTINEL = "__DONE__"
+from sqlalchemy import event
 
 
-class JobQueueHandler(logging.Handler):
-    """Logging handler that pushes records into the job's async queue."""
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=10000")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
 
-    def __init__(self, job_id: int, loop: asyncio.AbstractEventLoop):
-        super().__init__()
-        self.job_id = job_id
-        self.loop = loop
 
-    def emit(self, record: logging.LogRecord):
-        msg = self.format(record)
-        # Schedule the coroutine-safe put from the background thread
-        asyncio.run_coroutine_threadsafe(
-            job_log_queues[self.job_id].put(msg), self.loop
-        )
+from modules.core.job_logger import (
+    job_log_manager,
+    current_job_id,
+    JobContextFilter,
+    JobLogHandler,
+    DONE_SENTINEL,
+)
 
 
 def _migrate_db(engine) -> None:
@@ -50,6 +47,7 @@ def _migrate_db(engine) -> None:
         ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
         ("scrapejob", "total_pages",   "INTEGER"),
         ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
+        ("scrapejob", "log_path",      "TEXT"),
         ("page",      "url_path",      "TEXT"),
         ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
         ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
@@ -68,6 +66,20 @@ def _migrate_db(engine) -> None:
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     _migrate_db(engine)
+
+    # Initialize job logger event loop
+    loop = asyncio.get_running_loop()
+    job_log_manager.set_event_loop(loop)
+
+    # Attach context filter and job log handler to root logger
+    root_logger = logging.getLogger()
+    job_filter = JobContextFilter()
+    job_handler = JobLogHandler()
+    job_handler.setFormatter(logging.Formatter("%(levelname)s  %(message)s"))
+    job_handler.addFilter(job_filter)
+    root_logger.addFilter(job_filter)
+    root_logger.addHandler(job_handler)
+
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -101,16 +113,10 @@ async def _run_job_with_logging(
     large_threshold: int = 20,
     large_pause_sec: int = 120,
 ):
-    """Wrapper that attaches/detaches the JobQueueHandler around the scrape."""
-    loop = asyncio.get_event_loop()
-    handler = JobQueueHandler(job_id, loop)
-    handler.setFormatter(logging.Formatter("%(levelname)s  %(message)s"))
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(handler)
-
-    from modules.scrapers.engine import run_scrape_job
+    """Wrapper that tracks job_id in contextvars and closes job log streams upon exit."""
+    token = current_job_id.set(job_id)
     try:
+        from modules.scrapers.engine import run_scrape_job
         await run_scrape_job(
             job_id,
             target_url,
@@ -126,10 +132,20 @@ async def _run_job_with_logging(
             large_threshold,
             large_pause_sec,
         )
+    except Exception as e:
+        import logging
+        logging.error(f"Job {job_id} encountered unhandled exception: {e}", exc_info=True)
+        try:
+            with Session(engine) as session:
+                job = session.get(ScrapeJob, job_id)
+                if job and job.status not in ("cancelled", "paused"):
+                    job.status = "failed"
+                    session.commit()
+        except Exception:
+            pass
     finally:
-        root_logger.removeHandler(handler)
-        # Signal SSE consumers that this job stream is finished
-        await job_log_queues[job_id].put(_DONE_SENTINEL)
+        current_job_id.reset(token)
+        await job_log_manager.close_job(job_id)
 
 
 def _normalize_target_url(url: str) -> str:
@@ -235,25 +251,45 @@ def get_job(job_id: int, session: Session = Depends(get_session)):
 
 
 @app.get("/api/jobs/{job_id}/logs")
-async def stream_job_logs(job_id: int):
-    """SSE endpoint: streams log lines for a running job."""
+async def stream_job_logs(job_id: int, session: Session = Depends(get_session)):
+    """SSE endpoint: streams log lines for a job with history replay."""
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    is_active = job.status in ("running", "paused")
+    fallback_path = os.path.join(PROJECT_ROOT, job.log_path) if job.log_path else None
+
     async def event_generator():
-        queue = job_log_queues[job_id]
-        while True:
-            try:
-                line = await asyncio.wait_for(queue.get(), timeout=30)
-            except asyncio.TimeoutError:
-                # Send a keep-alive comment so the connection stays open
-                yield ": keep-alive\n\n"
-                continue
+        history, queue = job_log_manager.subscribe(job_id, fallback_path=fallback_path)
+        try:
+            # 1. Replay past logs
+            for line in history:
+                safe = line.replace("\n", " ").replace("\r", "")
+                yield f"data: {safe}\n\n"
 
-            if line == _DONE_SENTINEL:
-                yield f"data: __DONE__\n\n"
-                break
+            # 2. If job is not active, finish immediately
+            if not is_active:
+                yield f"data: {DONE_SENTINEL}\n\n"
+                return
 
-            # Escape newlines inside the data payload
-            safe = line.replace("\n", " ").replace("\r", "")
-            yield f"data: {safe}\n\n"
+            # 3. Stream live logs
+            while True:
+                try:
+                    line = await asyncio.wait_for(queue.get(), timeout=25)
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+                    continue
+
+                if line == DONE_SENTINEL:
+                    yield f"data: {DONE_SENTINEL}\n\n"
+                    break
+
+                safe = line.replace("\n", " ").replace("\r", "")
+                yield f"data: {safe}\n\n"
+        finally:
+            job_log_manager.unsubscribe(job_id, queue)
 
     return StreamingResponse(
         event_generator(),
@@ -263,6 +299,22 @@ async def stream_job_logs(job_id: int):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/api/jobs/{job_id}/logs/history")
+def get_job_log_history(job_id: int, session: Session = Depends(get_session)):
+    from fastapi import HTTPException
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    fallback_path = os.path.join(PROJECT_ROOT, job.log_path) if job.log_path else None
+    history = job_log_manager.get_history(job_id, fallback_path=fallback_path)
+    return {
+        "job_id": job_id,
+        "status": job.status,
+        "log_path": job.log_path,
+        "logs": history,
+    }
 
 
 @app.get("/api/jobs")
@@ -346,7 +398,11 @@ def resume_job(
     )
     return {"status": "resumed"}
 @app.delete("/api/jobs/{job_id}")
-async def delete_job(job_id: int, session: Session = Depends(get_session)):
+async def delete_job(
+    job_id: int,
+    keep_logs: bool = False,
+    session: Session = Depends(get_session),
+):
     job = session.get(ScrapeJob, job_id)
     if not job:
         return {"status": "not found"}
@@ -355,17 +411,23 @@ async def delete_job(job_id: int, session: Session = Depends(get_session)):
     import os
     from urllib.parse import urlparse
 
-    # 1. Close SSE stream if active
-    queue = job_log_queues.get(job_id)
-    if queue:
-        await queue.put(_DONE_SENTINEL)
-    job_log_queues.pop(job_id, None)
-
-    # 2. Determine folder to delete (Sitemap jobs use a predictable folder name)
+    # 1. Determine folder to delete
     domain = urlparse(job.target_url).netloc.replace(".", "_")
     folder_to_delete = os.path.join(DOWNLOADS_DIR, f"job_{job_id}_{domain}")
+    if job.log_path:
+        rel_dir = os.path.dirname(job.log_path).lstrip("/").lstrip("./")
+        if rel_dir.startswith("_downloads/"):
+            rel_dir = rel_dir.replace("_downloads/", "", 1)
+        folder_to_delete = os.path.join(DOWNLOADS_DIR, rel_dir)
 
-    # Fallback to checking page paths for single page scrapes
+    fallback_path = os.path.join(PROJECT_ROOT, job.log_path) if job.log_path else None
+
+    # 2. Preserve logs if requested
+    if keep_logs:
+        archive_dir = os.path.join(DOWNLOADS_DIR, "_logs")
+        job_log_manager.preserve_log_file(job_id, archive_dir, fallback_path=fallback_path)
+
+    # 3. Clean up database pages and files
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
         if not os.path.exists(folder_to_delete):
@@ -387,4 +449,5 @@ async def delete_job(job_id: int, session: Session = Depends(get_session)):
 
     session.delete(job)
     session.commit()
+    job_log_manager.cleanup_job(job_id)
     return {"status": "deleted"}

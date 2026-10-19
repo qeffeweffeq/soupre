@@ -441,38 +441,45 @@ async def run_scrape_job(
     large_pause_sec: int = 120,
 ):
     try:
+        from modules.core.job_logger import job_log_manager
+        from database.models import ScrapeJob, Page
+        from sqlmodel import select
+
+        domain = urlparse(target_url).netloc.replace(".", "_")
+        job_dir_name = f"job_{job_id}_{domain}"
+        job_dir = os.path.join(DOWNLOADS_DIR, job_dir_name)
+        os.makedirs(job_dir, exist_ok=True)
+        log_file = os.path.join(job_dir, "job.log")
+        job_log_manager.register_job_log_file(job_id, log_file)
+
+        with Session(db_engine) as session:
+            job = session.get(ScrapeJob, job_id)
+            if job:
+                job.status = "running"
+                job.log_path = f"_downloads/{job_dir_name}/job.log"
+                session.commit()
+
+        # Clean up legacy backend/_downloads if it exists
+        legacy_backend_downloads = os.path.join(BACKEND_DIR, "_downloads")
+        if os.path.exists(legacy_backend_downloads):
+            try:
+                import shutil
+                shutil.rmtree(legacy_backend_downloads)
+            except Exception:
+                pass
+
+        # Clean up any stray .png files in DOWNLOADS_DIR root
+        if os.path.exists(DOWNLOADS_DIR):
+            for fname in os.listdir(DOWNLOADS_DIR):
+                if fname.endswith(".png") and os.path.isfile(os.path.join(DOWNLOADS_DIR, fname)):
+                    try:
+                        os.remove(os.path.join(DOWNLOADS_DIR, fname))
+                    except Exception:
+                        pass
+
         if scrape_mode == "sitemap":
             from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry
             from .fetcher import fetch_url_with_browser
-            import logging
-            from urllib.parse import urlparse
-            import os
-
-            from sqlmodel import select
-            from database.models import ScrapeJob, Page
-
-            domain = urlparse(target_url).netloc.replace(".", "_")
-            job_dir_name = f"job_{job_id}_{domain}"
-            job_dir = os.path.join(DOWNLOADS_DIR, job_dir_name)
-            os.makedirs(job_dir, exist_ok=True)
-
-            # Clean up legacy backend/_downloads if it exists
-            legacy_backend_downloads = os.path.join(BACKEND_DIR, "_downloads")
-            if os.path.exists(legacy_backend_downloads):
-                try:
-                    import shutil
-                    shutil.rmtree(legacy_backend_downloads)
-                except Exception:
-                    pass
-
-            # Clean up any stray .png files in DOWNLOADS_DIR root
-            if os.path.exists(DOWNLOADS_DIR):
-                for fname in os.listdir(DOWNLOADS_DIR):
-                    if fname.endswith(".png") and os.path.isfile(os.path.join(DOWNLOADS_DIR, fname)):
-                        try:
-                            os.remove(os.path.join(DOWNLOADS_DIR, fname))
-                        except Exception:
-                            pass
 
             # Clearance cookie acquisition (take_screenshot=False)
             clearance_cookies = None
@@ -680,7 +687,7 @@ async def run_scrape_job(
                             if not job or job.status in ("cancelled", "paused"):
                                 break
         else:
-            await scrape_page(target_url, job_id, db_engine)
+            await scrape_page(target_url, job_id, db_engine, job_dir_name=job_dir_name)
 
         from database.models import ScrapeJob, Page
         with Session(db_engine) as session:
