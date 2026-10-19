@@ -39,15 +39,21 @@ from modules.core.job_logger import (
 )
 
 
+from modules.utils.url_utils import normalize_target_url
+
+
 def _migrate_db(engine) -> None:
-    """Add any new columns to existing SQLite tables (safe, idempotent)."""
+    """Add any new columns to existing SQLite tables (safe, idempotent) and backfill job title/icon."""
     from sqlalchemy import text
     migrations = [
         # (table_name, column_name, column_definition)
+        ("scrapejob", "title",         "TEXT"),
+        ("scrapejob", "icon_url",      "TEXT"),
         ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
         ("scrapejob", "total_pages",   "INTEGER"),
         ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
         ("scrapejob", "log_path",      "TEXT"),
+        ("page",      "icon_url",      "TEXT"),
         ("page",      "url_path",      "TEXT"),
         ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
         ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
@@ -62,6 +68,56 @@ def _migrate_db(engine) -> None:
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                 conn.commit()
+
+        # Backfill scrapejob.title and scrapejob.icon_url from completed pages where missing
+        jobs = conn.execute(
+            text("SELECT id, target_url, title, icon_url FROM scrapejob WHERE title IS NULL OR icon_url IS NULL")
+        ).fetchall()
+        for job_row in jobs:
+            j_id, j_target, j_title, j_icon = job_row
+            norm_target = (j_target or "").rstrip("/")
+            pages = conn.execute(
+                text(
+                    "SELECT url, title, icon_url, status FROM page "
+                    "WHERE job_id = :jid ORDER BY CASE WHEN status = 'completed' THEN 0 ELSE 1 END, id ASC"
+                ),
+                {"jid": j_id},
+            ).fetchall()
+
+            best_title = j_title
+            best_icon = j_icon
+
+            for p_url, p_title, p_icon, _ in pages:
+                is_real_title = (
+                    p_title
+                    and p_title.strip()
+                    and p_title.strip() != "Untitled"
+                    and not p_title.strip().startswith("/")
+                    and not p_title.strip().startswith("http")
+                )
+                is_root_match = (p_url or "").rstrip("/") == norm_target
+
+                if is_real_title and (not best_title or is_root_match):
+                    best_title = p_title.strip()
+                if p_icon and (not best_icon or is_root_match):
+                    best_icon = p_icon
+                if best_title and best_icon and is_root_match:
+                    break
+
+            if not best_icon and j_target:
+                parsed = urlparse(j_target)
+                domain = parsed.hostname or parsed.netloc
+                if domain:
+                    best_icon = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+
+            if best_title != j_title or best_icon != j_icon:
+                conn.execute(
+                    text("UPDATE scrapejob SET title = :title, icon_url = :icon WHERE id = :jid"),
+                    {"title": best_title, "icon": best_icon, "jid": j_id},
+                )
+        conn.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
@@ -148,15 +204,7 @@ async def _run_job_with_logging(
         await job_log_manager.close_job(job_id)
 
 
-def _normalize_target_url(url: str) -> str:
-    url = url.strip()
-    if not url.startswith("http://") and not url.startswith("https://"):
-        url = "https://" + url
-    parsed = urlparse(url)
-    scheme = parsed.scheme.lower()
-    netloc = parsed.netloc.lower()
-    path = parsed.path.rstrip("/")
-    return f"{scheme}://{netloc}{path}"
+_normalize_target_url = normalize_target_url
 
 
 @app.post("/api/jobs")

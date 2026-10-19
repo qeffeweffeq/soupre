@@ -4,7 +4,7 @@ import time
 from typing import Optional
 from urllib.parse import urlparse
 import logging
-from modules.config import DOWNLOADS_DIR
+from modules.config import DOWNLOADS_DIR, COOKIE_BUTTON_SELECTORS
 from .browser_engine import get_browser
 
 # Initialize logging
@@ -20,7 +20,7 @@ PRELOADER_SELECTORS = [
     ".page-loader",
 ]
 
-CONSENT_SELECTORS = [
+_BASE_CONSENT_SELECTORS = [
     "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll",
     "#onetrust-accept-btn-handler",
     "button#accept-all",
@@ -37,9 +37,17 @@ CONSENT_SELECTORS = [
     "button:has-text('Tout accepter')",
 ]
 
+CONSENT_SELECTORS = list(dict.fromkeys(_BASE_CONSENT_SELECTORS + list(COOKIE_BUTTON_SELECTORS)))
+
+COOKIE_OVERLAY_SELECTOR = (
+    "[id*='cookie'], [class*='cookie'], [class*='consent'], [id*='onetrust'], "
+    "[class*='cky-'], [id*='usercentrics'], [id*='tarteaucitron'], "
+    "[class*='cc-window'], [class*='cm-banner']"
+)
+
 
 async def dismiss_consent_banners(page) -> None:
-    """Attempt to auto-dismiss common cookie consent banners to clear overlays."""
+    """Attempt to auto-dismiss common cookie consent banners and hide remaining overlays."""
     for sel in CONSENT_SELECTORS:
         try:
             loc = page.locator(sel).first
@@ -50,6 +58,25 @@ async def dismiss_consent_banners(page) -> None:
                 break
         except Exception:
             pass
+
+    # Fallback: hide any remaining fixed/sticky/absolute cookie or consent overlays via DOM
+    try:
+        await page.evaluate(f"""
+            () => {{
+                const selectors = "{COOKIE_OVERLAY_SELECTOR}";
+                document.querySelectorAll(selectors).forEach(el => {{
+                    const style = window.getComputedStyle(el);
+                    if (style.position === 'fixed' || style.position === 'sticky' || style.position === 'absolute') {{
+                        el.style.setProperty('display', 'none', 'important');
+                        el.style.setProperty('opacity', '0', 'important');
+                        el.style.setProperty('visibility', 'hidden', 'important');
+                        el.style.setProperty('pointer-events', 'none', 'important');
+                    }}
+                }});
+            }}
+        """)
+    except Exception:
+        pass
 
 
 async def wait_for_preloaders_to_hide(page) -> None:
@@ -111,13 +138,22 @@ async def fetch_url_with_browser(
                         pass
                     html_check = await page.content()
                     
-                # Check for SiteGround / Cloudflare bot challenges
-                if "Checking the site connection security" in html_check or "sg-captcha" in html_check or "cloudflare" in html_check.lower() or len(html_check) < 15000:
+                # Check for SiteGround / Cloudflare / generic bot challenges
+                html_lower = html_check.lower()
+                if (
+                    "checking the site connection security" in html_lower
+                    or "checking your browser" in html_lower
+                    or "confirm you are human" in html_lower
+                    or "just a moment" in html_lower
+                    or "sg-captcha" in html_lower
+                    or "cloudflare" in html_lower
+                    or len(html_check) < 15000
+                ):
                     logger.info("[Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...")
                     try:
-                        # Wait up to 10 seconds for the challenge to resolve and page to reload
+                        # Wait up to 15 seconds for the challenge to resolve and page to reload
                         await page.wait_for_function(
-                            "() => document.body && !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", 
+                            "() => { if (!document.body) return false; const t = (document.body.innerText || '').toLowerCase(); const title = (document.title || '').toLowerCase(); return !t.includes('checking the site connection security') && !t.includes('just a moment') && !t.includes('checking your browser') && !t.includes('confirm you are human') && !title.includes('just a moment') && !title.includes('checking your browser'); }",
                             timeout=15000
                         )
                         # Wait an additional 3 seconds for the actual DOM to settle after redirect

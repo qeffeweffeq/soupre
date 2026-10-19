@@ -11,11 +11,22 @@ from urllib.parse import urljoin
 from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
-from database.models import Page
+from database.models import Page, ScrapeJob
 from modules.config import DOWNLOADS_DIR, BACKEND_DIR, PROJECT_ROOT
 from .fetcher import fetch_url_with_browser
 from .sitemap_fetcher import determine_content_type
-from modules.parsers.markdown_converter import convert_content_to_markdown
+from .parked import check_parked_domain, is_blank_page
+from modules.parsers.markdown_converter import convert_content_to_markdown, get_best_image
+from modules.extractors.icons_url import extract_best_icon
+from modules.extractors.basic_info import (
+    extract_about,
+    extract_email,
+    extract_phone,
+    extract_instagram,
+    extract_linkedin,
+    extract_founded,
+    extract_location,
+)
 from modules.utils.text_utils import sanitize_filename
 
 MIN_DELAY = 1.5
@@ -72,49 +83,6 @@ def determine_page_hreflang(
     if match:
         return match.group(1)
 
-    return None
-
-def get_best_image(element):
-    """Extract the highest resolution image URL from an element (img or styled div)."""
-    best_src = None
-    
-    # Try srcset or data-srcset
-    srcset = element.get('data-srcset') or element.get('srcset')
-    if srcset:
-        candidates = []
-        for part in srcset.split(','):
-            part = part.strip()
-            if not part: continue
-            tokens = part.split(' ')
-            url = tokens[0]
-            width = 0
-            if len(tokens) > 1:
-                w_str = tokens[1].replace('w', '').replace('x', '')
-                if w_str.isdigit():
-                    width = int(w_str)
-            candidates.append((width, url))
-        if candidates:
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            best_src = candidates[0][1]
-            
-    if best_src and not best_src.startswith('data:'):
-        return best_src
-        
-    # Try high-res data attributes
-    for attr in ['data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
-        val = element.get(attr)
-        if val and not val.startswith('data:'):
-            return val
-            
-    # Check for background-image in style
-    style = element.get('style', '')
-    if 'background-image' in style or 'background' in style:
-        match = re.search(r'url\([\'"]?(.*?)[\'"]?\)', style)
-        if match:
-            bg_src = match.group(1)
-            if not bg_src.startswith('data:'):
-                return bg_src
-                
     return None
 
 async def scrape_page(
@@ -181,6 +149,16 @@ async def scrape_page(
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
+    # Health checks: blank page & parked domain detection
+    if is_blank_page(soup):
+        logging.warning(f"Blank or nearly empty page detected for {url}")
+    full_page_text = soup.get_text(separator=" ", strip=True)
+    if check_parked_domain(full_page_text, url):
+        logging.warning(f"Parked or spam domain content detected for {url}")
+
+    # Extract best high-resolution icon URL (with Google Favicon fallback)
+    icon_url = await asyncio.to_thread(extract_best_icon, soup, url)
+
     # Determine page hreflang and content_type
     hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
     content_type = sitemap_content_type or determine_content_type(url)
@@ -233,22 +211,30 @@ async def scrape_page(
         else:
             db_screenshot_path = f"../_downloads/{folder_name}/{final_screenshot_name}"
 
-
     metadata = {
         "URL": url,
         "Title": page_title,
-        "Description": "",
+        "Description": extract_about(soup) or "",
         "Keywords": "",
         "Sitemap Last Modified": sitemap_lastmod or "",
         "Scraped At": datetime.now().isoformat()
     }
-    desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", property="og:description")
-    if desc_tag and desc_tag.get("content"):
-        metadata["Description"] = desc_tag["content"].strip()
-        
     kw_tag = soup.find("meta", attrs={"name": "keywords"})
     if kw_tag and kw_tag.get("content"):
         metadata["Keywords"] = kw_tag["content"].strip()
+
+    extra_meta = {
+        "Icon URL": icon_url,
+        "Location": extract_location(soup),
+        "Email": extract_email(soup),
+        "Phone": extract_phone(soup),
+        "Instagram": extract_instagram(soup),
+        "LinkedIn": extract_linkedin(soup),
+        "Founded": extract_founded(soup),
+    }
+    for k, v in extra_meta.items():
+        if v is not None and str(v).strip():
+            metadata[k] = str(v).strip()
 
     metadata_csv_path = os.path.join(page_dir, "metadata.csv")
     with open(metadata_csv_path, "w", newline='', encoding='utf-8') as f:
@@ -403,6 +389,7 @@ async def scrape_page(
             session.add(page)
             
         page.title = page_title
+        page.icon_url = icon_url
         page.markdown_path = db_markdown_path
         page.screenshot_path = db_screenshot_path
         page.url_path = urlparse(url).path or "/"
@@ -413,6 +400,15 @@ async def scrape_page(
             page.hreflang = hreflang
         if sitemap_lastmod:
             page.lastmod = sitemap_lastmod
+
+        job = session.get(ScrapeJob, job_id)
+        if job:
+            is_target_match = url.rstrip("/") == (job.target_url or "").rstrip("/")
+            if page_title and page_title != "Untitled" and (not job.title or job.title == "Untitled" or is_target_match):
+                job.title = page_title
+            if icon_url and (not job.icon_url or is_target_match):
+                job.icon_url = icon_url
+            session.add(job)
         
         session.commit()
 
@@ -481,10 +477,23 @@ async def run_scrape_job(
             from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry
             from .fetcher import fetch_url_with_browser
 
-            # Clearance cookie acquisition (take_screenshot=False)
+            # Clearance cookie acquisition (take_screenshot=False) + immediate root title/icon extraction
             clearance_cookies = None
             try:
-                _, _, clearance_cookies = await fetch_url_with_browser(target_url, take_screenshot=False)
+                root_html, _, clearance_cookies = await fetch_url_with_browser(target_url, take_screenshot=False)
+                if root_html:
+                    root_soup = BeautifulSoup(root_html, "html.parser")
+                    root_title = root_soup.title.string.strip() if root_soup.title and root_soup.title.string else None
+                    root_icon = await asyncio.to_thread(extract_best_icon, root_soup, target_url)
+                    with Session(db_engine) as s:
+                        job = s.get(ScrapeJob, job_id)
+                        if job:
+                            if root_title and root_title != "Untitled":
+                                job.title = root_title
+                            if root_icon:
+                                job.icon_url = root_icon
+                            s.add(job)
+                            s.commit()
             except Exception as e:
                 logging.warning(f"[Job {job_id}] Clearance cookie acquisition error: {e}")
 
