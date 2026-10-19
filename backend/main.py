@@ -132,6 +132,17 @@ async def _run_job_with_logging(
             large_threshold,
             large_pause_sec,
         )
+    except Exception as e:
+        import logging
+        logging.error(f"Job {job_id} encountered unhandled exception: {e}", exc_info=True)
+        try:
+            with Session(engine) as session:
+                job = session.get(ScrapeJob, job_id)
+                if job and job.status not in ("cancelled", "paused"):
+                    job.status = "failed"
+                    session.commit()
+        except Exception:
+            pass
     finally:
         current_job_id.reset(token)
         await job_log_manager.close_job(job_id)

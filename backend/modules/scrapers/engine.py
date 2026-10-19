@@ -451,6 +451,7 @@ async def run_scrape_job(
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
             if job:
+                job.status = "running"
                 job.log_path = f"_downloads/{job_dir_name}/job.log"
                 session.commit()
 
@@ -475,9 +476,6 @@ async def run_scrape_job(
         if scrape_mode == "sitemap":
             from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry
             from .fetcher import fetch_url_with_browser
-            import logging
-            from urllib.parse import urlparse
-            import os
 
             # Clearance cookie acquisition (take_screenshot=False)
             clearance_cookies = None

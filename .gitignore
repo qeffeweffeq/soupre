@@ -80,6 +80,8 @@ yarn-error.log*
 # SQLite
 *.sqlite3
 *.db
+*.db-wal
+*.db-shm
 scraper.log
 uvicorn.log
 no-db-man
