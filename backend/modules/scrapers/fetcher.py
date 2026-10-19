@@ -4,9 +4,8 @@ import time
 from typing import Optional
 from urllib.parse import urlparse
 import logging
-from playwright.async_api import async_playwright
-from playwright_stealth import Stealth
 from modules.config import DOWNLOADS_DIR
+from .browser_engine import get_browser
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -17,8 +16,8 @@ async def fetch_url_with_browser(
     target_screenshot_path: Optional[str] = None
 ):
     """
-    Fetch a URL using Playwright (Chromium) and return its rendered HTML.
-    Includes playwright-stealth to bypass Cloudflare/Bot Challenges.
+    Fetch a URL using the unified browser engine (Camoufox primary, Playwright Chromium fallback)
+    and return its rendered HTML, screenshot path, and cookies.
     """
     logger.info(f"[Browser] Fetching page: {url} (screenshot={take_screenshot})")
     
@@ -26,34 +25,13 @@ async def fetch_url_with_browser(
     cookies_list = []
     screenshot_path = ""
     
-    # We will use stealth
     try:
-        async with async_playwright() as p:
-            # We can also wrap the context manager using Stealth().use_async(p) but this works too
-            browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-features=IsolateOrigins,site-per-process',
-                ]
-            )
-            
-            # Create context with typical browser settings
-            context = await browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-            )
-            
-            page = await context.new_page()
-            
-            # Apply stealth
-            await Stealth().apply_stealth_async(page)
+        async with get_browser(headless=True) as session:
+            context = await session.create_context()
+            page = await session.new_page(context=context)
             
             # Goto URL and wait
             try:
-                # Wait until domcontentloaded or networkidle
-                # Wait until domcontentloaded
-                # Wait until domcontentloaded
                 try:
                     response = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
                     html_check = await page.content()
@@ -153,12 +131,19 @@ async def fetch_url_with_browser(
                             break
 
                 html_content = await page.content()
-                logger.info(f"[Browser] Successfully rendered {url}")
+                logger.info(f"[Browser] Successfully rendered {url} using engine '{session.engine_name}'")
                 
             except Exception as nav_e:
                 logger.error(f"[Browser] Error rendering {url}: {nav_e}")
             finally:
-                await browser.close()
+                try:
+                    await page.close()
+                except Exception:
+                    pass
+                try:
+                    await context.close()
+                except Exception:
+                    pass
                 
     except Exception as e:
         logger.error(f"[Browser] Error launching browser: {e}")

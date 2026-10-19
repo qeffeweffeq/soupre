@@ -1,0 +1,12 @@
+camoufox[geoip]>=0.5.8
+playwright>=1.50.0,<1.63
+playwright-stealth>=2.0.0
+fastapi>=0.115.0
+uvicorn>=0.30.0
+sqlmodel>=0.0.20
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+requests>=2.31.0
+html2text>=2024.2.26
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
