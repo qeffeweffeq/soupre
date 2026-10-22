@@ -223,6 +223,7 @@ def create_job(
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
+    target_url = (target_url or "").strip()
     if scrape_mode == "sitemap":
         norm_target = _normalize_target_url(target_url)
         existing_jobs = session.exec(
@@ -246,6 +247,7 @@ def create_job(
                 p.status = "pending"
                 session.add(p)
 
+            existing.target_url = (existing.target_url or "").strip()
             existing.status = "running"
             session.add(existing)
             session.commit()
@@ -425,6 +427,7 @@ def resume_job(
         p.status = "pending"
         session.add(p)
 
+    job.target_url = (job.target_url or "").strip()
     job.status = "running"
     session.add(job)
     session.commit()
