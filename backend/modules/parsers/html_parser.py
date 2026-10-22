@@ -71,11 +71,15 @@ def find_main_content(soup):
             id_name = get_element_attr_as_string(element, 'id')
 
             # Skip elements that are likely not main content
-            skip_keywords = ['menu', 'nav', 'header', 'footer', 'sidebar', 'widget', 'comment', 'cookie',
-                             'popup', 'modal', 'banner', 'ad-', 'advertisement']
+            skip_keywords = ['menu', 'nav', 'footer', 'sidebar', 'widget', 'comment', 'cookie',
+                             'popup', 'modal', 'ad-', 'advertisement']
 
             if any(keyword in class_name.lower() or keyword in id_name.lower() for keyword in skip_keywords):
                 continue
+
+            if ('site-header' in class_name.lower() or 'main-header' in class_name.lower() or class_name.lower() == 'header' or id_name.lower() == 'header'):
+                if not element.find(['h1', 'h2', 'h3']) and len(text) < 300:
+                    continue
 
             # Add to candidates with text length as score
             candidates.append((element, len(text)))
@@ -152,9 +156,9 @@ def extract_meta_content(soup):
 def should_skip_element(element, skip_patterns=None):
     if skip_patterns is None:
         skip_patterns = [
-            'nav', 'menu', 'footer', 'header', 'sidebar', 'cookie',
+            'nav', 'menu', 'footer', 'sidebar', 'cookie',
             'gdpr', 'moove', 'iubenda', 'onetrust', 'cookiebot',
-            'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone'
+            'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone', 'cloned'
         ]
 
     try:
@@ -190,7 +194,35 @@ def should_skip_element(element, skip_patterns=None):
         if 'modal-opener' in tag_name or 'modal-opener' in classes_lower or 'product__media' in classes_lower or 'lightbox' in classes_lower:
             return False
 
-        if any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
+        # Protect explicit content elements: headings, headlines, subheaders, captions, card titles
+        is_content = (
+            tag_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] or
+            any(k in classes_lower or k in id_lower for k in [
+                'subheader', 'sub-header', 'headline', 'title', 'overlaytext',
+                'caption', 'boxcontent', 'roomname', 'boxcontentheader'
+            ])
+        )
+
+        if is_content:
+            # Only skip content elements if strictly nested in an actual nav, footer, or cookie consent
+            for parent in element.parents:
+                parent_tag = getattr(parent, 'name', '') or ''
+                if parent_tag in ['nav', 'footer']:
+                    return True
+                p_cls = parent.get('class', [])
+                p_cls_str = (' '.join(p_cls) if isinstance(p_cls, list) else str(p_cls)).lower()
+                p_id_str = str(parent.get('id', '')).lower()
+                p_combined = p_cls_str + ' ' + p_id_str
+                if any(p in p_combined for p in ['cookie', 'consent', 'gdpr', 'popup', 'modal']):
+                    return True
+            return False
+
+        # For header: only skip if it's explicitly a site navigation header
+        if ('site-header' in classes_lower or 'main-header' in classes_lower or classes_lower == 'header' or id_lower == 'header'):
+            if not element.find(['h1', 'h2', 'h3']) and len(element.get_text(strip=True)) < 200:
+                return True
+
+        if tag_name in ['nav', 'menu', 'footer'] or any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
             return True
 
         # Check parent elements' classes and IDs (stopping before root containers like body/html/main)
@@ -235,9 +267,20 @@ def should_skip_element(element, skip_patterns=None):
 
         parent_classes_str = ' '.join(parent_classes)
         parent_ids_str = ' '.join(parent_ids)
+        parent_combined = (parent_classes_str + ' ' + parent_ids_str).lower()
 
-        if any(pattern in parent_classes_str.lower() or pattern in parent_ids_str.lower() for pattern in skip_patterns):
+        # Check skip patterns on parents, filtering out generic 'header' and 'banner' substrings
+        effective_patterns = [p for p in skip_patterns if p not in ['header', 'banner']]
+        if any(pattern in parent_combined for pattern in effective_patterns):
             return True
+
+        if 'header' in skip_patterns and ('site-header' in parent_combined or 'main-header' in parent_combined):
+            for parent in element.parents:
+                p_cls = (' '.join(parent.get('class', [])) if isinstance(parent.get('class', []), list) else str(parent.get('class', ''))).lower()
+                p_id = str(parent.get('id', '')).lower()
+                if 'site-header' in p_cls or 'site-header' in p_id or 'main-header' in p_cls or 'main-header' in p_id:
+                    if not parent.find(['h1', 'h2', 'h3']) and len(parent.get_text(strip=True)) < 200:
+                        return True
 
         return False
     except Exception as e:

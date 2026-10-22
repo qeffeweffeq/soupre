@@ -135,63 +135,80 @@ def _get_with_status(url: str, session: requests.Session) -> tuple[str, bytes | 
       - ("not_found", None, final_url) — 404/410 or generic non-sitemap HTML
       - ("unreachable", None, None)    — connection or read timeout / DNS failure
     """
-    try:
-        r = session.get(
-            url,
-            timeout=(6, 10),
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                              "AppleWebKit/537.36 (KHTML, like Gecko) "
-                              "Chrome/121.0.0.0 Safari/537.36",
-                "Accept": "application/xml,text/xml,text/html,*/*;q=0.8",
-            },
-            allow_redirects=True,
-        )
-        final_url = r.url
-        if r.status_code in (404, 410, 400):
-            logger.debug(f"[Sitemap] {url} returned HTTP {r.status_code}")
-            return "not_found", None, final_url
-
-        content = r.content or b""
-        lower_content = content[:10000].lower()
-        has_challenge_markers = (
-            b"sgcaptcha" in lower_content
-            or b"checking the site connection" in lower_content
-            or b"checking your browser" in lower_content
-            or b"confirm you are human" in lower_content
-            or b"just a moment" in lower_content
-            or b"cf-browser-verification" in lower_content
-            or b"challenge-platform" in lower_content
-        )
-
-        if r.status_code in (202, 403, 429, 503) or has_challenge_markers:
-            logger.debug(f"[Sitemap] Bot/WAF challenge detected on {url} (HTTP {r.status_code})")
-            return "challenge", None, final_url
-
-        if r.status_code >= 400:
-            logger.debug(f"[Sitemap] {url} returned HTTP {r.status_code}")
-            return "not_found", None, final_url
-
-        is_robots = url.endswith("robots.txt")
-        if len(content) < 200 and not is_robots:
-            logger.debug(f"[Sitemap] Skipping {url} — response too short ({len(content)} bytes)")
-            return "not_found", None, final_url
-
-        content_type = r.headers.get("Content-Type", "").lower()
-        if "html" in content_type and not is_robots:
-            if (b"<loc>" not in lower_content and
-                b"sitemap" not in lower_content and
-                b".xml" not in lower_content):
-                logger.debug(f"[Sitemap] Skipping {url} — returned generic HTML (not sitemap)")
+    user_agents = [
+        "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    ]
+    last_unreachable = False
+    for ua in user_agents:
+        try:
+            r = session.get(
+                url,
+                timeout=(6, 10),
+                headers={
+                    "User-Agent": ua,
+                    "Accept": "application/xml,text/xml,application/xhtml+xml,text/html;q=0.9,*/*;q=0.8",
+                },
+                allow_redirects=True,
+            )
+            final_url = r.url
+            if r.status_code in (404, 410, 400):
+                logger.debug(f"[Sitemap] {url} returned HTTP {r.status_code}")
                 return "not_found", None, final_url
 
-        return "ok", content, final_url
-    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-        logger.warning(f"[Sitemap] Unreachable or timed out fetching {url}: {e}")
+            content = r.content or b""
+            lower_content = content[:10000].lower()
+            has_challenge_markers = (
+                b"sgcaptcha" in lower_content
+                or b"checking the site connection" in lower_content
+                or b"checking your browser" in lower_content
+                or b"confirm you are human" in lower_content
+                or b"just a moment" in lower_content
+                or b"cf-browser-verification" in lower_content
+                or b"challenge-platform" in lower_content
+            )
+
+            if r.status_code in (202, 403, 429, 503) or has_challenge_markers:
+                logger.debug(f"[Sitemap] Bot/WAF challenge detected on {url} (HTTP {r.status_code})")
+                return "challenge", None, final_url
+
+            if r.status_code >= 400:
+                logger.debug(f"[Sitemap] {url} returned HTTP {r.status_code}")
+                return "not_found", None, final_url
+
+            is_robots = url.endswith("robots.txt")
+            if len(content) < 200 and not is_robots:
+                logger.debug(f"[Sitemap] Skipping {url} — response too short ({len(content)} bytes)")
+                continue
+
+            # Check if redirected away from a sitemap URL to the homepage or generic HTML page
+            if r.history:
+                final_path = urlparse(r.url).path.lower().rstrip("/")
+                content_type = r.headers.get("Content-Type", "").lower()
+                if (final_path in ("", "/") or "html" in content_type) and b"<loc>" not in lower_content and b"<sitemap>" not in lower_content:
+                    logger.debug(f"[Sitemap] {url} redirected to non-sitemap URL {r.url}")
+                    return "not_found", None, final_url
+
+            content_type = r.headers.get("Content-Type", "").lower()
+            if "html" in content_type and not is_robots:
+                if (b"<loc>" not in lower_content and
+                    b"sitemap" not in lower_content and
+                    b".xml" not in lower_content):
+                    logger.debug(f"[Sitemap] Skipping {url} — returned generic HTML (not sitemap)")
+                    return "not_found", None, final_url
+
+            return "ok", content, final_url
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            logger.warning(f"[Sitemap] Unreachable or timed out fetching {url} with UA {ua[:30]}: {e}")
+            last_unreachable = True
+            continue
+        except Exception as e:
+            logger.debug(f"[Sitemap] Cannot fetch {url} with UA {ua[:30]}: {e}")
+            continue
+
+    if last_unreachable:
         return "unreachable", None, None
-    except Exception as e:
-        logger.warning(f"[Sitemap] Cannot fetch {url}: {e}")
-        return "not_found", None, None
+    return "not_found", None, None
 
 
 def _get(url: str, session: requests.Session) -> bytes | None:
@@ -228,7 +245,8 @@ async def _fetch_with_status(url: str, session: requests.Session) -> tuple[str, 
                 b"just a moment" in lower):
                 return "challenge", None, final_url
             is_robots = url.endswith("robots.txt")
-            if not is_robots and b"<loc>" not in lower and b"sitemap" not in lower and b".xml" not in lower:
+            if not is_robots and b"<loc>" not in lower and b"<sitemap>" not in lower and b"sitemap" not in lower and b".xml" not in lower:
+                logger.debug(f"[Sitemap] Browser rendered non-sitemap HTML for {url}")
                 return "not_found", None, final_url
             return "ok", content_bytes, final_url
     except Exception as e:
@@ -547,6 +565,31 @@ async def discover_sitemap_urls(
         if url not in candidates:
             candidates.append(url)
 
+    # If submitted URL was sitemap.xml, ensure sitemap_index.xml is also a top candidate
+    if path_lower.endswith("sitemap.xml"):
+        idx_candidate = urljoin(origin, "/sitemap_index.xml")
+        if idx_candidate not in candidates:
+            candidates.append(idx_candidate)
+
+    # Priority sorting: candidates on the EXACT target domain come first, with sitemap indexes prioritized
+    def candidate_priority(u: str) -> tuple[int, int]:
+        u_parsed = urlparse(u)
+        u_netloc = u_parsed.netloc.lower()
+        target_netloc = parsed.netloc.lower()
+        if u_netloc == target_netloc:
+            netloc_rank = 0
+        elif u_netloc.endswith(target_netloc) or target_netloc.endswith(u_netloc):
+            netloc_rank = 1
+        elif u_netloc.split(".")[-2:] == target_netloc.split(".")[-2:]:
+            netloc_rank = 2
+        else:
+            netloc_rank = 3
+        path_p = u_parsed.path.lower()
+        path_rank = 0 if "index" in path_p else 1
+        return (netloc_rank, path_rank)
+
+    candidates.sort(key=candidate_priority)
+
     raw_xml: bytes | None = None
     sitemap_url_used: str | None = None
     result: list[SitemapEntry] = []
@@ -571,6 +614,7 @@ async def discover_sitemap_urls(
             candidate_entries: list[SitemapEntry] = []
             is_index, extracted = _extract_sitemap_entries(content, sitemap_hint=os.path.basename(sitemap_url))
             if is_index and extracted:
+                # Sitemap index: expand child sitemaps
                 for ce in extracted:
                     cu = urljoin(origin, ce.url)
                     if _strip_www(urlparse(cu).netloc) not in allowed_domains:
@@ -582,26 +626,20 @@ async def discover_sitemap_urls(
                             che.url = urljoin(origin, che.url)
                             che.content_type = determine_content_type(che.url, sitemap_hint=os.path.basename(cu))
                             candidate_entries.append(che)
-                filtered = _filter_same_domain(candidate_entries)
-                if filtered:
-                    used_is_index = True
-                    result = filtered
-                    raw_xml = content
-                    sitemap_url_used = sitemap_url
-                    break
             elif not is_index and extracted:
                 for pe in extracted:
                     pe.url = urljoin(origin, pe.url)
                     candidate_entries.append(pe)
-                filtered = _filter_same_domain(candidate_entries)
-                if filtered:
-                    used_is_index = False
-                    result = filtered
-                    raw_xml = content
-                    sitemap_url_used = sitemap_url
-                    break
+
+            filtered = _filter_same_domain(candidate_entries)
+            if filtered:
+                used_is_index = is_index
+                result = filtered
+                raw_xml = content
+                sitemap_url_used = sitemap_url
+                break
             else:
-                logger.debug(f"[Sitemap] No URLs extracted from {sitemap_url}, trying next candidate")
+                logger.debug(f"[Sitemap] Candidate {sitemap_url} had no URLs matching {parsed.netloc}, trying next...")
         except Exception as e:
             logger.warning(f"[Sitemap] Parse error for {sitemap_url}: {e}")
 

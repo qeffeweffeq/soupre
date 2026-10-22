@@ -127,3 +127,33 @@ async def test_discover_sitemap_urls_multi_domain_robots_and_unreachable_abort(m
     assert len(entries) == 1
     assert entries[0].url == "https://www.thesenseresort.com/en/rooms/"
 
+
+def test_multidomain_sitemap_prioritization():
+    from urllib.parse import urlparse
+    target = urlparse("https://www.thesenseresort.com/")
+    candidates = [
+        "https://www.thesenseresort.it/sitemap_index.xml",
+        "https://www.thesenseresort.com/sitemap_index.xml",
+        "https://www.thesenseresort.fr/sitemap_index.xml",
+        "https://www.thesenseresort.com/sitemap.xml",
+    ]
+
+    def candidate_priority(u: str) -> tuple[int, int]:
+        u_parsed = urlparse(u)
+        u_netloc = u_parsed.netloc.lower()
+        target_netloc = target.netloc.lower()
+        if u_netloc == target_netloc:
+            netloc_rank = 0
+        elif u_netloc.endswith(target_netloc) or target_netloc.endswith(u_netloc):
+            netloc_rank = 1
+        elif u_netloc.split(".")[-2:] == target_netloc.split(".")[-2:]:
+            netloc_rank = 2
+        else:
+            netloc_rank = 3
+        path_p = u_parsed.path.lower()
+        path_rank = 0 if "index" in path_p else 1
+        return (netloc_rank, path_rank)
+
+    sorted_candidates = sorted(candidates, key=candidate_priority)
+    assert sorted_candidates[0] == "https://www.thesenseresort.com/sitemap_index.xml"
+    assert sorted_candidates[1] == "https://www.thesenseresort.com/sitemap.xml"

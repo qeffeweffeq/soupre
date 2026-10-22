@@ -9,7 +9,6 @@ no-db-man
 dom-raider
 websoup
 
-
 # Python
 __pycache__/
 *.py[cod]

@@ -165,8 +165,8 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             text = element.string if element.string else ''
             return clean_text(text) if text.strip() else ''
 
-        # Skip form elements and inputs
-        if element.name in ['form', 'input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe', 'dialog', 'template']:
+        # Skip form inputs and non-content tags (do not skip form itself, so children can be processed)
+        if element.name in ['input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe', 'dialog', 'template']:
             return ""
 
         # Skip elements with certain classes/IDs that indicate non-content
@@ -187,10 +187,30 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             'lightbox' in classes_lower
         )
 
-        skip_patterns = ['cookie', 'consent', 'gdpr', 'moove', 'popup', 'modal', 'banner', 'sidebar',
-                         'footer', 'header', 'menu', 'nav', 'search', 'cart', 'login']
+        # Exception: protect explicit content elements (headings, headlines, subheaders, card titles)
+        is_content_element = (
+            tag_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] or
+            any(k in classes_lower or k in id_lower for k in [
+                'subheader', 'sub-header', 'headline', 'title', 'overlaytext',
+                'caption', 'boxcontent', 'roomname', 'boxcontentheader'
+            ])
+        )
 
-        if not is_media_or_root_container and any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
+        skip_patterns = [
+            'cookie', 'consent', 'gdpr', 'moove', 'popup', 'modal', 'sidebar',
+            'footer', 'menu', 'nav', 'search', 'cart', 'login',
+            'ad-banner', 'cookie-banner', 'advertisement', 'promo-bar'
+        ]
+
+        # Site header skip: only skip if it's explicitly site header chrome and NOT content
+        is_site_header = False
+        if not is_content_element and ('site-header' in classes_lower or 'main-header' in classes_lower or classes_lower == 'header' or id_lower == 'header'):
+            if not element.find(['h1', 'h2', 'h3']) and len(element.get_text(strip=True)) < 200:
+                is_site_header = True
+
+        if not is_media_or_root_container and not is_content_element and (
+            is_site_header or any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns)
+        ):
             return ""
 
         # Process headings with proper spacing
@@ -413,29 +433,75 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
             # Process body directly in DOM order (header/footer/nav/cookie elements are already decomposed or skipped)
             markdown += html_to_markdown(soup.body, url, driver, page_dir, processed_elements)
         else:
-            # Fallback to processing key elements
-            for i in range(1, 7):
-                for heading in soup.find_all(f'h{i}'):
-                    if should_skip_element(heading, ['nav', 'menu', 'footer', 'header', 'sidebar']):
+            # First attempt: traverse direct body children / top-level content sections in natural DOM order
+            section_markdown = ""
+            if soup.body:
+                wrapper_candidates = soup.body.find_all(recursive=False)
+                while len(wrapper_candidates) == 1 and wrapper_candidates[0].name in ['div', 'main', 'section']:
+                    inner = wrapper_candidates[0].find_all(recursive=False)
+                    if inner:
+                        wrapper_candidates = inner
+                    else:
+                        break
+
+                for child in wrapper_candidates:
+                    tag_name = getattr(child, 'name', '') or ''
+                    c_cls = get_element_attr_as_string(child, 'class').lower()
+                    c_id = get_element_attr_as_string(child, 'id').lower()
+                    text_len = len(child.get_text(strip=True))
+                    if text_len == 0:
                         continue
-                    markdown += html_to_markdown(heading, url, driver, page_dir, processed_elements)
 
-            for p in soup.find_all('p'):
-                if should_skip_element(p, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
-                    continue
-                if len(p.get_text(strip=True)) < 20:
-                    continue
-                markdown += html_to_markdown(p, url, driver, page_dir, processed_elements)
+                    # Skip header/footer/nav unless containing major content
+                    if tag_name in ['header', 'footer', 'nav'] and not child.find(['h1', 'h2']):
+                        continue
+                    if any(k in c_cls or k in c_id for k in ['nav', 'menu', 'footer', 'cookie', 'consent']):
+                        if not child.find(['h1', 'h2']) and text_len < 300:
+                            continue
 
-            for ul in soup.find_all('ul'):
-                if should_skip_element(ul, ['nav', 'menu', 'footer', 'header', 'sidebar']):
-                    continue
-                markdown += html_to_markdown(ul, url, driver, page_dir, processed_elements)
+                    part = html_to_markdown(child, url, driver, page_dir, processed_elements)
+                    if part and part.strip():
+                        section_markdown += part.strip() + "\n\n"
 
-            for ol in soup.find_all('ol'):
-                if should_skip_element(ol, ['nav', 'menu', 'footer', 'header', 'sidebar']):
-                    continue
-                markdown += html_to_markdown(ol, url, driver, page_dir, processed_elements)
+            if section_markdown.strip():
+                markdown += section_markdown
+            else:
+                # Fallback to processing key elements individually
+                # Process headings
+                for i in range(1, 7):
+                    for heading in soup.find_all(f'h{i}'):
+                        # Skip headings in navigation, footer, etc.
+                        if should_skip_element(heading, ['nav', 'menu', 'footer', 'header', 'sidebar']):
+                            continue
+
+                        markdown += html_to_markdown(heading, url, driver, page_dir, processed_elements)
+
+                # Process paragraphs
+                for p in soup.find_all('p'):
+                    # Skip paragraphs in navigation, footer, etc.
+                    if should_skip_element(p, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
+                        continue
+
+                    # Skip very short paragraphs that are likely not content
+                    if len(p.get_text(strip=True)) < 20:
+                        continue
+
+                    markdown += html_to_markdown(p, url, driver, page_dir, processed_elements)
+
+                # Process lists
+                for ul in soup.find_all('ul'):
+                    # Skip lists in navigation, footer, etc.
+                    if should_skip_element(ul, ['nav', 'menu', 'footer', 'header', 'sidebar']):
+                        continue
+
+                    markdown += html_to_markdown(ul, url, driver, page_dir, processed_elements)
+
+                for ol in soup.find_all('ol'):
+                    # Skip lists in navigation, footer, etc.
+                    if should_skip_element(ol, ['nav', 'menu', 'footer', 'header', 'sidebar']):
+                        continue
+
+                    markdown += html_to_markdown(ol, url, driver, page_dir, processed_elements)
 
         # Clean up the markdown
         # Remove excessive newlines
@@ -516,6 +582,29 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     for tag in soup.find_all(['noscript', 'script', 'style', 'template', 'dialog']):
         tag.decompose()
 
+    # Strip HTML comments
+    from bs4 import Comment
+    for comment in soup.find_all(string=lambda t: isinstance(t, Comment)):
+        comment.extract()
+
+    # Decompose slider/carousel cloned items upfront to prevent duplicate content
+    for cloned in soup.find_all(class_=lambda c: c and any(k in str(c).lower() for k in ['cloned', 'swiper-slide-duplicate', 'slick-cloned'])):
+        cloned.decompose()
+
+    # Unwrap substantive forms (e.g. ASP.NET WebForms wrapper) or decompose empty forms
+    for form in soup.find_all('form'):
+        has_rich = bool(form.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'article', 'section', 'main']))
+        text_len = len(form.get_text(strip=True))
+        p_count = len(form.find_all('p'))
+        if has_rich or text_len > 200 or p_count > 1:
+            form.unwrap()
+        else:
+            form.decompose()
+
+    # Decompose standalone interactive form controls
+    for ctrl in soup.find_all(['input', 'button', 'select', 'textarea', 'optgroup', 'option']):
+        ctrl.decompose()
+
     # Start building markdown content
     title = soup.title.string if soup.title else "Untitled Page"
     markdown_content = ""
@@ -545,6 +634,9 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
                 if element.name in ('html', 'body', 'main', 'article'):
                     continue
                 if element.get('data-elementor-type') in ('wp-page', 'wp-post', 'single', 'single-page', 'single-post'):
+                    continue
+                # Do not decompose if element has major heading and substantive content
+                if element.find(['h1', 'h2']) and len(element.get_text(strip=True)) > 300:
                     continue
                 element.decompose()
         except Exception:
@@ -585,18 +677,36 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
         except Exception:
             pass
 
-    # If content is truly empty (< 15 words), try a fallback text extraction
-    if len(markdown_content.split()) < 15:
+    # If content is still minimal, try a more aggressive approach with deduplication
+    if len(markdown_content.split()) < 30:
         try:
             significant_blocks = []
             seen_texts = set()
+            markdown_content_norm = re.sub(r'\s+', ' ', markdown_content.lower())
 
-            for tag in soup.find_all(['p', 'article', 'section']):
-                if should_skip_element(tag, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
+            # Find all text blocks with substantial content
+            for tag in soup.find_all(['p', 'div', 'section', 'article']):
+                # Skip parent containers if their child containers also match (prevents ancestor-descendant duplication)
+                has_child_block = any(
+                    len(child.get_text(strip=True)) > 100
+                    for child in tag.find_all(['p', 'div', 'section', 'article'], recursive=False)
+                )
+                if has_child_block:
                     continue
-                text = clean_text(tag.get_text(separator=' ', strip=True))
-                if len(text) > 60 and text not in seen_texts:
-                    seen_texts.add(text)
+
+                text = tag.get_text(strip=True)
+                if len(text) > 80:  # Only include blocks with meaningful text
+                    # Skip if it's in a navigation, footer, etc.
+                    if should_skip_element(tag, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
+                        continue
+
+                    norm = re.sub(r'\s+', ' ', text.lower()).strip()
+                    if norm in seen_texts or any(norm in s or s in norm for s in seen_texts):
+                        continue
+                    if norm in markdown_content_norm:
+                        continue
+
+                    seen_texts.add(norm)
                     significant_blocks.append(text)
 
             if significant_blocks:
