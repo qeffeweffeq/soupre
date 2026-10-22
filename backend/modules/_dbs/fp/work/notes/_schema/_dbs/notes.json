@@ -1,0 +1,68 @@
+{
+  "id": "e546796f-824f-4079-adc5-c04d4953d39e",
+  "title": "Notes",
+  "url": "https://app.notion.com/p/e546796f824f4079adc5c04d4953d39e",
+  "parent": {
+    "type": "block_id",
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+  },
+  "properties": {
+    "Archive": {
+      "id": "Muso",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Projects": {
+      "id": "PrRc",
+      "name": "Projects",
+      "type": "relation",
+      "relation": {
+        "database_id": "698e1856-1639-446f-a079-133039fcee99",
+        "type": "dual_property",
+        "synced_property_name": "Notes"
+      }
+    },
+    "Tags": {
+      "id": "Sk%5Bi",
+      "name": "Tags",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Ideas",
+          "id": "1bb39f94-6481-4348-9760-8d1518fb4d82",
+          "color": "default"
+        },
+        {
+          "name": "Proposal",
+          "id": "c288aeed-c579-4515-9948-48e64a18a4f3",
+          "color": "default"
+        },
+        {
+          "name": "Updates",
+          "id": "8ac7b318-e04e-4de4-98c8-acc18ed2ce8c",
+          "color": "default"
+        }
+      ]
+    },
+    "Client": {
+      "id": "WsVA",
+      "name": "Client",
+      "type": "relation",
+      "relation": {
+        "database_id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+        "type": "dual_property",
+        "synced_property_name": "Notes"
+      }
+    },
+    "Created": {
+      "id": "fMpl",
+      "name": "Created",
+      "type": "created_time"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

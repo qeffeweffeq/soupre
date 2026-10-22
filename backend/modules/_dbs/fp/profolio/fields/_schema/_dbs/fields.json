@@ -1,0 +1,46 @@
+{
+  "id": "fa2a719f-af87-423a-aca9-31d5646fc1a7",
+  "title": "Fields",
+  "url": "https://app.notion.com/p/fa2a719faf87423aaca931d5646fc1a7",
+  "parent": {
+    "type": "block_id",
+    "block_id": "39dc7930-1516-806a-a212-ddeea0c3f529"
+  },
+  "properties": {
+    "Creatives Relation": {
+      "id": "l%3DXW",
+      "name": "Creatives Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "18078ba9-1124-4bd3-82dd-8175ddf55cd4",
+        "type": "dual_property",
+        "synced_property_name": "Fields"
+      }
+    },
+    "Meta": {
+      "id": "vQYZ",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"👾 → \" + prop(\"Creatives\")"
+      }
+    },
+    "Creatives": {
+      "id": "zIhE",
+      "name": "Creatives",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Creatives Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "l=XW",
+        "function": "count"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}
