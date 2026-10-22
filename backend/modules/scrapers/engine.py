@@ -85,6 +85,73 @@ def determine_page_hreflang(
 
     return None
 
+
+SHARED_CONTACT_KEYS = (
+    "Icon URL",
+    "Location",
+    "Email",
+    "Phone",
+    "Instagram",
+    "LinkedIn",
+    "Founded",
+)
+
+
+def _read_job_contact_csv(job_dir: str) -> dict[str, str]:
+    contact_csv_path = os.path.join(job_dir, "contact.csv")
+    data: dict[str, str] = {}
+    if os.path.exists(contact_csv_path):
+        try:
+            with open(contact_csv_path, "r", newline="", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                for idx, row in enumerate(reader):
+                    if idx == 0 and row == ["Key", "Value"]:
+                        continue
+                    if len(row) >= 2 and row[0].strip():
+                        data[row[0].strip()] = row[1].strip()
+        except Exception:
+            pass
+    return data
+
+
+def _update_job_contact_csv(job_dir: str, soup: BeautifulSoup, icon_url: str | None = None) -> dict[str, str]:
+    os.makedirs(job_dir, exist_ok=True)
+    contact_data = _read_job_contact_csv(job_dir)
+
+    candidates = {
+        "Icon URL": icon_url,
+        "Location": extract_location(soup),
+        "Email": extract_email(soup),
+        "Phone": extract_phone(soup),
+        "Instagram": extract_instagram(soup),
+        "LinkedIn": extract_linkedin(soup),
+        "Founded": extract_founded(soup),
+    }
+
+    updated = False
+    for k in SHARED_CONTACT_KEYS:
+        val = candidates.get(k)
+        if val is None or not str(val).strip():
+            continue
+        val_str = str(val).strip()
+        existing_val = contact_data.get(k, "")
+        # Allow upgrading Google Favicon fallback to a real site icon
+        if not existing_val or (k == "Icon URL" and "google.com/s2/favicons" in existing_val and "google.com/s2/favicons" not in val_str):
+            contact_data[k] = val_str
+            updated = True
+
+    contact_csv_path = os.path.join(job_dir, "contact.csv")
+    if updated or not os.path.exists(contact_csv_path):
+        with open(contact_csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Key", "Value"])
+            for k in SHARED_CONTACT_KEYS:
+                if k in contact_data and contact_data[k]:
+                    writer.writerow([k, contact_data[k]])
+
+    return contact_data
+
+
 async def scrape_page(
     url: str,
     job_id: int,
@@ -190,8 +257,16 @@ async def scrape_page(
     if check_parked_domain(full_page_text, url):
         logging.warning(f"Parked or spam domain content detected for {url}")
 
-    # Extract best high-resolution icon URL (with Google Favicon fallback)
-    icon_url = await asyncio.to_thread(extract_best_icon, soup, url)
+    # Extract best high-resolution icon URL once per job (or upgrade if previous was a Google Favicon fallback)
+    existing_contact = _read_job_contact_csv(job_dir)
+    cached_icon = existing_contact.get("Icon URL")
+    if cached_icon and "google.com/s2/favicons" not in cached_icon:
+        icon_url = cached_icon
+    else:
+        icon_url = await asyncio.to_thread(extract_best_icon, soup, url)
+
+    # Persist shared site/contact fields into job-level contact.csv (instead of every single page)
+    _update_job_contact_csv(job_dir, soup, icon_url)
 
     # Determine page hreflang and content_type
     hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
@@ -256,19 +331,6 @@ async def scrape_page(
     kw_tag = soup.find("meta", attrs={"name": "keywords"})
     if kw_tag and kw_tag.get("content"):
         metadata["Keywords"] = kw_tag["content"].strip()
-
-    extra_meta = {
-        "Icon URL": icon_url,
-        "Location": extract_location(soup),
-        "Email": extract_email(soup),
-        "Phone": extract_phone(soup),
-        "Instagram": extract_instagram(soup),
-        "LinkedIn": extract_linkedin(soup),
-        "Founded": extract_founded(soup),
-    }
-    for k, v in extra_meta.items():
-        if v is not None and str(v).strip():
-            metadata[k] = str(v).strip()
 
     metadata_csv_path = os.path.join(page_dir, "metadata.csv")
     with open(metadata_csv_path, "w", newline='', encoding='utf-8') as f:
@@ -541,6 +603,7 @@ async def run_scrape_job(
                     root_soup = BeautifulSoup(root_html, "html.parser")
                     root_title = root_soup.title.string.strip() if root_soup.title and root_soup.title.string else None
                     root_icon = await asyncio.to_thread(extract_best_icon, root_soup, target_url)
+                    _update_job_contact_csv(job_dir, root_soup, root_icon)
                     with Session(db_engine) as s:
                         job = s.get(ScrapeJob, job_id)
                         if job:

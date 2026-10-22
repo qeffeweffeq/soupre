@@ -345,3 +345,34 @@ def test_determine_content_type_wp_page_sitemap_and_italian_segments():
     assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/offerte/", "wp-sitemap-posts-page-1.xml") == "offers"
     assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/spa-2/", "wp-sitemap-posts-page-1.xml") == "wellness"
     assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/news-item/", "wp-sitemap-posts-post-1.xml") == "blog"
+
+
+def test_job_contact_csv_persistence(tmp_path):
+    from modules.scrapers.engine import _update_job_contact_csv, _read_job_contact_csv
+
+    job_dir = str(tmp_path / "job_1_canado")
+    html_page1 = """
+    <html>
+      <head><meta name="geo.placename" content="Castagneto Carducci"></head>
+      <body>
+        <a href="mailto:info@canadofamilyhotel.it">Email</a>
+        <a href="tel:+3905657721">+3905657721</a>
+        <a href="https://www.instagram.com/canadofamilyhotel/">IG</a>
+      </body>
+    </html>
+    """
+    soup1 = BeautifulSoup(html_page1, "html.parser")
+    contact = _update_job_contact_csv(
+        job_dir,
+        soup1,
+        icon_url="https://canadofamilyhotel.it/storage/2025/12/logo-fv.png",
+    )
+
+    assert contact["Icon URL"] == "https://canadofamilyhotel.it/storage/2025/12/logo-fv.png"
+    assert contact["Location"] == "Castagneto Carducci"
+    assert contact["Email"] == "info@canadofamilyhotel.it"
+    assert contact["Phone"] == "+3905657721"
+    assert contact["Instagram"] == "https://www.instagram.com/canadofamilyhotel/"
+
+    saved = _read_job_contact_csv(job_dir)
+    assert saved == contact
