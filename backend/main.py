@@ -60,19 +60,30 @@ def _migrate_db(engine) -> None:
     from sqlalchemy import text
     migrations = [
         # (table_name, column_name, column_definition)
-        ("scrapejob", "title",         "TEXT"),
-        ("scrapejob", "icon_url",      "TEXT"),
-        ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
-        ("scrapejob", "total_pages",   "INTEGER"),
-        ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
-        ("scrapejob", "log_path",      "TEXT"),
-        ("page",      "icon_url",      "TEXT"),
-        ("page",      "url_path",      "TEXT"),
-        ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
-        ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
-        ("page",      "hreflang",      "TEXT"),
-        ("page",      "lastmod",       "TEXT"),
-        ("page",      "content_type",  "TEXT"),
+        ("scrapejob", "title",                     "TEXT"),
+        ("scrapejob", "icon_url",                  "TEXT"),
+        ("scrapejob", "scrape_mode",               "TEXT NOT NULL DEFAULT 'single'"),
+        ("scrapejob", "total_pages",               "INTEGER"),
+        ("scrapejob", "scraped_pages",             "INTEGER NOT NULL DEFAULT 0"),
+        ("scrapejob", "log_path",                  "TEXT"),
+        ("page",      "icon_url",                  "TEXT"),
+        ("page",      "url_path",                  "TEXT"),
+        ("page",      "url_depth",                 "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "status",                    "TEXT NOT NULL DEFAULT 'completed'"),
+        ("page",      "hreflang",                  "TEXT"),
+        ("page",      "lastmod",                   "TEXT"),
+        ("page",      "content_type",              "TEXT"),
+        ("page",      "clean_url",                 "TEXT"),
+        ("page",      "description",              "TEXT"),
+        ("page",      "favicon_path",              "TEXT"),
+        ("page",      "category_id",               "INTEGER REFERENCES category(id)"),
+        ("page",      "types_id",                  "INTEGER REFERENCES types(id)"),
+        ("page",      "genre_id",                  "INTEGER REFERENCES genre(id)"),
+        ("page",      "categorization_source",     "TEXT NOT NULL DEFAULT 'dual_hybrid'"),
+        ("page",      "categorization_confidence", "REAL NOT NULL DEFAULT 0.0"),
+        ("page",      "notion_page_id",            "TEXT"),
+        ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
+        ("page",      "last_synced_at",            "TIMESTAMP"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -135,6 +146,10 @@ def _migrate_db(engine) -> None:
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     _migrate_db(engine)
+
+    from database.seed_taxonomies import seed_taxonomies
+    with Session(engine) as session:
+        seed_taxonomies(session)
 
     # Initialize job logger event loop
     loop = asyncio.get_running_loop()
