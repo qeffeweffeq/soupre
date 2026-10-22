@@ -4,7 +4,7 @@ import time
 from typing import Optional
 from urllib.parse import urlparse
 import logging
-from modules.config import DOWNLOADS_DIR
+from modules.config import DOWNLOADS_DIR, COOKIE_BUTTON_SELECTORS
 from .browser_engine import get_browser
 
 # Initialize logging
@@ -20,7 +20,7 @@ PRELOADER_SELECTORS = [
     ".page-loader",
 ]
 
-CONSENT_SELECTORS = [
+_BASE_CONSENT_SELECTORS = [
     "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll",
     "#onetrust-accept-btn-handler",
     "button#accept-all",
@@ -37,9 +37,17 @@ CONSENT_SELECTORS = [
     "button:has-text('Tout accepter')",
 ]
 
+CONSENT_SELECTORS = list(dict.fromkeys(_BASE_CONSENT_SELECTORS + list(COOKIE_BUTTON_SELECTORS)))
+
+COOKIE_OVERLAY_SELECTOR = (
+    "[id*='cookie'], [class*='cookie'], [class*='consent'], [id*='onetrust'], "
+    "[class*='cky-'], [id*='usercentrics'], [id*='tarteaucitron'], "
+    "[class*='cc-window'], [class*='cm-banner']"
+)
+
 
 async def dismiss_consent_banners(page) -> None:
-    """Attempt to auto-dismiss common cookie consent banners to clear overlays."""
+    """Attempt to auto-dismiss common cookie consent banners and hide remaining overlays."""
     for sel in CONSENT_SELECTORS:
         try:
             loc = page.locator(sel).first
@@ -50,6 +58,25 @@ async def dismiss_consent_banners(page) -> None:
                 break
         except Exception:
             pass
+
+    # Fallback: hide any remaining fixed/sticky/absolute cookie or consent overlays via DOM
+    try:
+        await page.evaluate(f"""
+            () => {{
+                const selectors = "{COOKIE_OVERLAY_SELECTOR}";
+                document.querySelectorAll(selectors).forEach(el => {{
+                    const style = window.getComputedStyle(el);
+                    if (style.position === 'fixed' || style.position === 'sticky' || style.position === 'absolute') {{
+                        el.style.setProperty('display', 'none', 'important');
+                        el.style.setProperty('opacity', '0', 'important');
+                        el.style.setProperty('visibility', 'hidden', 'important');
+                        el.style.setProperty('pointer-events', 'none', 'important');
+                    }}
+                }});
+            }}
+        """)
+    except Exception:
+        pass
 
 
 async def wait_for_preloaders_to_hide(page) -> None:
@@ -100,45 +127,66 @@ async def fetch_url_with_browser(
             
             # Goto URL and wait
             try:
+                is_aux_resource = urlparse(url).path.lower().endswith((".xml", ".txt", ".gz"))
                 try:
-                    response = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                    await page.goto(url, wait_until="domcontentloaded", timeout=20000)
                     html_check = await page.content()
                 except Exception as e:
+                    current_url = getattr(page, "url", "") or ""
+                    if current_url in ("about:blank", ""):
+                        logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
+                        return "", "", []
                     logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
                     try:
-                        await page.wait_for_load_state('domcontentloaded', timeout=10000)
+                        await page.wait_for_load_state('domcontentloaded', timeout=8000)
                     except Exception:
                         pass
                     html_check = await page.content()
-                    
-                # Check for SiteGround / Cloudflare bot challenges
-                if "Checking the site connection security" in html_check or "sg-captcha" in html_check or "cloudflare" in html_check.lower() or len(html_check) < 15000:
+
+                if getattr(page, "url", "") in ("about:blank", "") or len(html_check.strip()) < 60:
+                    logger.warning(f"[Browser] Empty or blank document returned for {url}")
+                    return "", "", []
+
+                # Check for SiteGround / Cloudflare / generic bot challenges
+                html_lower = html_check.lower()
+                is_bot_challenge = (
+                    "checking the site connection security" in html_lower
+                    or "checking your browser" in html_lower
+                    or "confirm you are human" in html_lower
+                    or "just a moment" in html_lower
+                    or "sg-captcha" in html_lower
+                    or "cf-browser-verification" in html_lower
+                    or "challenge-platform" in html_lower
+                )
+                if is_bot_challenge:
                     logger.info("[Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...")
                     try:
-                        # Wait up to 10 seconds for the challenge to resolve and page to reload
+                        # Wait up to 15 seconds for the challenge to resolve and page to reload
                         await page.wait_for_function(
-                            "() => document.body && !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", 
+                            "() => { const root = document.body || document.documentElement; if (!root) return false; const t = (root.innerText || root.textContent || '').toLowerCase(); const title = (document.title || '').toLowerCase(); return !t.includes('checking the site connection security') && !t.includes('just a moment') && !t.includes('checking your browser') && !t.includes('confirm you are human') && !title.includes('just a moment') && !title.includes('checking your browser'); }",
                             timeout=15000
                         )
-                        # Wait an additional 3 seconds for the actual DOM to settle after redirect
-                        await asyncio.sleep(3)
+                        # Wait an additional 2 seconds for the actual DOM to settle after redirect
+                        await asyncio.sleep(2)
                         try:
                             await page.wait_for_load_state('domcontentloaded', timeout=5000)
                         except Exception:
                             pass
                     except Exception as e:
                         logger.warning(f"[Browser] Bot challenge wait timed out or failed: {e}")
-                
-                    await page.mouse.wheel(0, 500)
-                    await asyncio.sleep(0.5)
-                
+
+                    if not is_aux_resource:
+                        await page.mouse.wheel(0, 500)
+                        await asyncio.sleep(0.5)
+
                 # Acquire cookies
                 cookies_list = await context.cookies()
 
-                # Auto-dismiss consent banners & wait for splash preloader overlays to clear
-                await dismiss_consent_banners(page)
-                await wait_for_preloaders_to_hide(page)
-                await asyncio.sleep(1.0)
+                if not is_aux_resource:
+                    # Auto-dismiss consent banners & wait for splash preloader overlays to clear
+                    await dismiss_consent_banners(page)
+                    await wait_for_preloaders_to_hide(page)
+                    await asyncio.sleep(0.8)
 
                 # Take screenshot for the UI if requested
                 if take_screenshot:
@@ -202,6 +250,36 @@ async def fetch_url_with_browser(
                         except Exception as e:
                             logger.debug(f"[Browser] Load more expansion ended: {e}")
                             break
+
+                if not is_aux_resource:
+                    try:
+                        await page.evaluate(
+                            """() => {
+                                // 1. Remove 1pxx1px AI/SEO cloaking blocks injected at runtime
+                                document.querySelectorAll('[data-seo-content], [style*="clip-path:inset(50%)"], [style*="clip-path: inset(50%)"]').forEach(el => el.remove());
+
+                                // 2. Ensure Elementor lazy containers unlock their CSS background-image rules
+                                document.querySelectorAll('.e-con.e-parent').forEach(el => el.classList.add('e-lazyloaded'));
+
+                                // 3. Persist computed CSS background-image URLs onto data-bg-src so the HTML parser can extract them
+                                const candidates = document.querySelectorAll('div, section, article, figure');
+                                for (const el of candidates) {
+                                    if (el.closest('header, footer, nav, [data-elementor-type="header"], [data-elementor-type="footer"], [data-elementor-type="popup"], .elementor-hidden-desktop')) {
+                                        continue;
+                                    }
+                                    if (el.hasAttribute('data-bg-src')) continue;
+                                    const bg = window.getComputedStyle(el).backgroundImage;
+                                    if (bg && bg !== 'none' && bg.includes('url(') && !bg.includes('gradient(')) {
+                                        const m = bg.match(/url\\(["']?(https?:\\/\\/[^"')]+)["']?\\)/i);
+                                        if (m && m[1] && !m[1].startsWith('data:')) {
+                                            el.setAttribute('data-bg-src', m[1]);
+                                        }
+                                    }
+                                }
+                            }"""
+                        )
+                    except Exception as eval_e:
+                        logger.debug(f"[Browser] Pre-serialization DOM enrichment skipped: {eval_e}")
 
                 html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url} using engine '{session.engine_name}'")

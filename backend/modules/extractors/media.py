@@ -2,8 +2,8 @@ import logging
 import os
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-from modules.utils.network import get_domain_from_url
-from modules.utils.fs import sanitize_filename
+from modules.utils.url_utils import get_domain_from_url
+from modules.utils.text_utils import sanitize_filename
 from .helpers import clean_media_url, clean_page_title, extract_sku_from_url, extract_sku_from_html
 from .html import extract_from_text, extract_urls_from_srcset, extract_url_from_style_background
 
@@ -124,9 +124,6 @@ def extract_media_urls(html_content, base_url, config):
     exclusion_keywords = ['social', 'whatsapp', 'wechat', 'facebook', 'twitter', 'instagram', 'icon', 'logo', 'shuffle', 'snake', 'menu', 'arrow', 'chevron']
 
     # 0.3 SKU Detection for Strict Filtering
-    with open('ps_debug.html', 'w') as f:
-        f.write(html_content)
-    
     sku_parts = extract_sku_from_url(base_url)
     if not sku_parts:
         # Fallback to looking in the HTML (e.g., meta tags or ld+json) for SEO URLs

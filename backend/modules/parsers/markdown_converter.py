@@ -38,11 +38,12 @@ def get_best_image(element):
     # Check the element itself
     parse_srcset(element.get('data-srcset') or element.get('srcset'))
 
-    # Check high-res attributes on element itself (e.g. USM data-lightbox-src, zoom images)
+    # Check high-res attributes on element itself (e.g. USM data-lightbox-src, zoom images, computed bg)
     for big_attr in [
         'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
         'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
-        'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd'
+        'data-large_image', 'data-large', 'data-big-photo', 'data-imagehd',
+        'data-bg-src', 'data-thumbnail', 'data-background', 'data-bg'
     ]:
         val = element.get(big_attr) if hasattr(element, 'get') else None
         if val and not val.startswith('data:'):
@@ -98,6 +99,7 @@ def get_best_image(element):
         'data-lightbox-src', 'data-lightbox', 'data-zoom-image', 'data-zoom-src',
         'data-full-src', 'data-full-image', 'data-high-res-src', 'data-highres',
         'data-media-url', 'data-large_image', 'data-large', 'data-full-url',
+        'data-bg-src', 'data-thumbnail', 'data-background', 'data-bg',
         'data-src', 'data-lazy-src', 'src'
     ]:
         val = element.get(attr)
@@ -109,10 +111,20 @@ def get_best_image(element):
                     if u and not u.startswith('data:'):
                         return u
             return val
+
+    if hasattr(element, 'get') and element.get('data-settings'):
+        import json
+        try:
+            settings = json.loads(element.get('data-settings'))
+            if isinstance(settings, dict):
+                bg_img = settings.get('background_image') or settings.get('background_video_fallback')
+                if isinstance(bg_img, dict) and bg_img.get('url') and not str(bg_img['url']).startswith('data:'):
+                    return str(bg_img['url'])
+        except Exception:
+            pass
             
     style = element.get('style', '')
     if 'background-image' in style or 'background' in style:
-        import re
         match = re.search(r'url\([\'"]?(.*?)[\'"]?\)', style)
         if match:
             bg_src = match.group(1)
@@ -137,7 +149,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         if hasattr(element, 'get'):
             vid_attr = element.get('data-media-video') or element.get('data-media-autoplayvideo')
             if vid_attr:
-                import re, html
+                import html
                 decoded = html.unescape(vid_attr)
                 src_match = re.search(r'src=["\']([^"\']+)["\']', decoded)
                 if src_match:
@@ -154,7 +166,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             return clean_text(text) if text.strip() else ''
 
         # Skip form inputs and non-content tags (do not skip form itself, so children can be processed)
-        if element.name in ['input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe']:
+        if element.name in ['input', 'select', 'option', 'button', 'script', 'style', 'noscript', 'svg', 'iframe', 'dialog', 'template']:
             return ""
 
         # Skip elements with certain classes/IDs that indicate non-content
@@ -162,15 +174,17 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         element_id = get_element_attr_as_string(element, 'id')
         classes_lower = element_classes.lower()
         id_lower = element_id.lower()
-        tag_name = getattr(element, 'name', '') or ''
+        tag_name = (getattr(element, 'name', '') or '').lower()
+        elementor_type = (element.get('data-elementor-type') or '').lower() if hasattr(element, 'get') else ''
 
-        # Exception: do not skip gallery media, modal openers, or lightboxes
-        is_media_container = (
+        # Exception: do not skip root containers, Elementor page roots, gallery media, modal openers, or lightboxes
+        is_media_or_root_container = (
+            tag_name in ('body', 'html', 'main', 'article', 'img') or
+            elementor_type in ('wp-page', 'wp-post', 'single', 'single-page', 'single-post', 'archive') or
             'modal-opener' in tag_name or
             'modal-opener' in classes_lower or
             'product__media' in classes_lower or
-            'lightbox' in classes_lower or
-            tag_name == 'img'
+            'lightbox' in classes_lower
         )
 
         # Exception: protect explicit content elements (headings, headlines, subheaders, card titles)
@@ -183,7 +197,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         )
 
         skip_patterns = [
-            'cookie', 'consent', 'popup', 'modal', 'sidebar',
+            'cookie', 'consent', 'gdpr', 'moove', 'popup', 'modal', 'sidebar',
             'footer', 'menu', 'nav', 'search', 'cart', 'login',
             'ad-banner', 'cookie-banner', 'advertisement', 'promo-bar'
         ]
@@ -194,7 +208,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             if not element.find(['h1', 'h2', 'h3']) and len(element.get_text(strip=True)) < 200:
                 is_site_header = True
 
-        if not is_media_container and not is_content_element and (
+        if not is_media_or_root_container and not is_content_element and (
             is_site_header or any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns)
         ):
             return ""
@@ -202,7 +216,7 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
         # Process headings with proper spacing
         if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
             heading_level = int(element.name[1])
-            heading_text = clean_text(element.get_text(separator=" "))
+            heading_text = re.sub(r'\s+', ' ', clean_text(element.get_text(separator=" "))).strip()
             if heading_text:
                 return f"\n\n{'#' * heading_level} {heading_text}\n\n"
             return ""
@@ -238,10 +252,14 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
                         seen_img_urls.add(full_src)
                     img_md += html_to_markdown(img, base_url, driver, page_dir, processed_elements)
 
-            href = element.get('href', '')
+            href = (element.get('href') or '').strip()
             link_text = clean_text(element.get_text(separator=" "))
 
-            if href and not href.startswith(('javascript:', 'mailto:', 'tel:')):
+            if href and not href.startswith(('javascript:', '#')):
+                if href.startswith(('mailto:', 'tel:')):
+                    if link_text:
+                        return img_md + f"[{link_text}]({href})\n\n"
+                    return img_md
                 href = urljoin(base_url, href)
                 if link_text:
                     return img_md + f"[{link_text}]({href})\n\n"
@@ -249,10 +267,21 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
             else:
                 if img_md:
                     return img_md + (f"{link_text}\n\n" if link_text else "")
-                return clean_text(link_text)
+                return f"{clean_text(link_text)}\n\n" if link_text else ""
 
-        # Process images with better handling
-        elif element.name == 'img' or (element.name in ['div', 'span', 'section', 'article'] and (element.has_attr('data-media-video') or element.has_attr('data-media-autoplayvideo') or (element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', ''))))):
+        # Process images and containers with background images / videos
+        elif element.name == 'img' or (
+            element.name in ['div', 'span', 'section', 'article', 'figure'] and (
+                element.has_attr('data-bg-src') or
+                element.has_attr('data-thumbnail') or
+                element.has_attr('data-background') or
+                element.has_attr('data-bg') or
+                element.has_attr('data-media-video') or
+                element.has_attr('data-media-autoplayvideo') or
+                (element.has_attr('data-settings') and 'background_image' in str(element.get('data-settings', ''))) or
+                (element.has_attr('style') and ('background-image' in element.get('style', '') or 'background:' in element.get('style', '')))
+            )
+        ):
             src = get_best_image(element)
             alt = element.get('alt', '') if element.name == 'img' else ''
             
@@ -264,8 +293,9 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
                     
             if src:
                 if should_exclude_image(src, alt):
+                    if element.name != 'img':
+                        return video_md + process_children_recursively(element, base_url, driver, page_dir, processed_elements)
                     return ""
-                
                 
                 src = urljoin(base_url, src)
                 img_md = f"![{alt}]({src})\n\n"
@@ -331,18 +361,23 @@ def html_to_markdown(element, base_url, driver=None, page_dir=None, processed_el
 
         # Process divs and other container elements
         elif element.name in ['div', 'section', 'article', 'main', 'aside', 'span']:
-            # Upgrade Elementor/div headings to actual headings
+            # Upgrade leaf Elementor/div headings to actual headings (only when no real heading or block children exist)
             element_classes = element.get('class', [])
             if isinstance(element_classes, list):
                 class_str = ' '.join(element_classes).lower()
             else:
                 class_str = str(element_classes).lower()
-                
-            if element.name in ['div', 'p', 'span'] and ('heading' in class_str or 'title' in class_str) and len(clean_text(element.get_text(separator=' '))) < 150:
-                heading_text = clean_text(element.get_text(separator=' '))
+
+            if (
+                element.name in ['div', 'p', 'span']
+                and ('heading-title' in class_str or 'widget-title' in class_str or 'section-title' in class_str)
+                and not element.find(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'div'])
+                and len(clean_text(element.get_text(separator=' '))) < 150
+            ):
+                heading_text = re.sub(r'\s+', ' ', clean_text(element.get_text(separator=' '))).strip()
                 if heading_text:
                     return f"\n\n## {heading_text}\n\n"
-                    
+
             return process_children_recursively(element, base_url, driver, page_dir, processed_elements)
 
         # Process other elements
@@ -364,16 +399,25 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
         # First, try to find the main content container
         main_containers = []
 
-        # Look for main content containers
+        # Look for main content containers (including Elementor page/post containers)
         for selector in [
-            'main', 'article', '.content', '#content', '.entry-content', '.post-content',
-            '.main-content', '.site-content', '#main', '.main', 'div[role="main"]'
+            '[data-elementor-type="wp-page"]',
+            '[data-elementor-type="wp-post"]',
+            '[data-elementor-type="single"]',
+            '[data-elementor-type="single-page"]',
+            '[data-elementor-type="single-post"]',
+            '[data-elementor-type="archive"]',
+            'main', 'article', '.entry-content', '.post-content', '.page-content',
+            '.main-content', '.site-content', '#content', '.content', '#main', '.main', 'div[role="main"]'
         ]:
             try:
                 elements = soup.select(selector)
                 for element in elements:
-                    # Skip small containers
-                    if len(element.get_text(strip=True)) > 300:
+                    # Skip header/footer/popup containers
+                    if should_skip_element(element):
+                        continue
+                    # Accept containers with meaningful text or media
+                    if len(element.get_text(strip=True)) > 40 or element.find('img'):
                         main_containers.append(element)
             except Exception:
                 continue
@@ -385,6 +429,9 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
 
             # Process the largest container
             markdown += html_to_markdown(main_containers[0], url, driver, page_dir, processed_elements)
+        elif soup.body:
+            # Process body directly in DOM order (header/footer/nav/cookie elements are already decomposed or skipped)
+            markdown += html_to_markdown(soup.body, url, driver, page_dir, processed_elements)
         else:
             # First attempt: traverse direct body children / top-level content sections in natural DOM order
             section_markdown = ""
@@ -424,7 +471,7 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
                 for i in range(1, 7):
                     for heading in soup.find_all(f'h{i}'):
                         # Skip headings in navigation, footer, etc.
-                        if should_skip_element(heading, ['nav', 'menu', 'footer', 'sidebar']):
+                        if should_skip_element(heading, ['nav', 'menu', 'footer', 'header', 'sidebar']):
                             continue
 
                         markdown += html_to_markdown(heading, url, driver, page_dir, processed_elements)
@@ -432,7 +479,7 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
                 # Process paragraphs
                 for p in soup.find_all('p'):
                     # Skip paragraphs in navigation, footer, etc.
-                    if should_skip_element(p, ['nav', 'menu', 'footer', 'sidebar', 'cookie']):
+                    if should_skip_element(p, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
                         continue
 
                     # Skip very short paragraphs that are likely not content
@@ -444,42 +491,17 @@ def process_all_elements(soup, url, driver=None, page_dir=None):
                 # Process lists
                 for ul in soup.find_all('ul'):
                     # Skip lists in navigation, footer, etc.
-                    if should_skip_element(ul, ['nav', 'menu', 'footer', 'sidebar']):
+                    if should_skip_element(ul, ['nav', 'menu', 'footer', 'header', 'sidebar']):
                         continue
 
                     markdown += html_to_markdown(ul, url, driver, page_dir, processed_elements)
 
                 for ol in soup.find_all('ol'):
                     # Skip lists in navigation, footer, etc.
-                    if should_skip_element(ol, ['nav', 'menu', 'footer', 'sidebar']):
+                    if should_skip_element(ol, ['nav', 'menu', 'footer', 'header', 'sidebar']):
                         continue
 
                     markdown += html_to_markdown(ol, url, driver, page_dir, processed_elements)
-
-            # Process images
-            # for img in soup.find_all('img'):
-            #     # Skip tiny images and icons
-            #     if img.get('width') and int(img.get('width', '0').replace('px', '').strip() or 0) < 100:
-            #         continue
-            #     if img.get('height') and int(img.get('height', '0').replace('px', '').strip() or 0) < 100:
-            #         continue
-            #
-            #     # Skip images that should be excluded
-            #     src = img.get('src', '')
-            #     alt = img.get('alt', '')
-            #     if should_exclude_image(src, alt):
-            #         continue
-            #
-            #     # Skip images in navigation, footer, etc.
-            #     parent_classes = ' '.join([get_element_attr_as_string(p, 'class') for p in img.parents])
-            #     parent_ids = ' '.join([get_element_attr_as_string(p, 'id') for p in img.parents])
-            #
-            #     if any(pattern in parent_classes.lower() or pattern in parent_ids.lower()
-            #            for pattern in ['nav', 'menu', 'footer', 'header', 'sidebar', 'logo']):
-            #         continue
-            #
-            #     if src and not src.startswith('data:'):  # Skip data URIs
-            #         markdown += html_to_markdown(img, url, driver, page_dir, processed_elements)
 
         # Clean up the markdown
         # Remove excessive newlines
@@ -528,7 +550,36 @@ def meta_to_markdown_table(meta_data, title):
 
 def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     """Convert page content to markdown with improved formatting and error handling"""
-    for tag in soup.find_all(['noscript', 'script', 'style']):
+    # Extract Elementor CSS background-image rules from inline <style> and elementor-post-* stylesheets onto data-bg-src
+    try:
+        css_blobs = [st.string or st.get_text() for st in soup.find_all('style') if st.string or st.get_text()]
+        if soup.select_one('[data-elementor-type="wp-page"], [data-elementor-type="wp-post"]'):
+            import requests
+            for link_tag in soup.find_all('link', rel='stylesheet', href=True):
+                link_id = str(link_tag.get('id') or '').lower()
+                href = str(link_tag.get('href') or '')
+                if 'elementor-post-' in link_id or '/elementor/css/post-' in href:
+                    try:
+                        css_resp = requests.get(urljoin(url, href), timeout=(3, 5))
+                        if css_resp.ok and css_resp.text:
+                            css_blobs.append(css_resp.text)
+                    except Exception:
+                        pass
+        for css_text in css_blobs:
+            for el_id, bg_url in re.findall(
+                r'\.elementor-element-([a-zA-Z0-9_-]+)[^{]*\{[^}]*background-image\s*:\s*url\(["\']?(https?://[^"\')\s]+)["\']?\)',
+                css_text,
+                flags=re.IGNORECASE,
+            ):
+                if bg_url.startswith('data:'):
+                    continue
+                target_el = soup.find(attrs={'data-id': el_id})
+                if target_el and not target_el.has_attr('data-bg-src'):
+                    target_el['data-bg-src'] = bg_url
+    except Exception:
+        pass
+
+    for tag in soup.find_all(['noscript', 'script', 'style', 'template', 'dialog']):
         tag.decompose()
 
     # Strip HTML comments
@@ -558,22 +609,38 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
     title = soup.title.string if soup.title else "Untitled Page"
     markdown_content = ""
 
-    # First, try to remove cookie banners, ads, and other non-content elements
-    if main_content:
-        for selector in [
-            '.cookie', '.cookies', '.cookie-banner', '.cookie-consent', '.consent',
-            '.gdpr', '.privacy-alert', '[id*="cookie"]', '[class*="cookie"]',
-            '.menu', '#menu', 'nav', '.nav', '#nav', '.navigation', '#navigation',
-            '.footer', '#footer', '.sidebar', '#sidebar',
-            '.ad', '.advertisement', '.popup', '.modal', '.overlay',
-            '.elementor-hidden-mobile', '.elementor-hidden-tablet', '.elementor-hidden-phone',
-            '.d-none', '.d-sm-none', '.d-md-none', '.hidden', '[style*="display: none"]', '[style*="display:none"]'
-        ]:
-            for element in main_content.select(selector):
+    # Remove cookie banners, forms, hidden SEO cloaking, and non-content chrome across soup
+    for selector in [
+        '[data-seo-content]',
+        '[style*="clip-path:inset(50%)"]', '[style*="clip-path: inset(50%)"]',
+        '[style*="clip:rect(1px"]', '[style*="clip: rect(1px"]',
+        'header', 'footer', 'nav',
+        '[data-elementor-type="header"]', '[data-elementor-type="footer"]', '[data-elementor-type="popup"]',
+        '.elementor-location-header', '.elementor-location-footer', '.elementor-location-popup',
+        '#moove_gdpr_cookie_info_bar', '#moove_gdpr_cookie_modal',
+        '[id*="moove_gdpr"]', '[class*="moove-gdpr"]',
+        '.cookie', '.cookies', '.cookie-banner', '.cookie-consent', '.consent',
+        '.gdpr', '.privacy-alert', '[id*="cookie"]', '[class*="cookie"]',
+        'form', '.form', '#form', 'input', 'select', 'button',
+        '.menu', '#menu', '.nav', '#nav', '.navigation', '#navigation',
+        '.footer', '#footer', '.header', '#header', '.sidebar', '#sidebar',
+        '.ad', '.advertisement', '.popup', '.modal', '.overlay',
+        '.elementor-hidden-desktop',
+        '.d-none', '.hidden', '[aria-hidden="true"]',
+        '[style*="display: none"]', '[style*="display:none"]'
+    ]:
+        try:
+            for element in soup.select(selector):
+                if element.name in ('html', 'body', 'main', 'article'):
+                    continue
+                if element.get('data-elementor-type') in ('wp-page', 'wp-post', 'single', 'single-page', 'single-post'):
+                    continue
                 # Do not decompose if element has major heading and substantive content
                 if element.find(['h1', 'h2']) and len(element.get_text(strip=True)) > 300:
                     continue
                 element.decompose()
+        except Exception:
+            continue
 
     # Process the content
     try:
@@ -611,7 +678,7 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
             pass
 
     # If content is still minimal, try a more aggressive approach with deduplication
-    if len(markdown_content.split()) < 40:
+    if len(markdown_content.split()) < 30:
         try:
             significant_blocks = []
             seen_texts = set()
@@ -630,7 +697,7 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
                 text = tag.get_text(strip=True)
                 if len(text) > 80:  # Only include blocks with meaningful text
                     # Skip if it's in a navigation, footer, etc.
-                    if should_skip_element(tag, ['nav', 'menu', 'footer', 'sidebar', 'cookie']):
+                    if should_skip_element(tag, ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie']):
                         continue
 
                     norm = re.sub(r'\s+', ' ', text.lower()).strip()
@@ -642,11 +709,8 @@ def convert_content_to_markdown(main_content, soup, url, driver, page_dir):
                     seen_texts.add(norm)
                     significant_blocks.append(text)
 
-            # Add the significant blocks to the content
             if significant_blocks:
-                markdown_content += "\n\n## Extracted Content\n\n"
-                for block in significant_blocks:
-                    markdown_content += f"{block}\n\n"
+                markdown_content += "\n\n" + "\n\n".join(significant_blocks) + "\n\n"
         except Exception as e:
             logger.error(f"Error extracting significant blocks: {e}")
 

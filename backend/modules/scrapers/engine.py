@@ -11,11 +11,22 @@ from urllib.parse import urljoin
 from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
-from database.models import Page
+from database.models import Page, ScrapeJob
 from modules.config import DOWNLOADS_DIR, BACKEND_DIR, PROJECT_ROOT
 from .fetcher import fetch_url_with_browser
 from .sitemap_fetcher import determine_content_type
-from modules.parsers.markdown_converter import convert_content_to_markdown
+from .parked import check_parked_domain, is_blank_page
+from modules.parsers.markdown_converter import convert_content_to_markdown, get_best_image
+from modules.extractors.icons_url import extract_best_icon
+from modules.extractors.basic_info import (
+    extract_about,
+    extract_email,
+    extract_phone,
+    extract_instagram,
+    extract_linkedin,
+    extract_founded,
+    extract_location,
+)
 from modules.utils.text_utils import sanitize_filename
 
 MIN_DELAY = 1.5
@@ -74,48 +85,72 @@ def determine_page_hreflang(
 
     return None
 
-def get_best_image(element):
-    """Extract the highest resolution image URL from an element (img or styled div)."""
-    best_src = None
-    
-    # Try srcset or data-srcset
-    srcset = element.get('data-srcset') or element.get('srcset')
-    if srcset:
-        candidates = []
-        for part in srcset.split(','):
-            part = part.strip()
-            if not part: continue
-            tokens = part.split(' ')
-            url = tokens[0]
-            width = 0
-            if len(tokens) > 1:
-                w_str = tokens[1].replace('w', '').replace('x', '')
-                if w_str.isdigit():
-                    width = int(w_str)
-            candidates.append((width, url))
-        if candidates:
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            best_src = candidates[0][1]
-            
-    if best_src and not best_src.startswith('data:'):
-        return best_src
-        
-    # Try high-res data attributes
-    for attr in ['data-large_image', 'data-large', 'data-full-url', 'data-src', 'data-lazy-src', 'src']:
-        val = element.get(attr)
-        if val and not val.startswith('data:'):
-            return val
-            
-    # Check for background-image in style
-    style = element.get('style', '')
-    if 'background-image' in style or 'background' in style:
-        match = re.search(r'url\([\'"]?(.*?)[\'"]?\)', style)
-        if match:
-            bg_src = match.group(1)
-            if not bg_src.startswith('data:'):
-                return bg_src
-                
-    return None
+
+SHARED_CONTACT_KEYS = (
+    "Icon URL",
+    "Location",
+    "Email",
+    "Phone",
+    "Instagram",
+    "LinkedIn",
+    "Founded",
+)
+
+
+def _read_job_contact_csv(job_dir: str) -> dict[str, str]:
+    contact_csv_path = os.path.join(job_dir, "contact.csv")
+    data: dict[str, str] = {}
+    if os.path.exists(contact_csv_path):
+        try:
+            with open(contact_csv_path, "r", newline="", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                for idx, row in enumerate(reader):
+                    if idx == 0 and row == ["Key", "Value"]:
+                        continue
+                    if len(row) >= 2 and row[0].strip():
+                        data[row[0].strip()] = row[1].strip()
+        except Exception:
+            pass
+    return data
+
+
+def _update_job_contact_csv(job_dir: str, soup: BeautifulSoup, icon_url: str | None = None) -> dict[str, str]:
+    os.makedirs(job_dir, exist_ok=True)
+    contact_data = _read_job_contact_csv(job_dir)
+
+    candidates = {
+        "Icon URL": icon_url,
+        "Location": extract_location(soup),
+        "Email": extract_email(soup),
+        "Phone": extract_phone(soup),
+        "Instagram": extract_instagram(soup),
+        "LinkedIn": extract_linkedin(soup),
+        "Founded": extract_founded(soup),
+    }
+
+    updated = False
+    for k in SHARED_CONTACT_KEYS:
+        val = candidates.get(k)
+        if val is None or not str(val).strip():
+            continue
+        val_str = str(val).strip()
+        existing_val = contact_data.get(k, "")
+        # Allow upgrading Google Favicon fallback to a real site icon
+        if not existing_val or (k == "Icon URL" and "google.com/s2/favicons" in existing_val and "google.com/s2/favicons" not in val_str):
+            contact_data[k] = val_str
+            updated = True
+
+    contact_csv_path = os.path.join(job_dir, "contact.csv")
+    if updated or not os.path.exists(contact_csv_path):
+        with open(contact_csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Key", "Value"])
+            for k in SHARED_CONTACT_KEYS:
+                if k in contact_data and contact_data[k]:
+                    writer.writerow([k, contact_data[k]])
+
+    return contact_data
+
 
 async def scrape_page(
     url: str,
@@ -124,7 +159,8 @@ async def scrape_page(
     job_dir_name: str = None,
     sitemap_hreflang: str = None,
     sitemap_lastmod: str = None,
-    sitemap_content_type: str = None
+    sitemap_content_type: str = None,
+    max_pages: int = 0,
 ):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
@@ -152,34 +188,86 @@ async def scrape_page(
         screenshot_path = ""
         pw_cookies = []
 
-    # Check if Playwright failed or hit a Cloudflare/Bot challenge
+    # Check if browser failed or hit an unresolved Bot challenge
     needs_fallback = False
-    if not html_content:
+    html_lower = (html_content or "").lower()
+    if not html_content or len(html_content.strip()) < 500:
         needs_fallback = True
-    elif len(html_content) < 50000 or 'robot-suspicion' in html_content or 'cloudflare' in html_content.lower() or 'just a moment' in html_content.lower():
+    elif (
+        "robot-suspicion" in html_lower
+        or "checking the site connection security" in html_lower
+        or "checking your browser" in html_lower
+        or "<title>just a moment" in html_lower
+        or "confirm you are human" in html_lower
+    ):
         needs_fallback = True
 
     if needs_fallback:
-        logging.warning(f"Playwright failed or hit bot challenge for {url}. Falling back to standard HTTP request...")
+        logging.warning(f"Browser failed or hit bot challenge for {url}. Falling back to standard HTTP request...")
         import requests
         try:
             response = await asyncio.to_thread(
                 requests.get,
                 url,
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'},
-                timeout=15
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'},
+                timeout=(6, 12)
             )
             response.raise_for_status()
+            if len(response.text.strip()) < 500:
+                raise ValueError("Fallback request also returned an empty/challenge page.")
             html_content = response.text
-            if len(html_content) < 10000:
-                raise ValueError("Fallback request also returned a suspiciously small page (likely a bot challenge).")
             logging.info(f"Fallback request successful for {url} ({len(html_content)} bytes)")
         except Exception as e:
-            logging.error(f"Fallback fetch also failed for {url}: {e}. Proceeding with original Playwright content...")
+            logging.error(f"Fallback fetch also failed for {url}: {e}. Proceeding with original browser content...")
+            if not html_content or len(html_content.strip()) < 100:
+                raise RuntimeError(f"Failed to fetch content for {url}: {e}")
 
     soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Strip hidden 1pxx1px AI-SEO cloaking blocks immediately so they never pollute metadata or markdown
+    for hidden_seo in soup.select('[data-seo-content], [style*="clip-path:inset(50%)"], [style*="clip-path: inset(50%)"]'):
+        hidden_seo.decompose()
+
+    # Collect alternate language URLs (e.g. TranslatePress / WPML <link rel="alternate" hreflang="..." href="...">)
+    alternate_lang_links: list[tuple[str, str]] = []
+    try:
+        base_netloc = urlparse(url).netloc.lower().removeprefix("www.")
+        seen_alt_urls: set[str] = set()
+        for link_tag in soup.find_all("link", rel=lambda r: r and "alternate" in (r if isinstance(r, list) else str(r).lower().split())):
+            hl = (link_tag.get("hreflang") or "").strip().lower()
+            href = (link_tag.get("href") or "").strip()
+            if not hl or hl == "x-default" or not href:
+                continue
+            alt_full = urljoin(url, href).split("#")[0]
+            pu = urlparse(alt_full)
+            if pu.scheme in ("http", "https") and pu.netloc.lower().removeprefix("www.") == base_netloc:
+                if alt_full not in seen_alt_urls and alt_full != url:
+                    seen_alt_urls.add(alt_full)
+                    lang_short = re.split(r"[-_]", hl)[0]
+                    alternate_lang_links.append((alt_full, lang_short))
+    except Exception:
+        pass
+
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
+
+    # Health checks: blank page & parked domain detection
+    if is_blank_page(soup):
+        logging.warning(f"Blank or nearly empty page detected for {url}")
+    full_page_text = soup.get_text(separator=" ", strip=True)
+    if check_parked_domain(full_page_text, url):
+        logging.warning(f"Parked or spam domain content detected for {url}")
+
+    # Extract best high-resolution icon URL once per job (or upgrade if previous was a Google Favicon fallback)
+    existing_contact = _read_job_contact_csv(job_dir)
+    cached_icon = existing_contact.get("Icon URL")
+    if cached_icon and "google.com/s2/favicons" not in cached_icon:
+        icon_url = cached_icon
+    else:
+        icon_url = await asyncio.to_thread(extract_best_icon, soup, url)
+
+    # Persist shared site/contact fields into job-level contact.csv (instead of every single page)
+    _update_job_contact_csv(job_dir, soup, icon_url)
 
     # Determine page hreflang and content_type
     hreflang = determine_page_hreflang(url, soup, sitemap_hreflang)
@@ -233,19 +321,14 @@ async def scrape_page(
         else:
             db_screenshot_path = f"../_downloads/{folder_name}/{final_screenshot_name}"
 
-
     metadata = {
         "URL": url,
         "Title": page_title,
-        "Description": "",
+        "Description": extract_about(soup) or "",
         "Keywords": "",
         "Sitemap Last Modified": sitemap_lastmod or "",
         "Scraped At": datetime.now().isoformat()
     }
-    desc_tag = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", property="og:description")
-    if desc_tag and desc_tag.get("content"):
-        metadata["Description"] = desc_tag["content"].strip()
-        
     kw_tag = soup.find("meta", attrs={"name": "keywords"})
     if kw_tag and kw_tag.get("content"):
         metadata["Keywords"] = kw_tag["content"].strip()
@@ -280,86 +363,76 @@ async def scrape_page(
     downloaded_media = []
     
     if img_matches:
-        logging.info(f"Attempting to download {len(img_matches)} images using browser engine...")
-        from modules.scrapers.browser_engine import get_browser
-        
-        async def download_images_pw():
-            async with get_browser(headless=True) as session:
-                context = await session.create_context()
-                page = await session.new_page(context=context)
-                
-                # Navigate to base URL to clear Captcha
-                try:
-                    await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-                except:
-                    await page.wait_for_load_state('networkidle', timeout=15000)
-                    
-                # Wait for Captcha bypass
-                try:
-                    await page.wait_for_function("() => !document.body.innerText.includes('Checking the site connection security') && !document.body.innerText.includes('Just a moment')", timeout=15000)
-                    await asyncio.sleep(2)
-                except:
-                    pass
-                    
-                # Deduplicate images by src while keeping alt
-                unique_images = []
-                seen_srcs = set()
-                for alt, src in img_matches:
-                    if src.startswith('data:') or src in seen_srcs:
-                        continue
-                    seen_srcs.add(src)
-                    unique_images.append((alt, src))
+        import requests
+        unique_images = []
+        seen_srcs = set()
+        for alt, src in img_matches:
+            if src.startswith('data:') or src in seen_srcs:
+                continue
+            seen_srcs.add(src)
+            unique_images.append((alt, src))
 
-                logging.info(f"Downloading {len(unique_images)} unique images concurrently...")
+        if unique_images:
+            logging.info(f"Downloading {len(unique_images)} unique images concurrently...")
+            img_session = requests.Session()
+            img_session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                "Referer": url,
+            })
+            if pw_cookies:
+                for c in pw_cookies:
+                    if isinstance(c, dict) and c.get("name") and c.get("value") is not None:
+                        img_session.cookies.set(c["name"], c["value"], domain=c.get("domain", ""))
 
-                sem = asyncio.Semaphore(15)
-                used_filenames = set()
-                download_lock = asyncio.Lock()
-                downloaded_count = 0
+            sem = asyncio.Semaphore(15)
+            used_filenames = set()
+            download_lock = asyncio.Lock()
+            downloaded_count = 0
 
-                media_csv_path = os.path.join(page_dir, "media_index.csv")
-                with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(["Filename", "Alt Text", "Original URL"])
+            media_csv_path = os.path.join(page_dir, "media_index.csv")
+            with open(media_csv_path, "w", newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Filename", "Alt Text", "Original URL"])
 
-                    async def download_one(alt, src, idx):
-                        nonlocal downloaded_count
-                        raw_filename = os.path.basename(urlparse(src).path)
-                        clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_filename)
-                        if not clean_name or '.' not in clean_name:
-                            clean_name = f"image_{idx}.jpg"
+                def _fetch_img_bytes(target_src: str) -> bytes:
+                    resp = img_session.get(target_src, timeout=(5, 12))
+                    resp.raise_for_status()
+                    return resp.content
 
-                        # Avoid collisions
+                async def download_one(alt, src, idx):
+                    nonlocal downloaded_count
+                    raw_filename = os.path.basename(urlparse(src).path)
+                    clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_filename)
+                    if not clean_name or '.' not in clean_name:
+                        clean_name = f"image_{idx}.jpg"
+
+                    async with download_lock:
+                        if clean_name in used_filenames:
+                            clean_name = f"{idx}_{clean_name}"
+                        used_filenames.add(clean_name)
+
+                    local_path = os.path.join(images_dir, clean_name)
+                    rel_path = f"{img_rel_prefix}/{clean_name}"
+
+                    try:
+                        async with sem:
+                            body = await asyncio.to_thread(_fetch_img_bytes, src)
+
+                        with open(local_path, 'wb') as img_file:
+                            img_file.write(body)
+
                         async with download_lock:
-                            if clean_name in used_filenames:
-                                clean_name = f"{idx}_{clean_name}"
-                            used_filenames.add(clean_name)
+                            writer.writerow([clean_name, alt, src])
+                            downloaded_media.append((src, rel_path))
+                            downloaded_count += 1
+                            if downloaded_count % 50 == 0 or downloaded_count == len(unique_images):
+                                logging.info(f"Downloaded {downloaded_count}/{len(unique_images)} images...")
+                    except Exception as e:
+                        logging.warning(f"Failed to download {src}: {e}")
 
-                        local_path = os.path.join(images_dir, clean_name)
-                        rel_path = f"{img_rel_prefix}/{clean_name}"
+                tasks = [download_one(alt, src, i) for i, (alt, src) in enumerate(unique_images)]
+                await asyncio.gather(*tasks)
 
-                        try:
-                            async with sem:
-                                img_resp = await context.request.get(src, timeout=15000)
-                                body = await img_resp.body()
-
-                            with open(local_path, 'wb') as img_file:
-                                img_file.write(body)
-
-                            async with download_lock:
-                                writer.writerow([clean_name, alt, src])
-                                downloaded_media.append((src, rel_path))
-                                downloaded_count += 1
-                                if downloaded_count % 50 == 0 or downloaded_count == len(unique_images):
-                                    logging.info(f"Downloaded {downloaded_count}/{len(unique_images)} images...")
-                        except Exception as e:
-                            logging.warning(f"Failed to download {src}: {e}")
-
-                    tasks = [download_one(alt, src, i) for i, (alt, src) in enumerate(unique_images)]
-                    await asyncio.gather(*tasks)
-                
-        await download_images_pw()
-        
         # Replace URLs in markdown
         for src, rel_path in downloaded_media:
             final_markdown = final_markdown.replace(f"({src})", f"({rel_path})")
@@ -403,6 +476,7 @@ async def scrape_page(
             session.add(page)
             
         page.title = page_title
+        page.icon_url = icon_url
         page.markdown_path = db_markdown_path
         page.screenshot_path = db_screenshot_path
         page.url_path = urlparse(url).path or "/"
@@ -413,6 +487,46 @@ async def scrape_page(
             page.hreflang = hreflang
         if sitemap_lastmod:
             page.lastmod = sitemap_lastmod
+
+        job = session.get(ScrapeJob, job_id)
+        if job:
+            is_target_match = url.rstrip("/") == (job.target_url or "").rstrip("/")
+            if page_title and page_title != "Untitled" and (not job.title or job.title == "Untitled" or is_target_match):
+                job.title = page_title
+            if icon_url and (not job.icon_url or is_target_match):
+                job.icon_url = icon_url
+
+            # Enqueue newly discovered hreflang alternate pages (e.g. TranslatePress / WPML) in sitemap mode
+            if job.scrape_mode == "sitemap" and alternate_lang_links:
+                existing_urls = set(session.exec(select(Page.url).where(Page.job_id == job_id)).all())
+                added_alt = 0
+                for alt_url, alt_lang in alternate_lang_links:
+                    if alt_url in existing_urls:
+                        continue
+                    if max_pages and max_pages > 0 and len(existing_urls) >= max_pages:
+                        break
+                    alt_path = urlparse(alt_url).path or "/"
+                    alt_depth = len([part for part in alt_path.split("/") if part])
+                    alt_ct = determine_content_type(alt_url)
+                    session.add(
+                        Page(
+                            job_id=job_id,
+                            url=alt_url,
+                            title=alt_path,
+                            url_path=alt_path,
+                            url_depth=alt_depth,
+                            status="pending",
+                            hreflang=alt_lang,
+                            content_type=alt_ct,
+                        )
+                    )
+                    existing_urls.add(alt_url)
+                    added_alt += 1
+                if added_alt > 0:
+                    job.total_pages = len(existing_urls)
+                    logging.info(f"[Job {job_id}] Discovered {added_alt} alternate language URL(s) from {url}")
+
+            session.add(job)
         
         session.commit()
 
@@ -478,13 +592,28 @@ async def run_scrape_job(
                         pass
 
         if scrape_mode == "sitemap":
-            from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry
+            from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry, _strip_www
             from .fetcher import fetch_url_with_browser
 
-            # Clearance cookie acquisition (take_screenshot=False)
+            # Clearance cookie acquisition (take_screenshot=False) + immediate root title/icon extraction
             clearance_cookies = None
+            root_html = ""
             try:
-                _, _, clearance_cookies = await fetch_url_with_browser(target_url, take_screenshot=False)
+                root_html, _, clearance_cookies = await fetch_url_with_browser(target_url, take_screenshot=False)
+                if root_html:
+                    root_soup = BeautifulSoup(root_html, "html.parser")
+                    root_title = root_soup.title.string.strip() if root_soup.title and root_soup.title.string else None
+                    root_icon = await asyncio.to_thread(extract_best_icon, root_soup, target_url)
+                    _update_job_contact_csv(job_dir, root_soup, root_icon)
+                    with Session(db_engine) as s:
+                        job = s.get(ScrapeJob, job_id)
+                        if job:
+                            if root_title and root_title != "Untitled":
+                                job.title = root_title
+                            if root_icon:
+                                job.icon_url = root_icon
+                            s.add(job)
+                            s.commit()
             except Exception as e:
                 logging.warning(f"[Job {job_id}] Clearance cookie acquisition error: {e}")
 
@@ -495,6 +624,32 @@ async def run_scrape_job(
                 max_pages=max_pages,
                 cookies=clearance_cookies
             )
+
+            # Fallback: if no XML sitemap was found but root_html was fetched, extract internal links from homepage
+            if not entries and root_html:
+                try:
+                    root_soup = BeautifulSoup(root_html, "html.parser")
+                    base_netloc = _strip_www(urlparse(target_url).netloc)
+                    seen_fallback: set[str] = {target_url.split("#")[0]}
+                    entries.append(SitemapEntry(url=target_url.split("#")[0], content_type="pages"))
+                    for a_tag in root_soup.find_all("a", href=True):
+                        href = (a_tag.get("href") or "").strip()
+                        if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
+                            continue
+                        full_u = urljoin(target_url, href).split("#")[0]
+                        pu = urlparse(full_u)
+                        if pu.scheme in ("http", "https") and _strip_www(pu.netloc) == base_netloc:
+                            ext = pu.path.lower()
+                            if not ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip', '.xml', '.xsl', '.css', '.js')):
+                                if full_u not in seen_fallback:
+                                    seen_fallback.add(full_u)
+                                    entries.append(SitemapEntry(
+                                        url=full_u,
+                                        content_type=determine_content_type(full_u),
+                                    ))
+                    logging.info(f"[Job {job_id}] No XML sitemap found; discovered {len(entries)} internal page URLs from homepage.")
+                except Exception as fb_e:
+                    logging.warning(f"[Job {job_id}] Homepage link fallback failed: {fb_e}")
 
             with Session(db_engine) as s:
                 existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
@@ -541,7 +696,7 @@ async def run_scrape_job(
                         p = pages_by_url[u]
                         if entry.hreflang and not p.hreflang:
                             p.hreflang = entry.hreflang
-                        if ct and (not p.content_type or "sitemap" in p.content_type.lower()):
+                        if ct:
                             p.content_type = ct
 
                         # Incremental scrape logic
@@ -636,9 +791,12 @@ async def run_scrape_job(
                         if not job or job.status in ("cancelled", "paused"):
                             break
 
-                    page_delay = round(random.uniform(delay_min, delay_max), 1)
-                    logging.info(f"[Job {job_id}] Human-like delay: {page_delay}s ({page_delay/60:.2f}m) before scraping page {idx + 1}/{session_size}: {item['url']}...")
-                    await asyncio.sleep(page_delay)
+                    if idx > 0:
+                        page_delay = round(random.uniform(delay_min, delay_max), 1)
+                        logging.info(f"[Job {job_id}] Human-like delay: {page_delay}s ({page_delay/60:.2f}m) before scraping page {idx + 1}/{session_size}: {item['url']}...")
+                        await asyncio.sleep(page_delay)
+                    else:
+                        logging.info(f"[Job {job_id}] Scraping page {idx + 1}/{session_size}: {item['url']}...")
 
                     try:
                         await scrape_page(
@@ -648,7 +806,8 @@ async def run_scrape_job(
                             job_dir_name=job_dir_name,
                             sitemap_hreflang=item["hreflang"],
                             sitemap_lastmod=item["lastmod"],
-                            sitemap_content_type=item["content_type"]
+                            sitemap_content_type=item["content_type"],
+                            max_pages=max_pages,
                         )
                     except Exception as e:
                         logging.error(f"[Job {job_id}] Error scraping page {item['url']}: {e}")

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 class ScrapeJob(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     target_url: str
+    title: Optional[str] = Field(default=None)
+    icon_url: Optional[str] = Field(default=None)
     status: str = Field(default="pending")  # pending, running, completed, failed
     scrape_mode: str = Field(default="single")       # "single" | "sitemap"
     total_pages: Optional[int] = Field(default=None)  # total URLs in sitemap
@@ -18,6 +20,7 @@ class Page(SQLModel, table=True):
     job_id: int = Field(foreign_key="scrapejob.id")
     url: str
     title: str
+    icon_url: Optional[str] = Field(default=None)
     markdown_path: Optional[str] = None
     screenshot_path: Optional[str] = None
     status: str = Field(default="pending")            # "pending" | "completed" | "failed"

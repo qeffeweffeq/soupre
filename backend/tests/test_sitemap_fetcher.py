@@ -56,6 +56,78 @@ def test_determine_content_type_guarantee_no_sitemap_output():
         assert not ct.lower().endswith(".xml"), f"Failed for {url} with hint {hint}: returned {ct}"
 
 
+@pytest.mark.asyncio
+async def test_fetch_does_not_launch_browser_on_404_or_timeout(monkeypatch):
+    import requests
+    from modules.scrapers import sitemap_fetcher
+
+    browser_calls = []
+
+    async def fake_browser(url, take_screenshot=False):
+        browser_calls.append(url)
+        return "<urlset></urlset>", "", []
+
+    monkeypatch.setattr("modules.scrapers.fetcher.fetch_url_with_browser", fake_browser)
+
+    # 1. 404 Not Found -> should NOT launch browser
+    monkeypatch.setattr(sitemap_fetcher, "_get_with_status", lambda u, s: ("not_found", None, u))
+    status, content, _ = await sitemap_fetcher._fetch_with_status("https://example.com/sitemap.xml", requests.Session())
+    assert status == "not_found"
+    assert content is None
+    assert browser_calls == []
+
+    # 2. Unreachable timeout -> should NOT launch browser
+    monkeypatch.setattr(sitemap_fetcher, "_get_with_status", lambda u, s: ("unreachable", None, None))
+    status, content, _ = await sitemap_fetcher._fetch_with_status("https://example.com/sitemap.xml", requests.Session())
+    assert status == "unreachable"
+    assert content is None
+    assert browser_calls == []
+
+    # 3. WAF challenge -> SHOULD launch browser
+    monkeypatch.setattr(sitemap_fetcher, "_get_with_status", lambda u, s: ("challenge", None, u))
+    status, content, _ = await sitemap_fetcher._fetch_with_status("https://example.com/sitemap.xml", requests.Session())
+    assert len(browser_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_discover_sitemap_urls_multi_domain_robots_and_unreachable_abort(monkeypatch, tmp_path):
+    from modules.scrapers import sitemap_fetcher
+
+    # Case A: Unreachable host aborts after 2 consecutive timeouts instead of trying all 19 paths
+    calls = []
+
+    async def fake_unreachable(url, session):
+        calls.append(url)
+        return "unreachable", None, None
+
+    monkeypatch.setattr(sitemap_fetcher, "_fetch_with_status", fake_unreachable)
+    entries = await sitemap_fetcher.discover_sitemap_urls("https://dead.example.com/", str(tmp_path))
+    assert entries == []
+    assert len(calls) == 2  # /robots.txt + first sitemap candidate only!
+
+    # Case B: robots.txt lists foreign TLD (.it) before matching TLD (.com)
+    robots_txt = (
+        b"Sitemap: https://www.thesenseresort.it/sitemap_index.xml\n"
+        b"Sitemap: https://www.thesenseresort.com/sitemap_index.xml\n"
+    )
+    com_sitemap = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url><loc>https://www.thesenseresort.com/en/rooms/</loc></url>
+    </urlset>"""
+
+    async def fake_multi_domain(url, session):
+        if url.endswith("/robots.txt"):
+            return "ok", robots_txt, url
+        if url == "https://www.thesenseresort.com/sitemap_index.xml":
+            return "ok", com_sitemap, url
+        return "not_found", None, url
+
+    monkeypatch.setattr(sitemap_fetcher, "_fetch_with_status", fake_multi_domain)
+    entries = await sitemap_fetcher.discover_sitemap_urls("https://www.thesenseresort.com/", str(tmp_path))
+    assert len(entries) == 1
+    assert entries[0].url == "https://www.thesenseresort.com/en/rooms/"
+
+
 def test_multidomain_sitemap_prioritization():
     from urllib.parse import urlparse
     target = urlparse("https://www.thesenseresort.com/")
