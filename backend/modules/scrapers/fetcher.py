@@ -127,54 +127,66 @@ async def fetch_url_with_browser(
             
             # Goto URL and wait
             try:
+                is_aux_resource = urlparse(url).path.lower().endswith((".xml", ".txt", ".gz"))
                 try:
-                    response = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                    await page.goto(url, wait_until="domcontentloaded", timeout=20000)
                     html_check = await page.content()
                 except Exception as e:
+                    current_url = getattr(page, "url", "") or ""
+                    if current_url in ("about:blank", ""):
+                        logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
+                        return "", "", []
                     logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
                     try:
-                        await page.wait_for_load_state('domcontentloaded', timeout=10000)
+                        await page.wait_for_load_state('domcontentloaded', timeout=8000)
                     except Exception:
                         pass
                     html_check = await page.content()
-                    
+
+                if getattr(page, "url", "") in ("about:blank", "") or len(html_check.strip()) < 60:
+                    logger.warning(f"[Browser] Empty or blank document returned for {url}")
+                    return "", "", []
+
                 # Check for SiteGround / Cloudflare / generic bot challenges
                 html_lower = html_check.lower()
-                if (
+                is_bot_challenge = (
                     "checking the site connection security" in html_lower
                     or "checking your browser" in html_lower
                     or "confirm you are human" in html_lower
                     or "just a moment" in html_lower
                     or "sg-captcha" in html_lower
-                    or "cloudflare" in html_lower
-                    or len(html_check) < 15000
-                ):
+                    or "cf-browser-verification" in html_lower
+                    or "challenge-platform" in html_lower
+                )
+                if is_bot_challenge:
                     logger.info("[Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...")
                     try:
                         # Wait up to 15 seconds for the challenge to resolve and page to reload
                         await page.wait_for_function(
-                            "() => { if (!document.body) return false; const t = (document.body.innerText || '').toLowerCase(); const title = (document.title || '').toLowerCase(); return !t.includes('checking the site connection security') && !t.includes('just a moment') && !t.includes('checking your browser') && !t.includes('confirm you are human') && !title.includes('just a moment') && !title.includes('checking your browser'); }",
+                            "() => { const root = document.body || document.documentElement; if (!root) return false; const t = (root.innerText || root.textContent || '').toLowerCase(); const title = (document.title || '').toLowerCase(); return !t.includes('checking the site connection security') && !t.includes('just a moment') && !t.includes('checking your browser') && !t.includes('confirm you are human') && !title.includes('just a moment') && !title.includes('checking your browser'); }",
                             timeout=15000
                         )
-                        # Wait an additional 3 seconds for the actual DOM to settle after redirect
-                        await asyncio.sleep(3)
+                        # Wait an additional 2 seconds for the actual DOM to settle after redirect
+                        await asyncio.sleep(2)
                         try:
                             await page.wait_for_load_state('domcontentloaded', timeout=5000)
                         except Exception:
                             pass
                     except Exception as e:
                         logger.warning(f"[Browser] Bot challenge wait timed out or failed: {e}")
-                
-                    await page.mouse.wheel(0, 500)
-                    await asyncio.sleep(0.5)
-                
+
+                    if not is_aux_resource:
+                        await page.mouse.wheel(0, 500)
+                        await asyncio.sleep(0.5)
+
                 # Acquire cookies
                 cookies_list = await context.cookies()
 
-                # Auto-dismiss consent banners & wait for splash preloader overlays to clear
-                await dismiss_consent_banners(page)
-                await wait_for_preloaders_to_hide(page)
-                await asyncio.sleep(1.0)
+                if not is_aux_resource:
+                    # Auto-dismiss consent banners & wait for splash preloader overlays to clear
+                    await dismiss_consent_banners(page)
+                    await wait_for_preloaders_to_hide(page)
+                    await asyncio.sleep(0.8)
 
                 # Take screenshot for the UI if requested
                 if take_screenshot:
