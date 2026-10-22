@@ -267,3 +267,81 @@ def test_migrate_db_adds_columns_and_backfills_title_and_icon(tmp_path):
         assert job is not None
         assert job.title == "Pentagram —The world’s largest independent design consultancy"
         assert job.icon_url == "https://www.google.com/s2/favicons?domain=pentagram.com&sz=128"
+
+
+# ---------------------------------------------------------------------------
+# 9. Elementor Header/Footer Body Class, Cloaking Removal & Sitemap Classification
+# ---------------------------------------------------------------------------
+
+def test_elementor_body_class_and_markdown_extraction():
+    from modules.parsers.html_parser import should_skip_element
+    from modules.parsers.markdown_converter import convert_content_to_markdown
+
+    html = """
+    <html>
+      <head>
+        <title>Ristorante - Hotel Il Settebello</title>
+        <style>
+          .elementor-2396 .elementor-element.elementor-element-c80fa71 {
+              background-image: url("https://hotelsettebello.italianhotelgroup.it/wp-content/uploads/2025/11/hero-dining.jpg");
+          }
+        </style>
+      </head>
+      <body class="wp-singular page-template page-template-elementor_header_footer page">
+        <div data-elementor-type="header" class="elementor elementor-16">
+          <nav><a href="/menu">Header Nav</a></nav>
+        </div>
+        <h1 style="position:absolute; width:1px; height:1px; clip-path:inset(50%);">Hidden Cloaked H1</h1>
+        <div data-seo-content="true" style="position:absolute; width:1px; height:1px; clip-path:inset(50%);">
+          <p>Cloaked AI SEO text Rated 7.4/10 su Booking.com</p>
+        </div>
+        <div data-elementor-type="wp-page" data-elementor-id="2396" class="elementor elementor-2396">
+          <div class="elementor-element elementor-element-c80fa71 e-con" data-id="c80fa71">
+            <h2>Ristorante Vista Mare</h2>
+            <p class="elementor-hidden-mobile">La giornata inizia con una ricca colazione vista mare.</p>
+            <p><a href="tel:+390586620039">+39 0586 620039</a></p>
+            <p><a href="mailto:info@hotel.it">info@hotel.it</a></p>
+          </div>
+          <div class="elementor-element elementor-hidden-desktop elementor-hidden-tablet elementor-hidden-mobile">
+            <h2>Offerte montagna 2026</h2>
+            <p>6 notti Deposito sci in ski room</p>
+          </div>
+        </div>
+        <dialog id="moove_gdpr_cookie_modal">
+          <p>Cookie preferences modal</p>
+        </dialog>
+      </body>
+    </html>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    h2 = soup.find("h2")
+    assert should_skip_element(h2) is False
+    header_nav = soup.find("nav")
+    assert should_skip_element(header_nav) is True
+
+    main_content = soup.find("main") or soup.find("body")
+    md = convert_content_to_markdown(main_content, soup, "https://hotelsettebello.italianhotelgroup.it/ristorante/", None, None)
+
+    assert "Ristorante Vista Mare" in md
+    assert "La giornata inizia con una ricca colazione vista mare." in md
+    assert "hero-dining.jpg" in md
+    assert "[+39 0586 620039](tel:+390586620039)" in md
+    assert "[info@hotel.it](mailto:info@hotel.it)" in md
+    assert "Cloaked AI SEO text" not in md
+    assert "Hidden Cloaked H1" not in md
+    assert "Offerte montagna 2026" not in md
+    assert "Cookie preferences modal" not in md
+
+
+def test_determine_content_type_wp_page_sitemap_and_italian_segments():
+    from modules.scrapers.sitemap_fetcher import determine_content_type
+
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/", "wp-sitemap-posts-page-1.xml") == "pages"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/contatti/", "wp-sitemap-posts-page-1.xml") == "pages"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/dintorni/", "wp-sitemap-posts-page-1.xml") == "pages"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/camere/", "wp-sitemap-posts-page-1.xml") == "rooms"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/ristorante/", "wp-sitemap-posts-page-1.xml") == "dining"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/hotel/", "wp-sitemap-posts-page-1.xml") == "hotels"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/offerte/", "wp-sitemap-posts-page-1.xml") == "offers"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/spa-2/", "wp-sitemap-posts-page-1.xml") == "wellness"
+    assert determine_content_type("https://hotelsettebello.italianhotelgroup.it/news-item/", "wp-sitemap-posts-post-1.xml") == "blog"

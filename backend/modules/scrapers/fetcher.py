@@ -251,6 +251,36 @@ async def fetch_url_with_browser(
                             logger.debug(f"[Browser] Load more expansion ended: {e}")
                             break
 
+                if not is_aux_resource:
+                    try:
+                        await page.evaluate(
+                            """() => {
+                                // 1. Remove 1pxx1px AI/SEO cloaking blocks injected at runtime
+                                document.querySelectorAll('[data-seo-content], [style*="clip-path:inset(50%)"], [style*="clip-path: inset(50%)"]').forEach(el => el.remove());
+
+                                // 2. Ensure Elementor lazy containers unlock their CSS background-image rules
+                                document.querySelectorAll('.e-con.e-parent').forEach(el => el.classList.add('e-lazyloaded'));
+
+                                // 3. Persist computed CSS background-image URLs onto data-bg-src so the HTML parser can extract them
+                                const candidates = document.querySelectorAll('div, section, article, figure');
+                                for (const el of candidates) {
+                                    if (el.closest('header, footer, nav, [data-elementor-type="header"], [data-elementor-type="footer"], [data-elementor-type="popup"], .elementor-hidden-desktop')) {
+                                        continue;
+                                    }
+                                    if (el.hasAttribute('data-bg-src')) continue;
+                                    const bg = window.getComputedStyle(el).backgroundImage;
+                                    if (bg && bg !== 'none' && bg.includes('url(') && !bg.includes('gradient(')) {
+                                        const m = bg.match(/url\\(["']?(https?:\\/\\/[^"')]+)["']?\\)/i);
+                                        if (m && m[1] && !m[1].startsWith('data:')) {
+                                            el.setAttribute('data-bg-src', m[1]);
+                                        }
+                                    }
+                                }
+                            }"""
+                        )
+                    except Exception as eval_e:
+                        logger.debug(f"[Browser] Pre-serialization DOM enrichment skipped: {eval_e}")
+
                 html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url} using engine '{session.engine_name}'")
                 

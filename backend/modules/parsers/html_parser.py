@@ -151,13 +151,25 @@ def extract_meta_content(soup):
 
 def should_skip_element(element, skip_patterns=None):
     if skip_patterns is None:
-        skip_patterns = ['nav', 'menu', 'footer', 'header', 'sidebar', 'cookie',
-                         'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone']
+        skip_patterns = [
+            'nav', 'menu', 'footer', 'header', 'sidebar', 'cookie',
+            'gdpr', 'moove', 'iubenda', 'onetrust', 'cookiebot',
+            'popup', 'modal', 'ad-', 'advertisement', 'swiper-slide-duplicate', 'clone'
+        ]
 
     try:
-        tag_name = getattr(element, 'name', '') or ''
-        # Never skip img elements based on modal/slider wrappers
-        if tag_name == 'img':
+        tag_name = (getattr(element, 'name', '') or '').lower()
+        # Never skip root content containers or img elements
+        if tag_name in ('img', 'body', 'html', 'main', 'article'):
+            return False
+
+        if tag_name in ('header', 'footer', 'nav', 'dialog', 'template'):
+            return True
+
+        elementor_type = (element.get('data-elementor-type') or '').lower() if hasattr(element, 'get') else ''
+        if elementor_type in ('header', 'footer', 'popup'):
+            return True
+        if elementor_type in ('wp-page', 'wp-post', 'single', 'single-page', 'single-post', 'archive'):
             return False
 
         # Check the element's own class and ID
@@ -181,12 +193,24 @@ def should_skip_element(element, skip_patterns=None):
         if any(pattern in classes_lower or pattern in id_lower for pattern in skip_patterns):
             return True
 
-        # Check parent elements' classes and IDs
+        # Check parent elements' classes and IDs (stopping before root containers like body/html/main)
         parent_classes = []
         parent_ids = []
 
         for parent in element.parents:
-            parent_tag = getattr(parent, 'name', '') or ''
+            parent_tag = (getattr(parent, 'name', '') or '').lower()
+            if parent_tag in ('body', 'html', '[document]', 'main', 'article'):
+                continue
+
+            if parent_tag in ('header', 'footer', 'nav', 'dialog', 'template'):
+                return True
+
+            p_elementor_type = (parent.get('data-elementor-type') or '').lower() if hasattr(parent, 'get') else ''
+            if p_elementor_type in ('header', 'footer', 'popup'):
+                return True
+            if p_elementor_type in ('wp-page', 'wp-post', 'single', 'single-page', 'single-post', 'archive'):
+                continue
+
             parent_class = parent.get('class', [])
             if isinstance(parent_class, list):
                 parent_class = ' '.join(parent_class)

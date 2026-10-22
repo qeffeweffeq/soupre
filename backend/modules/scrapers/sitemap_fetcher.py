@@ -38,7 +38,10 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
     if segments and re.match(r"^[a-z]{2}(-[a-z]{2})?$", segments[0]):
         segments = segments[1:]
 
-    first_seg = segments[0] if segments else ""
+    if not segments:
+        return "pages"
+
+    first_seg = segments[0]
 
     # Canonical content type mappings based on URL segment
     if first_seg:
@@ -54,7 +57,7 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
             return "events"
         if first_seg in ("products", "prodotti", "produkte", "shop", "negozio"):
             return "products"
-        if any(r in first_seg for r in ("room", "camera", "zimmer", "chambre", "suite", "villa")):
+        if any(r in first_seg for r in ("room", "camera", "camere", "alloggi", "alloggio", "zimmer", "chambre", "suite", "villa", "accommodation")):
             return "rooms"
         if any(d in first_seg for d in ("dining", "ristorant", "restaurant", "food", "cuisine")):
             return "dining"
@@ -75,10 +78,10 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
                 return "categories"
             if any(w in hint for w in ("tag", "tags")):
                 return "tags"
-            if "post" in hint:
-                return "blog"
             if "page" in hint:
                 return "pages"
+            if "post" in hint:
+                return "blog"
             clean_hint = re.sub(r"^sitemap[-_]?|[-_]sitemap(\d+)?(\.xml(\.gz)?)?$|\.xml(\.gz)?$", "", hint).strip("-_")
             clean_hint = re.sub(r"[^a-zA-Z0-9_\-]", "", clean_hint).lower()
             if clean_hint and "sitemap" not in clean_hint:

@@ -155,6 +155,31 @@ async def scrape_page(
                 raise RuntimeError(f"Failed to fetch content for {url}: {e}")
 
     soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Strip hidden 1pxx1px AI-SEO cloaking blocks immediately so they never pollute metadata or markdown
+    for hidden_seo in soup.select('[data-seo-content], [style*="clip-path:inset(50%)"], [style*="clip-path: inset(50%)"]'):
+        hidden_seo.decompose()
+
+    # Collect alternate language URLs (e.g. TranslatePress / WPML <link rel="alternate" hreflang="..." href="...">)
+    alternate_lang_links: list[tuple[str, str]] = []
+    try:
+        base_netloc = urlparse(url).netloc.lower().removeprefix("www.")
+        seen_alt_urls: set[str] = set()
+        for link_tag in soup.find_all("link", rel=lambda r: r and "alternate" in (r if isinstance(r, list) else str(r).lower().split())):
+            hl = (link_tag.get("hreflang") or "").strip().lower()
+            href = (link_tag.get("href") or "").strip()
+            if not hl or hl == "x-default" or not href:
+                continue
+            alt_full = urljoin(url, href).split("#")[0]
+            pu = urlparse(alt_full)
+            if pu.scheme in ("http", "https") and pu.netloc.lower().removeprefix("www.") == base_netloc:
+                if alt_full not in seen_alt_urls and alt_full != url:
+                    seen_alt_urls.add(alt_full)
+                    lang_short = re.split(r"[-_]", hl)[0]
+                    alternate_lang_links.append((alt_full, lang_short))
+    except Exception:
+        pass
+
     page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
@@ -407,6 +432,37 @@ async def scrape_page(
                 job.title = page_title
             if icon_url and (not job.icon_url or is_target_match):
                 job.icon_url = icon_url
+
+            # Enqueue newly discovered hreflang alternate pages (e.g. TranslatePress / WPML) in sitemap mode
+            if job.scrape_mode == "sitemap" and alternate_lang_links:
+                existing_urls = set(session.exec(select(Page.url).where(Page.job_id == job_id)).all())
+                added_alt = 0
+                for alt_url, alt_lang in alternate_lang_links:
+                    if alt_url in existing_urls:
+                        continue
+                    if job.max_pages and job.max_pages > 0 and (len(existing_urls) + added_alt) >= job.max_pages:
+                        break
+                    alt_path = urlparse(alt_url).path or "/"
+                    alt_depth = len([part for part in alt_path.split("/") if part])
+                    alt_ct = determine_content_type(alt_url)
+                    session.add(
+                        Page(
+                            job_id=job_id,
+                            url=alt_url,
+                            title=alt_path,
+                            url_path=alt_path,
+                            url_depth=alt_depth,
+                            status="pending",
+                            hreflang=alt_lang,
+                            content_type=alt_ct,
+                        )
+                    )
+                    existing_urls.add(alt_url)
+                    added_alt += 1
+                if added_alt > 0:
+                    job.total_pages = len(existing_urls)
+                    logging.info(f"[Job {job_id}] Discovered {added_alt} alternate language URL(s) from {url}")
+
             session.add(job)
         
         session.commit()
@@ -576,7 +632,7 @@ async def run_scrape_job(
                         p = pages_by_url[u]
                         if entry.hreflang and not p.hreflang:
                             p.hreflang = entry.hreflang
-                        if ct and (not p.content_type or "sitemap" in p.content_type.lower()):
+                        if ct:
                             p.content_type = ct
 
                         # Incremental scrape logic
