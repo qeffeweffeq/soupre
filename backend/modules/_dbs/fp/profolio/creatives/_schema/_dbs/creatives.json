@@ -1,0 +1,243 @@
+{
+  "id": "18078ba9-1124-4bd3-82dd-8175ddf55cd4",
+  "title": "Creatives",
+  "url": "https://app.notion.com/p/18078ba911244bd382dd8175ddf55cd4",
+  "parent": {
+    "type": "block_id",
+    "block_id": "39dc7930-1516-806a-a212-ddeea0c3f529"
+  },
+  "properties": {
+    "Duplicated": {
+      "id": "%3EoZq",
+      "name": "Duplicated",
+      "type": "checkbox"
+    },
+    "Date": {
+      "id": "%40M%7BA",
+      "name": "Date",
+      "type": "date"
+    },
+    "Master": {
+      "id": "%40Xtv",
+      "name": "Master",
+      "type": "checkbox"
+    },
+    "Type": {
+      "id": "CDTN",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "1b8c7930-1516-80ea-9167-d5117c443343",
+        "type": "dual_property",
+        "synced_property_name": "🦄 Creatives Relation"
+      }
+    },
+    "Founded": {
+      "id": "EJ%3Fc",
+      "name": "Founded",
+      "type": "rich_text"
+    },
+    "Archive": {
+      "id": "HxDN",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Autofilled": {
+      "id": "LmWz",
+      "name": "Autofilled",
+      "type": "checkbox"
+    },
+    "Pin": {
+      "id": "QYdm",
+      "name": "Pin",
+      "type": "checkbox"
+    },
+    "Location": {
+      "id": "Q%5B%7Be",
+      "name": "Location",
+      "type": "rich_text"
+    },
+    "Year": {
+      "id": "Rf%3B%3B",
+      "name": "Year",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "10",
+          "id": "d849a354-3ec5-4fab-866f-3288bbce2af6",
+          "color": "default"
+        },
+        {
+          "name": "11",
+          "id": "48db1504-515d-46dc-aa0c-d61a31c737fa",
+          "color": "default"
+        },
+        {
+          "name": "12",
+          "id": "ad2a49d9-4ca2-40c2-ae88-16bee6fbf2ee",
+          "color": "default"
+        },
+        {
+          "name": "13",
+          "id": "a45aa35a-fec7-40a6-b579-73763b767b5e",
+          "color": "default"
+        },
+        {
+          "name": "14",
+          "id": "77d7399f-7e69-4f08-9a35-ba16cb2d7207",
+          "color": "default"
+        },
+        {
+          "name": "15",
+          "id": "ad005fe9-3f31-4916-a68d-9878d19249e7",
+          "color": "default"
+        },
+        {
+          "name": "16",
+          "id": "91486917-9362-47c0-9c27-082e7dbf1808",
+          "color": "default"
+        },
+        {
+          "name": "17",
+          "id": "525d018e-0538-4edf-b8a2-089a378e8992",
+          "color": "default"
+        },
+        {
+          "name": "18",
+          "id": ">]<B",
+          "color": "default"
+        },
+        {
+          "name": "19",
+          "id": "nfMO",
+          "color": "default"
+        },
+        {
+          "name": "20",
+          "id": "RCAX",
+          "color": "default"
+        },
+        {
+          "name": "21",
+          "id": "k:[y",
+          "color": "default"
+        },
+        {
+          "name": "22",
+          "id": "\\psR",
+          "color": "default"
+        },
+        {
+          "name": "23",
+          "id": "u[^u",
+          "color": "default"
+        },
+        {
+          "name": "24",
+          "id": "41b1d48c-7f5b-4d42-bd97-fef5da5e7025",
+          "color": "default"
+        },
+        {
+          "name": "25",
+          "id": "1713812b-daf9-4d57-8594-a2a9cdb7ab4d",
+          "color": "default"
+        },
+        {
+          "name": "26",
+          "id": "a601759f-191d-40f4-a566-c7c0820cab65",
+          "color": "default"
+        }
+      ]
+    },
+    "Short About": {
+      "id": "SjcI",
+      "name": "Short About",
+      "type": "rich_text"
+    },
+    "Not Autofilled": {
+      "id": "XO%3DK",
+      "name": "Not Autofilled",
+      "type": "checkbox"
+    },
+    "Email": {
+      "id": "ZKvr",
+      "name": "Email",
+      "type": "email"
+    },
+    "Phone": {
+      "id": "%5DafC",
+      "name": "Phone",
+      "type": "phone_number"
+    },
+    "Rank": {
+      "id": "fJ%5D%60",
+      "name": "Rank",
+      "type": "number"
+    },
+    "Web": {
+      "id": "guKD",
+      "name": "Web",
+      "type": "url"
+    },
+    "Notes": {
+      "id": "guxk",
+      "name": "Notes",
+      "type": "rich_text"
+    },
+    "Last Update": {
+      "id": "hZJr",
+      "name": "Last Update",
+      "type": "last_edited_time"
+    },
+    "Created": {
+      "id": "jXuX",
+      "name": "Created",
+      "type": "created_time"
+    },
+    "Instagram": {
+      "id": "nEfl",
+      "name": "Instagram",
+      "type": "url"
+    },
+    "About": {
+      "id": "p%3Blq",
+      "name": "About",
+      "type": "rich_text"
+    },
+    "Linkedin": {
+      "id": "t%3EHf",
+      "name": "Linkedin",
+      "type": "url"
+    },
+    "Fields": {
+      "id": "tzCM",
+      "name": "Fields",
+      "type": "relation",
+      "relation": {
+        "database_id": "fa2a719f-af87-423a-aca9-31d5646fc1a7",
+        "type": "dual_property",
+        "synced_property_name": "Creatives Relation"
+      }
+    },
+    "Tags": {
+      "id": "x%5DV%3A",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "79812c03-a4c0-4ff8-9fba-0aa31f9494e2",
+        "type": "dual_property",
+        "synced_property_name": "Creatives Relation"
+      }
+    },
+    "TBP-U": {
+      "id": "y%3FU%3A",
+      "name": "TBP-U",
+      "type": "checkbox"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

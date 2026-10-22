@@ -1,0 +1,38 @@
+{
+  "id": "17e63158-bfa0-808e-aede-d06ca3cf0c74",
+  "title": "Return Points",
+  "url": "https://app.notion.com/p/17e63158bfa0808eaeded06ca3cf0c74",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8061-9865-d785584d2248"
+  },
+  "properties": {
+    "Items Relation": {
+      "id": "QPPB",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Return Point"
+      }
+    },
+    "Items": {
+      "id": "mzfs",
+      "name": "Items",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "QPPB",
+        "function": "count"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

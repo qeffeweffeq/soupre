@@ -1,0 +1,272 @@
+{
+  "id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+  "title": "Tasks",
+  "url": "https://app.notion.com/p/ff00c9ec0fea4dee80fa41f98fb90843",
+  "parent": {
+    "type": "block_id",
+    "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+  },
+  "properties": {
+    "Created": {
+      "id": "'Y6%3C",
+      "name": "Created",
+      "type": "created_time"
+    },
+    "Priority": {
+      "id": "%3A%3FJr",
+      "name": "Priority",
+      "type": "relation",
+      "relation": {
+        "database_id": "7494d011-63e6-4f3c-882c-1521ef75144b",
+        "type": "dual_property",
+        "synced_property_name": "Priority"
+      }
+    },
+    "Archive": {
+      "id": "%3BLAN",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Timing": {
+      "id": "%3Bgl%40",
+      "name": "Timing",
+      "type": "date"
+    },
+    "Progress": {
+      "id": "%3DkwC",
+      "name": "Progress",
+      "type": "formula",
+      "formula": {
+        "expression": "/**\n * @see https://www.redgregory.com/notion-20/2023/10/25/notion-formulas-20-track-project-progress-without-rollups\n */\nif(!prop(\"Subtasks Tasks\").empty(), \n\tfloor(100 *\n\t\tprop(\"Subtasks Tasks\").map(\n\t\t\tcurrent.prop(\"Done\").toNumber()\n\t\t).sum() / \n\t\tprop(\"Subtasks Tasks\").length()\n\t) / 100,\n\tprop(\"Done\").toNumber()\n)"
+      }
+    },
+    "Persona": {
+      "id": "%3E%5Cc%40",
+      "name": "Persona",
+      "type": "relation",
+      "relation": {
+        "database_id": "43750c98-df82-4272-983e-9bcc8865f95a",
+        "type": "dual_property",
+        "synced_property_name": "Tasks Relation"
+      }
+    },
+    "DPR": {
+      "id": "GbkA",
+      "name": "DPR",
+      "type": "relation",
+      "relation": {
+        "database_id": "107c7930-1516-8029-ad49-c7fe2997070c",
+        "type": "dual_property",
+        "synced_property_name": "Tasks"
+      }
+    },
+    "Sub Seed Name": {
+      "id": "IBF%3C",
+      "name": "Sub Seed Name",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(join(map(prop(\"Parent Task\"), format(current)), \", \")) and (prop(\"Sub Seed\") == true), prop(\"Task\"), join(map(prop(\"Parent Task\"), format(current)), \", \"))"
+      }
+    },
+    "Project": {
+      "id": "Ng%7B%7B",
+      "name": "Project",
+      "type": "relation",
+      "relation": {
+        "database_id": "698e1856-1639-446f-a079-133039fcee99",
+        "type": "dual_property",
+        "synced_property_name": "Tasks Relation"
+      }
+    },
+    "State": {
+      "id": "OTna",
+      "name": "State",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(join(map(prop(\"Parent Task\"), format(current)), \", \")), \"\", \"↳ \") + if(prop(\"Done\") == true, \"😎\", if(empty(prop(\"Due\")), \"⚪️\", if(formatDate(prop(\"Due\"), \"L\") == formatDate(now(), \"L\"), \"🟢\", if(prop(\"Due\") < now(), \"🔴\", \"🔵\"))))"
+      }
+    },
+    "Parent Task": {
+      "id": "S%3ET%40",
+      "name": "Parent Task",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Subtasks"
+      }
+    },
+    "Effort": {
+      "id": "SXKa",
+      "name": "Effort",
+      "type": "formula",
+      "formula": {
+        "expression": "round(dateBetween(dateEnd( prop(\"Timing\") ), dateStart(prop(\"Timing\")), \"minutes\") / 60)"
+      }
+    },
+    "Pinned": {
+      "id": "So%3F%5D",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Activity": {
+      "id": "SvLR",
+      "name": "Activity",
+      "type": "relation",
+      "relation": {
+        "database_id": "d74d19f8-6945-4eb0-8d40-e879f3b1d571",
+        "type": "dual_property",
+        "synced_property_name": "Tasks Relation"
+      }
+    },
+    "Subtasks": {
+      "id": "TNUz",
+      "name": "Subtasks",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Parent Task"
+      }
+    },
+    "Due": {
+      "id": "%5CBZS",
+      "name": "Due",
+      "type": "date"
+    },
+    "Due TS": {
+      "id": "%5ClzH",
+      "name": "Due TS",
+      "type": "formula",
+      "formula": {
+        "expression": "timestamp(prop(\"Due\"))"
+      }
+    },
+    "Subtasks Tasks": {
+      "id": "%5D%5B%5ED",
+      "name": "Subtasks Tasks",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Related Task"
+      }
+    },
+    "Last edited time": {
+      "id": "%60qAD",
+      "name": "Last edited time",
+      "type": "last_edited_time"
+    },
+    "Parent Due TS": {
+      "id": "eOAF",
+      "name": "Parent Due TS",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Due TS",
+        "relation_property_name": "Parent Task",
+        "rollup_property_id": "\\lzH",
+        "relation_property_id": "S>T@",
+        "function": "show_original"
+      }
+    },
+    "Effort OLD": {
+      "id": "fV%5EZ",
+      "name": "Effort OLD",
+      "type": "number"
+    },
+    "Due TS [Parent]": {
+      "id": "gU%5C%5D",
+      "name": "Due TS [Parent]",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(join(map(prop(\"Parent Due TS\"), format(current)), \",\")), prop(\"Due TS\"), toNumber(join(map(prop(\"Parent Due TS\"), format(current)), \",\")))"
+      }
+    },
+    "Author": {
+      "id": "gnwR",
+      "name": "Author",
+      "type": "people"
+    },
+    "Done": {
+      "id": "gqV%3F",
+      "name": "Done",
+      "type": "checkbox"
+    },
+    "Related Task": {
+      "id": "h%3Ck%3F",
+      "name": "Related Task",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Subtasks Tasks"
+      }
+    },
+    "Services": {
+      "id": "hUfV",
+      "name": "Services",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Services 1": {
+      "id": "lKDw",
+      "name": "Services 1",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "dual_property",
+        "synced_property_name": "Tasks"
+      }
+    },
+    "Prompt": {
+      "id": "lTQ_",
+      "name": "Prompt",
+      "type": "relation",
+      "relation": {
+        "database_id": "5d385941-868a-4ab5-9f53-036221133911",
+        "type": "dual_property",
+        "synced_property_name": "Tasks"
+      }
+    },
+    "Sub Seed": {
+      "id": "tw%7BA",
+      "name": "Sub Seed",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(join(map(prop(\"Parent Task\"), format(current)), \", \")) == true, true, false)"
+      }
+    },
+    "Effort Meta": {
+      "id": "vcTE",
+      "name": "Effort Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"⏱️ \" + dateBetween(dateEnd(prop(\"Timing\")), dateStart(prop(\"Timing\")), \"minutes\") / 60"
+      }
+    },
+    "Status": {
+      "id": "wO%7BJ",
+      "name": "Status",
+      "type": "relation",
+      "relation": {
+        "database_id": "e649e102-b26d-4bd8-9998-80105e5c544a",
+        "type": "dual_property",
+        "synced_property_name": "Tasks Relation"
+      }
+    },
+    "Extra": {
+      "id": "y%5Dz%60",
+      "name": "Extra",
+      "type": "checkbox"
+    },
+    "Task": {
+      "id": "title",
+      "name": "Task",
+      "type": "title"
+    }
+  }
+}

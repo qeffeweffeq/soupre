@@ -1,0 +1,80 @@
+{
+  "id": "239e2e28-a234-4106-9ce7-ed737e9e1669",
+  "title": "Brands",
+  "url": "https://app.notion.com/p/239e2e28a23441069ce7ed737e9e1669",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8084-9290-c76b619a7503"
+  },
+  "properties": {
+    "Pinned": {
+      "id": "D%7DIe",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Description": {
+      "id": "GwQq",
+      "name": "Description",
+      "type": "rich_text"
+    },
+    "Items Relation": {
+      "id": "NWyc",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Brand"
+      }
+    },
+    "URL Store #2": {
+      "id": "RXf%5D",
+      "name": "URL Store #2",
+      "type": "url"
+    },
+    "Created time": {
+      "id": "R%7CSH",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "URL": {
+      "id": "Y%7DWk",
+      "name": "URL",
+      "type": "url"
+    },
+    "Items Cost": {
+      "id": "dIpX",
+      "name": "Items Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Price",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "HCP@",
+        "relation_property_id": "NWyc",
+        "function": "sum"
+      }
+    },
+    "Items Count": {
+      "id": "ggDD",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "NWyc",
+        "function": "count"
+      }
+    },
+    "URL Store #1": {
+      "id": "w%5BQS",
+      "name": "URL Store #1",
+      "type": "url"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}
