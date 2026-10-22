@@ -159,7 +159,8 @@ async def scrape_page(
     job_dir_name: str = None,
     sitemap_hreflang: str = None,
     sitemap_lastmod: str = None,
-    sitemap_content_type: str = None
+    sitemap_content_type: str = None,
+    max_pages: int = 0,
 ):
     delay = round(random.uniform(MIN_DELAY, MAX_DELAY), 2)
     logging.info(f"Human-like delay: waiting {delay}s before fetching {url}...")
@@ -502,7 +503,7 @@ async def scrape_page(
                 for alt_url, alt_lang in alternate_lang_links:
                     if alt_url in existing_urls:
                         continue
-                    if job.max_pages and job.max_pages > 0 and (len(existing_urls) + added_alt) >= job.max_pages:
+                    if max_pages and max_pages > 0 and len(existing_urls) >= max_pages:
                         break
                     alt_path = urlparse(alt_url).path or "/"
                     alt_depth = len([part for part in alt_path.split("/") if part])
@@ -805,7 +806,8 @@ async def run_scrape_job(
                             job_dir_name=job_dir_name,
                             sitemap_hreflang=item["hreflang"],
                             sitemap_lastmod=item["lastmod"],
-                            sitemap_content_type=item["content_type"]
+                            sitemap_content_type=item["content_type"],
+                            max_pages=max_pages,
                         )
                     except Exception as e:
                         logging.error(f"[Job {job_id}] Error scraping page {item['url']}: {e}")
