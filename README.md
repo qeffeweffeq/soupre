@@ -79,8 +79,42 @@ soupre/
 │   └── tailwind.config.ts    # Tailwind CSS v4 configuration
 ├── dev_all.py                # Smart dual-service runner with dynamic port allocation
 ├── package.json              # Root scripts
+├── _downloads/               # Output directory for all archived websites & media
 └── README.md
 ```
+
+---
+
+## Archive Directory Structure (`_downloads/`)
+
+Scraped websites are saved under `_downloads/` organized by job ID and domain slug (`job_<id>_<domain_slug>/`). Each archive maintains a deterministic, taxonomy-based hierarchy:
+
+```
+_downloads/
+└── job_<job_id>_<domain_slug>/
+    ├── sitemap.xml               # Complete discovered or generated sitemap
+    ├── job.log                   # Isolated log stream for this scrape job
+    ├── contact.csv               # Site-wide contact info (Email, Phone, Socials, Icon URL)
+    ├── _images/                  # Central media directory for all downloaded site assets
+    │   ├── hero-banner.jpg
+    │   └── ...
+    └── <taxonomy>/               # Language or section routing (e.g. `it/`, `en/`, `default/`)
+        └── <category>/           # Path-derived taxonomy (e.g. `pages/`, `rooms/`, `blog/`)
+            └── <page_slug>/      # Dedicated directory for each scraped page
+                ├── <title>.md    # Semantic GitHub Flavored Markdown with clean media links
+                ├── metadata.csv  # Page-level metadata (Title, URL, Description, Keywords)
+                ├── media_index.csv # Mapping of downloaded filenames, alt text, and source URLs
+                └── screenshot_<domain>_<timestamp>.png # Full-page browser screenshot
+```
+
+### Generated Artifacts Breakdown
+- **`contact.csv`**: Centralizes site-wide company details (`Icon URL`, `Location`, `Email`, `Phone`, `Instagram`, `LinkedIn`, `Founded`) extracted across the domain to avoid duplicating them across every page's metadata.
+- **`sitemap.xml`**: Normalized XML sitemap compiled from XML discovery, sitemap indexes, or robots.txt fallback.
+- **`<page_slug>/<title>.md`**: Clean Markdown document with unwrapped ASP.NET wrappers, preserved Elementor hero background images, stripped cloaking, and deduplicated carousel slides.
+- **`metadata.csv`**: Contains `URL`, `Title`, `Description`, and `Keywords` specific to that page.
+- **`media_index.csv`**: Maps local filenames in `_images/` back to their `Alt Text` and `Original URL`.
+- **`screenshot_*.png`**: High-resolution, full-page rendering captured by the stealth browser engine.
+- **`job.log`**: Isolated real-time log trace captured during execution and streamed via SSE to the UI.
 
 ---
 
