@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
@@ -52,7 +52,11 @@ from modules.core.job_logger import (
 )
 
 
-from modules.utils.url_utils import normalize_target_url
+from modules.utils.url_utils import (
+    normalize_target_url,
+    sanitize_url,
+    extract_urls_from_text,
+)
 
 
 def _migrate_db(engine) -> None:
@@ -235,6 +239,48 @@ async def _run_job_with_logging(
 _normalize_target_url = normalize_target_url
 
 
+@app.post("/api/jobs/batch-upload")
+async def batch_upload_urls(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    raw_text: Optional[str] = Form(None),
+):
+    """
+    Extract and sanitize URLs from an uploaded file (.txt, .csv, .md, .html)
+    or a raw text form/JSON payload.
+    """
+    content = ""
+    if file is not None:
+        file_bytes = await file.read()
+        content = file_bytes.decode("utf-8", errors="ignore")
+    elif raw_text:
+        content = raw_text
+    else:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            try:
+                body_json = await request.json()
+                if isinstance(body_json, dict):
+                    content = str(body_json.get("raw_text") or "")
+                elif isinstance(body_json, str):
+                    content = body_json
+            except Exception:
+                pass
+        if not content:
+            try:
+                body_bytes = await request.body()
+                if body_bytes:
+                    content = body_bytes.decode("utf-8", errors="ignore")
+            except Exception:
+                pass
+
+    urls = extract_urls_from_text(content)
+    return {
+        "count": len(urls),
+        "urls": urls,
+    }
+
+
 @app.post("/api/jobs")
 def create_job(
     target_url: str,
@@ -251,7 +297,9 @@ def create_job(
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
-    target_url = (target_url or "").strip()
+    target_url = sanitize_url(target_url)
+    if not target_url:
+        raise HTTPException(status_code=400, detail="A valid target URL is required")
     if scrape_mode == "sitemap":
         norm_target = _normalize_target_url(target_url)
         existing_jobs = session.exec(
