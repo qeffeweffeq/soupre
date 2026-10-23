@@ -248,7 +248,7 @@ async def scrape_page(
     except Exception:
         pass
 
-    page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
+    page_title = " ".join(soup.title.string.split()) if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
     # Health checks: blank page & parked domain detection
@@ -349,7 +349,8 @@ async def scrape_page(
         
     md_table = "## Metadata\n\n| Key | Value |\n|---|---|\n"
     for k, v in metadata.items():
-        v_safe = str(v).replace("|", "\\|")
+        v_clean = " ".join(str(v).replace("\r\n", " ").replace("\n", " ").replace("\r", " ").split())
+        v_safe = v_clean.replace("|", "\\|")
         md_table += f"| **{k}** | {v_safe} |\n"
         
     final_markdown = f"# {page_title}\n\n{md_table}\n\n---\n\n{raw_markdown}"
