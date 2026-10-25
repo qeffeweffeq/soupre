@@ -44,7 +44,7 @@ def client_fixture():
 def test_get_job_pages_enriched_taxonomy(client):
     with Session(test_engine) as session:
         job = ScrapeJob(target_url="https://prada.com", title="Prada Scrape", status="completed")
-        cat = Category(name="Goods & Commerce", slug="goods-commerce")
+        cat = Category(name="Street", slug="street", section="goods")
         session.add_all([job, cat])
         session.commit()
         session.refresh(job)
@@ -82,8 +82,9 @@ def test_get_job_pages_enriched_taxonomy(client):
     assert len(pages) == 1
     p = pages[0]
     assert p["title"] == "Prada Sunglasses"
-    assert p["category_name"] == "Goods & Commerce"
-    assert p["category_slug"] == "goods-commerce"
+    assert p["category_name"] == "Street"
+    assert p["category_slug"] == "street"
+    assert p["category_section"] == "goods"
     assert p["types_name"] == "Shop"
     assert p["types_slug"] == "shop"
     assert p["genre_name"] == "E-Commerce"
@@ -181,8 +182,8 @@ def test_patch_page_taxonomy_404_cases(client):
 def test_get_taxonomies_explorer_hierarchy(client):
     with Session(test_engine) as session:
         job = ScrapeJob(target_url="https://brand.com", title="Brand")
-        cat_shop = Category(name="Goods & Commerce", slug="goods-commerce")
-        cat_blog = Category(name="Writing", slug="writing")
+        cat_shop = Category(name="Street", slug="street", section="goods")
+        cat_blog = Category(name="Writing", slug="writing", section="services")
         session.add_all([job, cat_shop, cat_blog])
         session.commit()
         session.refresh(job)
@@ -216,7 +217,7 @@ def test_get_taxonomies_explorer_hierarchy(client):
             types_id=type_eyewear.id,
             status="completed",
         )
-        # Page 3: in Goods & Commerce but untyped
+        # Page 3: in Street but untyped
         p3 = Page(
             job_id=job.id,
             url="https://brand.com/promo",
@@ -241,9 +242,10 @@ def test_get_taxonomies_explorer_hierarchy(client):
     assert resp.status_code == 200
     tree = resp.json()
 
-    # Find Goods & Commerce
-    goods_cat = next((c for c in tree if c["slug"] == "goods-commerce"), None)
+    # Find Street
+    goods_cat = next((c for c in tree if c["slug"] == "street"), None)
     assert goods_cat is not None
+    assert goods_cat["section"] == "goods"
     assert goods_cat["page_count"] == 3  # 2 typed + 1 untyped
 
     types_map = {t["name"]: t for t in goods_cat["types"]}

@@ -88,11 +88,14 @@ def _migrate_db(engine) -> None:
         ("page",      "notion_page_id",            "TEXT"),
         ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
         ("page",      "last_synced_at",            "TIMESTAMP"),
+        ("category",  "section",                   "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
             result = conn.execute(text(f"PRAGMA table_info({table})"))
             existing = [row[1] for row in result.fetchall()]
+            if not existing:
+                continue
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                 conn.commit()
@@ -461,6 +464,7 @@ def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict
     data = page.model_dump()
     data["category_name"] = page.category.name if page.category else None
     data["category_slug"] = page.category.slug if page.category else None
+    data["category_section"] = page.category.section if page.category else None
     data["types_name"] = page.types_rel.name if page.types_rel else None
     data["types_slug"] = page.types_rel.slug if page.types_rel else None
     data["genre_name"] = page.genre.name if page.genre else None
@@ -608,6 +612,7 @@ async def delete_job(
 class CategoryCreate(BaseModel):
     name: str
     slug: Optional[str] = None
+    section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
@@ -615,6 +620,7 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
+    section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
@@ -800,6 +806,7 @@ def get_taxonomies_explorer(
             "id": cat.id,
             "name": cat.name,
             "slug": cat.slug,
+            "section": cat.section,
             "description": cat.description,
             "notion_id": cat.notion_id,
             "page_count": cat_page_total,
@@ -861,6 +868,7 @@ def get_taxonomies_tree(session: Session = Depends(get_session)):
             "id": cat.id,
             "name": cat.name,
             "slug": cat.slug,
+            "section": cat.section,
             "description": cat.description,
             "notion_id": cat.notion_id,
             "page_count": cat_page_count,
@@ -883,6 +891,7 @@ def create_category(payload: CategoryCreate, session: Session = Depends(get_sess
     category = Category(
         name=payload.name,
         slug=slug,
+        section=payload.section,
         description=payload.description,
         notion_id=payload.notion_id,
     )
@@ -903,6 +912,8 @@ def update_category(category_id: int, payload: CategoryUpdate, session: Session 
             category.slug = slugify(payload.name)
     if payload.slug is not None:
         category.slug = payload.slug
+    if payload.section is not None:
+        category.section = payload.section
     if payload.description is not None:
         category.description = payload.description
     if payload.notion_id is not None:
