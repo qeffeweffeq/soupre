@@ -563,6 +563,8 @@ async def scrape_page(
                             status="pending",
                             hreflang=alt_lang,
                             content_type=alt_ct,
+                            category_id=job.category_id if job else None,
+                            types_id=job.types_id if job else None,
                         )
                     )
                     existing_urls.add(alt_url)
@@ -734,6 +736,8 @@ async def run_scrape_job(
                             hreflang=entry.hreflang,
                             lastmod=entry.lastmod,
                             content_type=ct,
+                            category_id=job.category_id if job else None,
+                            types_id=job.types_id if job else None,
                         )
                         s.add(p)
                         pages_by_url[u] = p

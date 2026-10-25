@@ -89,6 +89,8 @@ def _migrate_db(engine) -> None:
         ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
         ("page",      "last_synced_at",            "TIMESTAMP"),
         ("category",  "section",                   "TEXT"),
+        ("scrapejob", "category_id",               "INTEGER REFERENCES category(id)"),
+        ("scrapejob", "types_id",                  "INTEGER REFERENCES types(id)"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -145,6 +147,26 @@ def _migrate_db(engine) -> None:
                 conn.execute(
                     text("UPDATE scrapejob SET title = :title, icon_url = :icon WHERE id = :jid"),
                     {"title": best_title, "icon": best_icon, "jid": j_id},
+                )
+        conn.commit()
+
+        # Backfill scrapejob.category_id and scrapejob.types_id from pages where missing
+        null_tax_jobs = conn.execute(
+            text("SELECT id FROM scrapejob WHERE category_id IS NULL")
+        ).fetchall()
+        for (j_id,) in null_tax_jobs:
+            page_tax = conn.execute(
+                text(
+                    "SELECT category_id, types_id FROM page "
+                    "WHERE job_id = :jid AND category_id IS NOT NULL "
+                    "ORDER BY id ASC LIMIT 1"
+                ),
+                {"jid": j_id},
+            ).fetchone()
+            if page_tax and page_tax[0]:
+                conn.execute(
+                    text("UPDATE scrapejob SET category_id = :cid, types_id = :tid WHERE id = :jid"),
+                    {"cid": page_tax[0], "tid": page_tax[1], "jid": j_id},
                 )
         conn.commit()
 
@@ -370,13 +392,23 @@ def create_job(
     return {"job_id": job.id, "status": "started"}
 
 
+def serialize_job_enriched(job: ScrapeJob) -> dict:
+    data = job.model_dump()
+    data["category_name"] = job.category.name if job.category else None
+    data["category_slug"] = job.category.slug if job.category else None
+    data["category_section"] = job.category.section if job.category else None
+    data["types_name"] = job.types_rel.name if job.types_rel else None
+    data["types_slug"] = job.types_rel.slug if job.types_rel else None
+    return data
+
+
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: int, session: Session = Depends(get_session)):
     from fastapi import HTTPException
     job = session.get(ScrapeJob, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return job
+    return serialize_job_enriched(job)
 
 
 @app.get("/api/jobs/{job_id}/logs")
@@ -449,7 +481,7 @@ def get_job_log_history(job_id: int, session: Session = Depends(get_session)):
 @app.get("/api/jobs")
 def get_jobs(session: Session = Depends(get_session)):
     jobs = session.exec(select(ScrapeJob).order_by(ScrapeJob.created_at.desc())).all()
-    return jobs
+    return [serialize_job_enriched(j) for j in jobs]
 
 
 def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict:
@@ -730,6 +762,79 @@ def update_page_taxonomy(
     session.refresh(page)
 
     return serialize_page_enriched(page)
+
+
+class JobTaxonomyUpdate(BaseModel):
+    category_id: Optional[int] = None
+    types_id: Optional[int] = None
+
+
+@app.patch("/api/jobs/{job_id}/taxonomy")
+def update_job_taxonomy(
+    job_id: int,
+    payload: JobTaxonomyUpdate,
+    session: Session = Depends(get_session)
+):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    fields_set = payload.model_fields_set
+
+    if "category_id" in fields_set:
+        if payload.category_id is not None:
+            cat = session.get(Category, payload.category_id)
+            if not cat:
+                raise HTTPException(status_code=404, detail="Category not found")
+        job.category_id = payload.category_id
+
+    if "types_id" in fields_set:
+        if payload.types_id is not None:
+            t = session.get(Types, payload.types_id)
+            if not t:
+                raise HTTPException(status_code=404, detail="Types not found")
+            if "category_id" not in fields_set and t.category_id:
+                job.category_id = t.category_id
+        job.types_id = payload.types_id
+
+    # If category changed and types_id was not explicitly specified, verify if existing types_id matches category
+    if "category_id" in fields_set and "types_id" not in fields_set:
+        if job.types_id is not None:
+            existing_type = session.get(Types, job.types_id)
+            if existing_type and existing_type.category_id != job.category_id:
+                job.types_id = None
+
+    session.add(job)
+
+    # Bulk update all pages belonging to this job
+    pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
+    for page in pages:
+        if "category_id" in fields_set:
+            page.category_id = job.category_id
+            page.categorization_source = "user_manual"
+            page.categorization_confidence = 1.0
+            if job.types_id is None:
+                page.types_id = None
+
+        if "types_id" in fields_set:
+            page.types_id = job.types_id
+            page.categorization_source = "user_manual"
+            page.categorization_confidence = 1.0
+            if job.category_id is not None:
+                page.category_id = job.category_id
+
+        session.add(page)
+
+    session.commit()
+    session.refresh(job)
+    for page in pages:
+        session.refresh(page)
+
+    return {
+        "job": serialize_job_enriched(job),
+        "pages": [serialize_page_enriched(p, job) for p in pages],
+        "updated_pages_count": len(pages),
+    }
 
 
 @app.get("/api/taxonomies/explorer")

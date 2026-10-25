@@ -267,3 +267,130 @@ def test_get_taxonomies_explorer_hierarchy(client):
     assert uncat is not None
     assert uncat["page_count"] == 1
     assert uncat["types"][0]["pages"][0]["title"] == "Unknown Page"
+
+
+def test_patch_job_taxonomy_cascades_to_all_pages(client):
+    with Session(test_engine) as session:
+        job = ScrapeJob(
+            target_url="https://docs.python.org",
+            title="Python Docs",
+            scrape_mode="sitemap",
+            status="completed",
+        )
+        cat_tech = Category(name="Tech", slug="tech", section="goods")
+        cat_cycling = Category(name="Cycling", slug="cycling", section="goods")
+        session.add_all([job, cat_tech, cat_cycling])
+        session.commit()
+        session.refresh(job)
+        session.refresh(cat_tech)
+        session.refresh(cat_cycling)
+
+        type_sw = Types(category_id=cat_tech.id, name="Software", slug="software")
+        session.add(type_sw)
+        session.commit()
+        session.refresh(type_sw)
+
+        p1 = Page(job_id=job.id, url="https://docs.python.org/3/tutorial", title="Tutorial")
+        p2 = Page(job_id=job.id, url="https://docs.python.org/3/library", title="Library")
+        p3 = Page(job_id=job.id, url="https://docs.python.org/3/reference", title="Reference")
+        session.add_all([p1, p2, p3])
+        session.commit()
+        session.refresh(p1)
+        session.refresh(p2)
+        session.refresh(p3)
+
+        job_id = job.id
+        tech_id = cat_tech.id
+        cycling_id = cat_cycling.id
+        sw_id = type_sw.id
+        p2_id = p2.id
+
+    # 1. Update Category at Job Level -> Cascades to all 3 pages
+    resp = client.patch(f"/api/jobs/{job_id}/taxonomy", json={"category_id": tech_id})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["job"]["category_id"] == tech_id
+    assert data["job"]["category_name"] == "Tech"
+    assert data["updated_pages_count"] == 3
+    assert len(data["pages"]) == 3
+    for p in data["pages"]:
+        assert p["category_id"] == tech_id
+        assert p["category_name"] == "Tech"
+        assert p["categorization_source"] == "user_manual"
+
+    # 2. Update Type at Job Level -> Cascades to all 3 pages
+    resp = client.patch(f"/api/jobs/{job_id}/taxonomy", json={"types_id": sw_id})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["job"]["types_id"] == sw_id
+    assert data["job"]["types_name"] == "Software"
+    for p in data["pages"]:
+        assert p["types_id"] == sw_id
+        assert p["types_name"] == "Software"
+
+    # 3. Individual page override (secondary option): override page 2 to Cycling
+    resp = client.patch(f"/api/pages/{p2_id}/taxonomy", json={"category_id": cycling_id})
+    assert resp.status_code == 200
+    p2_updated = resp.json()
+    assert p2_updated["category_id"] == cycling_id
+    assert p2_updated["category_name"] == "Cycling"
+
+    # Verify via GET /api/jobs/{id}/pages that p1 has Tech, p2 has Cycling, p3 has Tech
+    resp = client.get(f"/api/jobs/{job_id}/pages")
+    assert resp.status_code == 200
+    pages = resp.json()
+    p_map = {p["title"]: p for p in pages}
+    assert p_map["Tutorial"]["category_name"] == "Tech"
+    assert p_map["Library"]["category_name"] == "Cycling"
+    assert p_map["Reference"]["category_name"] == "Tech"
+
+    # 4. Updating Job Level again resets/updates all pages to new selection
+    resp = client.patch(f"/api/jobs/{job_id}/taxonomy", json={"category_id": cycling_id})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["job"]["category_id"] == cycling_id
+    assert data["job"]["category_name"] == "Cycling"
+    for p in data["pages"]:
+        assert p["category_id"] == cycling_id
+        assert p["category_name"] == "Cycling"
+
+
+def test_get_jobs_enriched_with_taxonomy(client):
+    with Session(test_engine) as session:
+        cat = Category(name="Cycling", slug="cycling", section="goods")
+        session.add(cat)
+        session.commit()
+        session.refresh(cat)
+
+        t = Types(category_id=cat.id, name="Bikes", slug="bikes")
+        session.add(t)
+        session.commit()
+        session.refresh(t)
+
+        job = ScrapeJob(
+            target_url="https://canyon.com",
+            title="Canyon Bicycles",
+            category_id=cat.id,
+            types_id=t.id,
+        )
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+        job_id = job.id
+
+    # Test GET /api/jobs
+    resp = client.get("/api/jobs")
+    assert resp.status_code == 200
+    jobs = resp.json()
+    target_job = next((j for j in jobs if j["id"] == job_id), None)
+    assert target_job is not None
+    assert target_job["category_name"] == "Cycling"
+    assert target_job["types_name"] == "Bikes"
+
+    # Test GET /api/jobs/{job_id}
+    resp = client.get(f"/api/jobs/{job_id}")
+    assert resp.status_code == 200
+    single_job = resp.json()
+    assert single_job["id"] == job_id
+    assert single_job["category_name"] == "Cycling"
+    assert single_job["types_name"] == "Bikes"
