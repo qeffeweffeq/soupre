@@ -11,7 +11,8 @@ from urllib.parse import urljoin
 from datetime import datetime
 from bs4 import BeautifulSoup
 from sqlmodel import Session
-from database.models import Page, ScrapeJob
+from database.models import Page, ScrapeJob, PageTagLink
+from modules.enrichment.classifier import classify_page
 from modules.config import DOWNLOADS_DIR, BACKEND_DIR, PROJECT_ROOT
 from .fetcher import fetch_url_with_browser
 from .sitemap_fetcher import determine_content_type
@@ -248,7 +249,7 @@ async def scrape_page(
     except Exception:
         pass
 
-    page_title = soup.title.string.strip() if soup.title and soup.title.string else "Untitled"
+    page_title = " ".join(soup.title.string.split()) if soup.title and soup.title.string else "Untitled"
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
     # Health checks: blank page & parked domain detection
@@ -349,7 +350,8 @@ async def scrape_page(
         
     md_table = "## Metadata\n\n| Key | Value |\n|---|---|\n"
     for k, v in metadata.items():
-        v_safe = str(v).replace("|", "\\|")
+        v_clean = " ".join(str(v).replace("\r\n", " ").replace("\n", " ").replace("\r", " ").split())
+        v_safe = v_clean.replace("|", "\\|")
         md_table += f"| **{k}** | {v_safe} |\n"
         
     final_markdown = f"# {page_title}\n\n{md_table}\n\n---\n\n{raw_markdown}"
@@ -476,6 +478,8 @@ async def scrape_page(
             session.add(page)
             
         page.title = page_title
+        page.description = metadata.get("Description") or ""
+        page.clean_url = url.split("?")[0].split("#")[0]
         page.icon_url = icon_url
         page.markdown_path = db_markdown_path
         page.screenshot_path = db_screenshot_path
@@ -487,6 +491,47 @@ async def scrape_page(
             page.hreflang = hreflang
         if sitemap_lastmod:
             page.lastmod = sitemap_lastmod
+
+        # Automatic dual classification (JEV & Embeddings)
+        try:
+            classification = classify_page(
+                title=page_title,
+                description=metadata.get("Description", ""),
+                body_text=raw_markdown,
+                url=url,
+                db_session=session,
+            )
+            page.category_id = classification.category_id
+            page.types_id = classification.types_id
+            page.genre_id = classification.genre_id
+            page.categorization_source = classification.source
+            page.categorization_confidence = classification.confidence
+
+            # Flush to ensure page has an ID before creating PageTagLink records
+            session.flush()
+
+            if page.id is not None and classification.tag_ids:
+                existing_links = session.exec(
+                    select(PageTagLink).where(PageTagLink.page_id == page.id)
+                ).all()
+                existing_tag_ids = {link.tag_id for link in existing_links}
+                for tid in classification.tag_ids:
+                    if tid not in existing_tag_ids:
+                        session.add(PageTagLink(page_id=page.id, tag_id=tid))
+
+            cat_log_msg = (
+                f"[Categorization] Category: {classification.category} | "
+                f"Type: {classification.type} | "
+                f"Source: {classification.source} (confidence: {classification.confidence:.2f})"
+            )
+            logging.info(cat_log_msg)
+            try:
+                from modules.core.job_logger import job_log_manager
+                job_log_manager.log(job_id, cat_log_msg)
+            except Exception:
+                pass
+        except Exception as exc:
+            logging.warning(f"[Categorization] Failed to classify page {url}: {exc}")
 
         job = session.get(ScrapeJob, job_id)
         if job:
