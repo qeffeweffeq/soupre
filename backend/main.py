@@ -88,11 +88,14 @@ def _migrate_db(engine) -> None:
         ("page",      "notion_page_id",            "TEXT"),
         ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
         ("page",      "last_synced_at",            "TIMESTAMP"),
+        ("category",  "section",                   "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
             result = conn.execute(text(f"PRAGMA table_info({table})"))
             existing = [row[1] for row in result.fetchall()]
+            if not existing:
+                continue
             if column not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
                 conn.commit()
@@ -449,10 +452,32 @@ def get_jobs(session: Session = Depends(get_session)):
     return jobs
 
 
+def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict:
+    scraped_at = None
+    if job and job.created_at:
+        scraped_at = job.created_at.isoformat()
+    elif page.job and page.job.created_at:
+        scraped_at = page.job.created_at.isoformat()
+    elif page.lastmod:
+        scraped_at = page.lastmod
+
+    data = page.model_dump()
+    data["category_name"] = page.category.name if page.category else None
+    data["category_slug"] = page.category.slug if page.category else None
+    data["category_section"] = page.category.section if page.category else None
+    data["types_name"] = page.types_rel.name if page.types_rel else None
+    data["types_slug"] = page.types_rel.slug if page.types_rel else None
+    data["genre_name"] = page.genre.name if page.genre else None
+    data["tag_names"] = [t.name for t in page.tags] if page.tags else []
+    data["scraped_at"] = scraped_at
+    return data
+
+
 @app.get("/api/jobs/{job_id}/pages")
 def get_job_pages(job_id: int, session: Session = Depends(get_session)):
+    job = session.get(ScrapeJob, job_id)
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
-    return pages
+    return [serialize_page_enriched(p, job) for p in pages]
 
 
 @app.post("/api/jobs/{job_id}/cancel")
@@ -587,6 +612,7 @@ async def delete_job(
 class CategoryCreate(BaseModel):
     name: str
     slug: Optional[str] = None
+    section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
@@ -594,6 +620,7 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
+    section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
@@ -636,6 +663,182 @@ class GenreUpdate(BaseModel):
     slug: Optional[str] = None
 
 
+class PageTaxonomyUpdate(BaseModel):
+    category_id: Optional[int] = None
+    types_id: Optional[int] = None
+    genre_id: Optional[int] = None
+    tag_ids: Optional[List[int]] = None
+
+
+@app.patch("/api/pages/{page_id}/taxonomy")
+def update_page_taxonomy(
+    page_id: int,
+    payload: PageTaxonomyUpdate,
+    session: Session = Depends(get_session)
+):
+    page = session.get(Page, page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    fields_set = payload.model_fields_set
+
+    if "category_id" in fields_set:
+        if payload.category_id is not None:
+            cat = session.get(Category, payload.category_id)
+            if not cat:
+                raise HTTPException(status_code=404, detail="Category not found")
+        page.category_id = payload.category_id
+
+    if "types_id" in fields_set:
+        if payload.types_id is not None:
+            t = session.get(Types, payload.types_id)
+            if not t:
+                raise HTTPException(status_code=404, detail="Types not found")
+            if "category_id" not in fields_set and t.category_id:
+                page.category_id = t.category_id
+        page.types_id = payload.types_id
+
+    # If category changed and types_id was not explicitly specified, verify if existing types_id matches category
+    if "category_id" in fields_set and "types_id" not in fields_set:
+        if page.types_id is not None:
+            existing_type = session.get(Types, page.types_id)
+            if existing_type and existing_type.category_id != page.category_id:
+                page.types_id = None
+
+    if "genre_id" in fields_set:
+        if payload.genre_id is not None:
+            g = session.get(Genre, payload.genre_id)
+            if not g:
+                raise HTTPException(status_code=404, detail="Genre not found")
+        page.genre_id = payload.genre_id
+
+    if "tag_ids" in fields_set:
+        if payload.tag_ids is not None:
+            if payload.tag_ids:
+                tags = session.exec(select(Tag).where(Tag.id.in_(payload.tag_ids))).all()
+                page.tags = tags
+            else:
+                page.tags = []
+        else:
+            page.tags = []
+
+    page.categorization_source = "user_manual"
+    page.categorization_confidence = 1.0
+
+    session.add(page)
+    session.commit()
+    session.refresh(page)
+
+    return serialize_page_enriched(page)
+
+
+@app.get("/api/taxonomies/explorer")
+def get_taxonomies_explorer(
+    status: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    categories = session.exec(select(Category).order_by(Category.name)).all()
+    all_types = session.exec(select(Types).order_by(Types.name)).all()
+
+    query = select(Page)
+    if status is not None:
+        query = query.where(Page.status == status)
+    pages = session.exec(query).all()
+
+    job_ids = {p.job_id for p in pages if p.job_id is not None}
+    jobs_map = {}
+    if job_ids:
+        jobs = session.exec(select(ScrapeJob).where(ScrapeJob.id.in_(job_ids))).all()
+        jobs_map = {j.id: j for j in jobs}
+
+    pages_by_cat_and_type = defaultdict(list)
+    pages_by_cat_no_type = defaultdict(list)
+    unassigned_pages = []
+
+    for p in pages:
+        sp = serialize_page_enriched(p, jobs_map.get(p.job_id))
+        if p.category_id is None:
+            unassigned_pages.append(sp)
+        elif p.types_id is None:
+            pages_by_cat_no_type[p.category_id].append(sp)
+        else:
+            pages_by_cat_and_type[(p.category_id, p.types_id)].append(sp)
+
+    types_by_cat = defaultdict(list)
+    for t in all_types:
+        types_by_cat[t.category_id].append(t)
+
+    tree = []
+    for cat in categories:
+        cat_types = types_by_cat.get(cat.id, [])
+        cat_page_total = 0
+        types_data = []
+
+        for t in cat_types:
+            t_pages = pages_by_cat_and_type.get((cat.id, t.id), [])
+            cat_page_total += len(t_pages)
+            types_data.append({
+                "id": t.id,
+                "category_id": t.category_id,
+                "name": t.name,
+                "slug": t.slug,
+                "description": t.description,
+                "notion_id": t.notion_id,
+                "page_count": len(t_pages),
+                "pages": t_pages,
+            })
+
+        cat_untyped = pages_by_cat_no_type.get(cat.id, [])
+        cat_page_total += len(cat_untyped)
+        if cat_untyped:
+            types_data.append({
+                "id": None,
+                "category_id": cat.id,
+                "name": "General / Other",
+                "slug": "general",
+                "description": None,
+                "notion_id": None,
+                "page_count": len(cat_untyped),
+                "pages": cat_untyped,
+            })
+
+        tree.append({
+            "id": cat.id,
+            "name": cat.name,
+            "slug": cat.slug,
+            "section": cat.section,
+            "description": cat.description,
+            "notion_id": cat.notion_id,
+            "page_count": cat_page_total,
+            "types": types_data,
+            "uncategorized_pages": cat_untyped,
+        })
+
+    if unassigned_pages:
+        tree.append({
+            "id": None,
+            "name": "Uncategorized",
+            "slug": "uncategorized",
+            "description": "Pages without an assigned category",
+            "page_count": len(unassigned_pages),
+            "types": [
+                {
+                    "id": None,
+                    "category_id": None,
+                    "name": "All Unassigned",
+                    "slug": "unassigned",
+                    "description": None,
+                    "notion_id": None,
+                    "page_count": len(unassigned_pages),
+                    "pages": unassigned_pages,
+                }
+            ],
+            "uncategorized_pages": unassigned_pages,
+        })
+
+    return tree
+
+
 @app.get("/api/taxonomies/tree")
 def get_taxonomies_tree(session: Session = Depends(get_session)):
     categories = session.exec(select(Category).order_by(Category.name)).all()
@@ -665,6 +868,7 @@ def get_taxonomies_tree(session: Session = Depends(get_session)):
             "id": cat.id,
             "name": cat.name,
             "slug": cat.slug,
+            "section": cat.section,
             "description": cat.description,
             "notion_id": cat.notion_id,
             "page_count": cat_page_count,
@@ -687,6 +891,7 @@ def create_category(payload: CategoryCreate, session: Session = Depends(get_sess
     category = Category(
         name=payload.name,
         slug=slug,
+        section=payload.section,
         description=payload.description,
         notion_id=payload.notion_id,
     )
@@ -707,6 +912,8 @@ def update_category(category_id: int, payload: CategoryUpdate, session: Session 
             category.slug = slugify(payload.name)
     if payload.slug is not None:
         category.slug = payload.slug
+    if payload.section is not None:
+        category.section = payload.section
     if payload.description is not None:
         category.description = payload.description
     if payload.notion_id is not None:

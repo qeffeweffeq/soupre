@@ -11,22 +11,40 @@ log = logging.getLogger(__name__)
 CACHE_FILE = Path(__file__).resolve().parent / "cache" / "_taxonomy_embeddings.json"
 
 CATEGORY_DESCRIPTIONS: Dict[str, str] = {
+    # Services / Roles DB (16)
     "Technology": "Software development, technology products, cloud infrastructure, APIs, programming, web apps, SaaS, engineering, IT systems, databases.",
-    "Creativity": "Creative services, branding, portfolio, artistic direction, graphic design, visual innovation, digital concepts, creative agency.",
-    "Artists": "Visual artists, illustrators, 3D artists, animators, painters, musicians, digital creators, fine arts, galleries.",
-    "Design": "UI/UX design, web design, graphic design, typography, brand identity, layout, industrial design, visual styling.",
-    "Writing": "Copywriting, technical documentation, journalism, blogs, content writing, storytelling, editorial publications, essays.",
+    "Creativity": "Creative services, branding, portfolio, artistic direction, visual innovation, digital concepts, creative agency, design studio.",
+    "Artists": "Visual artists, illustrators, 3D artists, animators, painters, musicians, digital creators, fine arts, art exhibitions, galleries.",
+    "Design": "UI/UX design, web design, graphic design, typography, brand identity, layout, industrial design, visual styling, portfolio.",
+    "Writing": "Copywriting, technical documentation, journalism, blogs, content writing, storytelling, editorial publications, essays, magazines.",
     "Marketing": "Digital marketing, SEO, search engine advertising, social media campaigns, growth hacking, public relations, analytics, ads.",
     "Financial": "Finance, financial services, investments, banking, cryptocurrency, fintech, wealth management, accounting, loans.",
     "Management": "Business management, administration, consulting, legal compliance, operations, enterprise leadership, executive strategy.",
-    "Goods & Commerce": "E-commerce, online retail, physical products, merchandise, lifestyle goods, consumer shopping, brand store, catalog.",
-    "Traveller": "Travel guides, tourism, hotels, hospitality, booking, destinations, trip planning, flight services, vacations.",
+    "Traveller": "Travel guides, tourism, hotels, hospitality resorts, luxury accommodation, booking, destinations, trip planning, flight services, vacations.",
     "Assistant": "AI assistants, productivity bots, intelligent automation, copilot tools, task helpers, automated workflows.",
-    "Builder": "Web builders, site generators, no-code platforms, frameworks, development scaffolds, page builders.",
+    "Builder": "Web builders, site generators, no-code platforms, frameworks, development scaffolds, page builders, CMS platforms.",
     "Content Creation": "Content creators, streaming, podcasting, video production, blogging, influencer media, publishing.",
     "Economics": "Economic research, market analysis, financial theory, global trade, macroeconomic data, socioeconomic studies.",
-    "Joker": "General utilities, multipurpose helpers, miscellaneous tools, accessories, random tools.",
+    "Joker": "General utilities, multipurpose helpers, miscellaneous tools, calculators, format converters, random web helpers.",
     "Legal": "Legal services, law firms, contracts, terms of service, regulatory compliance, privacy policies, attorneys.",
+    "Development": "Software engineering firms, frontend and backend development agencies, mobile apps development, web dev shops.",
+
+    # GOODS / Categories DB (16)
+    "Snowboarding": "Snowboarding gear, snowboards, winter sports equipment, bindings, alpine winter apparel, snow outerwear, goggles.",
+    "Cycling": "Bicycles, cycling apparel, bike gear, road bikes, gravel, mountain biking accessories, cycling helmets, components.",
+    "Home": "Home furnishings, interior decor, kitchenware, bathroom accessories, furniture, appliances, lighting, living essentials.",
+    "Street": "Streetwear, casual fashion, denim, jeans, sneakers, sunglasses, eyewear, urban apparel, accessories, shoes, clothing, luxury boutique.",
+    "Hiking": "Hiking gear, trekking equipment, outdoor apparel, trail footwear, backpacks, camping gear, outdoor exploration.",
+    "Yoga": "Yoga mats, activewear, pilates apparel, meditation accessories, athletic leggings, mindful movement gear.",
+    "Other": "Miscellaneous consumer products, general accessories, replacement parts, smoking accessories, specialty goods.",
+    "Travel": "Luggage, travel bags, travel accessories, passport holders, packing cubes, weekenders, journey gear.",
+    "Beverage": "Coffee, specialty tea, wine, alcoholic beverages, craft drinks, roasteries, bottled drinks, glassware.",
+    "Entertainment": "Toys, board games, vinyl records, entertainment collectibles, pop culture items, gaming accessories.",
+    "Car": "Automotive accessories, car parts, wheels, vehicle care, automotive tools, driving gear, tyres.",
+    "Food": "Gourmet food, artisan snacks, sweets, chocolates, pantry staples, specialty ingredients, edible goods.",
+    "Office": "Office supplies, desk organization, stationery, notebooks, pens, printing supplies, workspace accessories.",
+    "Tech": "Consumer electronics, gadgets, computer hardware, audio equipment, chargers, tech accessories, phone cases.",
+    "Wellness": "Personal care, skincare, grooming, bath and body, cosmetics, clean beauty, wellness products, health essentials.",
 }
 
 TYPE_DESCRIPTIONS: Dict[str, str] = {

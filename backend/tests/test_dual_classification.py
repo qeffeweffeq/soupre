@@ -92,7 +92,7 @@ def test_classifier_synthetic_pages():
             url="https://acmeshop.com/store",
             db_session=session,
         )
-        assert res_shop.category == "Goods & Commerce"
+        assert res_shop.category == "Street"
         assert res_shop.type == "Shop"
         assert res_shop.category_id is not None
         assert res_shop.types_id is not None
