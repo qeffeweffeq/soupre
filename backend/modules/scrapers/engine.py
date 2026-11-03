@@ -88,239 +88,25 @@ def determine_page_hreflang(
     return None
 
 
-SHARED_CONTACT_KEYS = (
-    "Icon URL",
-    "Location",
-    "Email",
-    "Phone",
-    "Instagram",
-    "LinkedIn",
-    "Founded",
+from modules.extractors.contact import (
+    SHARED_CONTACT_KEYS,
+    read_job_contact_csv,
+    update_job_contact_csv,
+    _read_job_contact_csv,
+    _update_job_contact_csv,
 )
-
-
-def _read_job_contact_csv(job_dir: str) -> dict[str, str]:
-    contact_csv_path = os.path.join(job_dir, "contact.csv")
-    data: dict[str, str] = {}
-    if os.path.exists(contact_csv_path):
-        try:
-            with open(contact_csv_path, "r", newline="", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                for idx, row in enumerate(reader):
-                    if idx == 0 and row == ["Key", "Value"]:
-                        continue
-                    if len(row) >= 2 and row[0].strip():
-                        data[row[0].strip()] = row[1].strip()
-        except Exception:
-            pass
-    return data
-
-
-def _update_job_contact_csv(job_dir: str, soup: BeautifulSoup, icon_url: str | None = None) -> dict[str, str]:
-    os.makedirs(job_dir, exist_ok=True)
-    contact_data = _read_job_contact_csv(job_dir)
-
-    candidates = {
-        "Icon URL": icon_url,
-        "Location": extract_location(soup),
-        "Email": extract_email(soup),
-        "Phone": extract_phone(soup),
-        "Instagram": extract_instagram(soup),
-        "LinkedIn": extract_linkedin(soup),
-        "Founded": extract_founded(soup),
-    }
-
-    updated = False
-    for k in SHARED_CONTACT_KEYS:
-        val = candidates.get(k)
-        if val is None or not str(val).strip():
-            continue
-        val_str = str(val).strip()
-        existing_val = contact_data.get(k, "")
-        # Allow upgrading Google Favicon fallback to a real site icon
-        if not existing_val or (k == "Icon URL" and "google.com/s2/favicons" in existing_val and "google.com/s2/favicons" not in val_str):
-            contact_data[k] = val_str
-            updated = True
-
-    contact_csv_path = os.path.join(job_dir, "contact.csv")
-    if updated or not os.path.exists(contact_csv_path):
-        with open(contact_csv_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Key", "Value"])
-            for k in SHARED_CONTACT_KEYS:
-                if k in contact_data and contact_data[k]:
-                    writer.writerow([k, contact_data[k]])
-
-    return contact_data
-
-
-_CHALLENGE_TITLES = (
-    "just a moment",
-    "checking your browser",
-    "checking the site connection security",
-    "attention required",
-    "security check",
-    "robot check",
+from modules.utils.page_recovery import (
+    _CHALLENGE_TITLES,
+    extract_page_title,
+    resolve_disk_path,
+    is_untitled_or_empty_page,
+    cleanup_untitled_page_artifacts,
+    is_challenge_or_unrendered_html,
+    _is_challenge_or_unrendered_html,
+    get_job_dir,
+    _get_job_dir,
+    reset_job_retryable_pages,
 )
-
-
-def extract_page_title(soup: Optional[BeautifulSoup]) -> str:
-    """
-    Extract the page title using a fallback cascade:
-    1. <title> tag
-    2. <meta property="og:title"> / <meta name="twitter:title">
-    3. First non-empty <h1> in <main>, <article>, or <body>
-    4. Fallback to "Untitled"
-    """
-    if not soup:
-        return "Untitled"
-
-    def _clean_candidate(val: Optional[str]) -> Optional[str]:
-        if not val:
-            return None
-        cleaned = " ".join(str(val).split()).strip()
-        if not cleaned or cleaned.lower() in ("untitled", "untitled page"):
-            return None
-        if any(ch in cleaned.lower() for ch in _CHALLENGE_TITLES):
-            return None
-        return cleaned
-
-    # 1. <title>
-    if soup.title:
-        raw_title = soup.title.string or soup.title.get_text(" ", strip=True)
-        cand = _clean_candidate(raw_title)
-        if cand:
-            return cand
-
-    # 2. og:title / twitter:title
-    for meta_attrs in (
-        {"property": "og:title"},
-        {"name": "og:title"},
-        {"name": "twitter:title"},
-        {"property": "twitter:title"},
-    ):
-        meta_tag = soup.find("meta", attrs=meta_attrs)
-        if meta_tag and meta_tag.get("content"):
-            cand = _clean_candidate(meta_tag.get("content"))
-            if cand:
-                return cand
-
-    # 3. First non-empty <h1>
-    for container in [soup.find("main"), soup.find("article"), soup.body, soup]:
-        if not container:
-            continue
-        for h1 in container.find_all("h1"):
-            cand = _clean_candidate(h1.get_text(" ", strip=True))
-            if cand:
-                return cand
-
-    return "Untitled"
-
-
-def resolve_disk_path(rel_path: Optional[str], job_dir: Optional[str] = None) -> Optional[str]:
-    """Resolve a relative markdown_path or screenshot_path stored on Page into an absolute filesystem path."""
-    if not rel_path:
-        return None
-    rel = rel_path.lstrip("./").lstrip("/")
-    if rel.startswith("_downloads/"):
-        return os.path.join(DOWNLOADS_DIR, rel.replace("_downloads/", "", 1))
-    if rel.startswith("../_downloads/"):
-        return os.path.join(DOWNLOADS_DIR, rel.replace("../_downloads/", "", 1))
-    if job_dir:
-        return os.path.join(job_dir, rel)
-    return os.path.join(DOWNLOADS_DIR, rel)
-
-
-def is_untitled_or_empty_page(page: Page, job_dir: Optional[str] = None) -> bool:
-    """
-    Return True if a Page record represents an 'Untitled' or empty-body scrape
-    that should be re-scraped.
-    """
-    title_norm = (page.title or "").strip().lower()
-    if title_norm in ("untitled", "untitled page"):
-        return True
-
-    md_path = page.markdown_path or ""
-    if md_path:
-        base_md = os.path.basename(md_path).lower()
-        parent_dir_name = os.path.basename(os.path.dirname(md_path)).lower()
-        if base_md == "untitled.md" or parent_dir_name == "untitled" or parent_dir_name.startswith("untitled_"):
-            return True
-
-    if page.status == "completed":
-        if not title_norm:
-            return True
-        disk_path = resolve_disk_path(md_path, job_dir)
-        if not disk_path or not os.path.exists(disk_path):
-            return True
-        try:
-            with open(disk_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            if "\n---\n" in content:
-                body = content.split("\n---\n", 1)[1].strip()
-            else:
-                body = content.strip()
-            if not body:
-                return True
-        except Exception:
-            return True
-
-    return False
-
-
-def cleanup_untitled_page_artifacts(page: Page, job_dir: Optional[str] = None) -> None:
-    """
-    Remove stale 'Untitled' / 'Untitled_<slug>' directories or files on disk for a page
-    before re-queuing or updating it, preventing orphan Untitled folders.
-    """
-    for rel_path in (page.markdown_path, page.screenshot_path):
-        disk_path = resolve_disk_path(rel_path, job_dir)
-        if not disk_path:
-            continue
-        parent_dir = os.path.dirname(disk_path)
-        parent_name = os.path.basename(parent_dir)
-        if parent_name == "Untitled" or parent_name.startswith("Untitled_"):
-            if os.path.isdir(parent_dir):
-                # Verify metadata.csv matches page.url if present, or remove if it's an Untitled dir for this page
-                meta_file = os.path.join(parent_dir, "metadata.csv")
-                should_remove_dir = True
-                if os.path.exists(meta_file) and page.url:
-                    try:
-                        with open(meta_file, "r", encoding="utf-8", errors="ignore") as mf:
-                            meta_text = mf.read()
-                        if page.url not in meta_text and meta_text.strip():
-                            should_remove_dir = False
-                    except Exception:
-                        pass
-                if should_remove_dir:
-                    shutil.rmtree(parent_dir, ignore_errors=True)
-                    continue
-        if os.path.isfile(disk_path) and os.path.basename(disk_path).lower().startswith(("untitled", "screenshot_")):
-            try:
-                os.remove(disk_path)
-            except Exception:
-                pass
-
-
-def _is_challenge_or_unrendered_html(html_content: Optional[str]) -> bool:
-    """Check if raw HTML is empty, a bot challenge, or an unrendered 'Untitled' blank page."""
-    if not html_content or len(html_content.strip()) < 500:
-        return True
-    html_lower = html_content.lower()
-    if (
-        "robot-suspicion" in html_lower
-        or "checking the site connection security" in html_lower
-        or "checking your browser" in html_lower
-        or "<title>just a moment" in html_lower
-        or "confirm you are human" in html_lower
-        or "sg-captcha" in html_lower
-    ):
-        return True
-    prelim_soup = BeautifulSoup(html_content, "html.parser")
-    prelim_title = extract_page_title(prelim_soup)
-    if prelim_title == "Untitled" or is_blank_page(prelim_soup):
-        return True
-    return False
 
 
 async def scrape_page(
