@@ -264,6 +264,38 @@ async def _run_job_with_logging(
 _normalize_target_url = normalize_target_url
 
 
+def _get_job_dir(job: ScrapeJob) -> str:
+    domain = urlparse(job.target_url or "").netloc.replace(".", "_")
+    return os.path.join(DOWNLOADS_DIR, f"job_{job.id}_{domain}")
+
+
+def reset_job_retryable_pages(session: Session, job: ScrapeJob) -> int:
+    """
+    Find all 'failed' or 'Untitled'/empty pages for a job, clean up their stale
+    Untitled disk artifacts, reset their status to 'pending', and update job.scraped_pages.
+    """
+    from modules.scrapers.engine import is_untitled_or_empty_page, cleanup_untitled_page_artifacts
+
+    job_dir = _get_job_dir(job)
+    pages = session.exec(select(Page).where(Page.job_id == job.id)).all()
+    reset_count = 0
+    for p in pages:
+        if p.status == "failed" or is_untitled_or_empty_page(p, job_dir):
+            cleanup_untitled_page_artifacts(p, job_dir)
+            p.status = "pending"
+            if (p.title or "").strip().lower() in ("", "untitled", "untitled page"):
+                p.title = p.url_path or urlparse(p.url).path or p.url
+            p.markdown_path = None
+            p.screenshot_path = None
+            session.add(p)
+            reset_count += 1
+
+    completed_count = sum(1 for p in pages if p.status == "completed")
+    job.scraped_pages = completed_count
+    session.add(job)
+    return reset_count
+
+
 @app.post("/api/jobs/batch-upload")
 async def batch_upload_urls(
     request: Request,
@@ -340,13 +372,8 @@ def create_job(
             if existing.status == "running":
                 return {"job_id": existing.id, "status": "already_running"}
 
-            # Restore existing job
-            failed_pages = session.exec(
-                select(Page).where(Page.job_id == existing.id, Page.status == "failed")
-            ).all()
-            for p in failed_pages:
-                p.status = "pending"
-                session.add(p)
+            # Restore existing job (resetting both failed and Untitled/empty pages)
+            reset_count = reset_job_retryable_pages(session, existing)
 
             existing.target_url = (existing.target_url or "").strip()
             existing.status = "running"
@@ -368,7 +395,7 @@ def create_job(
                 large_threshold,
                 large_pause_sec,
             )
-            return {"job_id": existing.id, "status": "restored"}
+            return {"job_id": existing.id, "status": "restored", "queued_pages": reset_count}
 
     job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
     session.add(job)
@@ -392,6 +419,19 @@ def create_job(
     return {"job_id": job.id, "status": "started"}
 
 
+def _is_page_untitled_fast(page: Page) -> bool:
+    title_norm = (page.title or "").strip().lower()
+    if title_norm in ("untitled", "untitled page"):
+        return True
+    md_path = page.markdown_path or ""
+    if md_path:
+        base_md = os.path.basename(md_path).lower()
+        parent_dir_name = os.path.basename(os.path.dirname(md_path)).lower()
+        if base_md == "untitled.md" or parent_dir_name == "untitled" or parent_dir_name.startswith("untitled_"):
+            return True
+    return False
+
+
 def serialize_job_enriched(job: ScrapeJob) -> dict:
     data = job.model_dump()
     data["category_name"] = job.category.name if job.category else None
@@ -399,6 +439,10 @@ def serialize_job_enriched(job: ScrapeJob) -> dict:
     data["category_section"] = job.category.section if job.category else None
     data["types_name"] = job.types_rel.name if job.types_rel else None
     data["types_slug"] = job.types_rel.slug if job.types_rel else None
+
+    job_pages = job.pages or []
+    data["untitled_count"] = sum(1 for p in job_pages if _is_page_untitled_fast(p))
+    data["failed_count"] = sum(1 for p in job_pages if p.status == "failed")
     return data
 
 
@@ -502,6 +546,7 @@ def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict
     data["genre_name"] = page.genre.name if page.genre else None
     data["tag_names"] = [t.name for t in page.tags] if page.tags else []
     data["scraped_at"] = scraped_at
+    data["is_untitled"] = _is_page_untitled_fast(page)
     return data
 
 
@@ -553,12 +598,7 @@ def resume_job(
     if job.status == "running":
         raise HTTPException(status_code=400, detail="Job is already running")
 
-    failed_pages = session.exec(
-        select(Page).where(Page.job_id == job_id, Page.status == "failed")
-    ).all()
-    for p in failed_pages:
-        p.status = "pending"
-        session.add(p)
+    reset_count = reset_job_retryable_pages(session, job)
 
     job.target_url = (job.target_url or "").strip()
     job.status = "running"
@@ -580,7 +620,112 @@ def resume_job(
         cooldown_min,
         cooldown_max,
     )
-    return {"status": "resumed"}
+    return {"status": "resumed", "queued_pages": reset_count}
+
+
+@app.post("/api/jobs/{job_id}/rescrape-untitled")
+def rescrape_untitled_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session: Session = Depends(get_session),
+):
+    job = session.get(ScrapeJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status == "running":
+        raise HTTPException(status_code=400, detail="Job is already running")
+
+    reset_count = reset_job_retryable_pages(session, job)
+    pending_count = len(
+        session.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all()
+    )
+    if reset_count == 0 and pending_count == 0 and job.scrape_mode == "sitemap":
+        return {"status": "nothing_to_rescrape", "job_id": job.id, "queued_pages": 0}
+
+    job.target_url = (job.target_url or "").strip()
+    job.status = "running"
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    max_pages = max(0, job.total_pages or 0)
+    background_tasks.add_task(
+        _run_job_with_logging,
+        job.id,
+        job.target_url,
+        job.scrape_mode,
+        max_pages,
+        delay_min,
+        delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
+    )
+    return {"status": "resumed", "job_id": job.id, "queued_pages": reset_count}
+
+
+@app.post("/api/pages/{page_id}/rescrape")
+def rescrape_single_page(
+    page_id: int,
+    background_tasks: BackgroundTasks,
+    session_min: int = 30,
+    session_max: int = 50,
+    cooldown_min: float = 180.0,
+    cooldown_max: float = 300.0,
+    delay_min: float = 60.0,
+    delay_max: float = 120.0,
+    session: Session = Depends(get_session),
+):
+    from modules.scrapers.engine import cleanup_untitled_page_artifacts
+
+    page = session.get(Page, page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+    job = session.get(ScrapeJob, page.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status == "running":
+        raise HTTPException(status_code=400, detail="Job is already running")
+
+    job_dir = _get_job_dir(job)
+    cleanup_untitled_page_artifacts(page, job_dir)
+    page.status = "pending"
+    if (page.title or "").strip().lower() in ("", "untitled", "untitled page"):
+        page.title = page.url_path or urlparse(page.url).path or page.url
+    page.markdown_path = None
+    page.screenshot_path = None
+    session.add(page)
+
+    all_pages = session.exec(select(Page).where(Page.job_id == job.id)).all()
+    job.scraped_pages = sum(1 for p in all_pages if p.status == "completed" and p.id != page.id)
+    job.target_url = (job.target_url or "").strip()
+    job.status = "running"
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+
+    max_pages = max(0, job.total_pages or 0)
+    background_tasks.add_task(
+        _run_job_with_logging,
+        job.id,
+        job.target_url,
+        job.scrape_mode,
+        max_pages,
+        delay_min,
+        delay_max,
+        session_min,
+        session_max,
+        cooldown_min,
+        cooldown_max,
+    )
+    return {"status": "resumed", "job_id": job.id, "page_id": page.id}
 @app.delete("/api/jobs/{job_id}")
 async def delete_job(
     job_id: int,

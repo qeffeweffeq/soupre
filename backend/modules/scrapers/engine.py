@@ -6,6 +6,7 @@ import os
 import csv
 import re
 import time
+import shutil
 from typing import Optional
 from urllib.parse import urljoin
 from datetime import datetime
@@ -153,6 +154,175 @@ def _update_job_contact_csv(job_dir: str, soup: BeautifulSoup, icon_url: str | N
     return contact_data
 
 
+_CHALLENGE_TITLES = (
+    "just a moment",
+    "checking your browser",
+    "checking the site connection security",
+    "attention required",
+    "security check",
+    "robot check",
+)
+
+
+def extract_page_title(soup: Optional[BeautifulSoup]) -> str:
+    """
+    Extract the page title using a fallback cascade:
+    1. <title> tag
+    2. <meta property="og:title"> / <meta name="twitter:title">
+    3. First non-empty <h1> in <main>, <article>, or <body>
+    4. Fallback to "Untitled"
+    """
+    if not soup:
+        return "Untitled"
+
+    def _clean_candidate(val: Optional[str]) -> Optional[str]:
+        if not val:
+            return None
+        cleaned = " ".join(str(val).split()).strip()
+        if not cleaned or cleaned.lower() in ("untitled", "untitled page"):
+            return None
+        if any(ch in cleaned.lower() for ch in _CHALLENGE_TITLES):
+            return None
+        return cleaned
+
+    # 1. <title>
+    if soup.title:
+        raw_title = soup.title.string or soup.title.get_text(" ", strip=True)
+        cand = _clean_candidate(raw_title)
+        if cand:
+            return cand
+
+    # 2. og:title / twitter:title
+    for meta_attrs in (
+        {"property": "og:title"},
+        {"name": "og:title"},
+        {"name": "twitter:title"},
+        {"property": "twitter:title"},
+    ):
+        meta_tag = soup.find("meta", attrs=meta_attrs)
+        if meta_tag and meta_tag.get("content"):
+            cand = _clean_candidate(meta_tag.get("content"))
+            if cand:
+                return cand
+
+    # 3. First non-empty <h1>
+    for container in [soup.find("main"), soup.find("article"), soup.body, soup]:
+        if not container:
+            continue
+        for h1 in container.find_all("h1"):
+            cand = _clean_candidate(h1.get_text(" ", strip=True))
+            if cand:
+                return cand
+
+    return "Untitled"
+
+
+def resolve_disk_path(rel_path: Optional[str], job_dir: Optional[str] = None) -> Optional[str]:
+    """Resolve a relative markdown_path or screenshot_path stored on Page into an absolute filesystem path."""
+    if not rel_path:
+        return None
+    rel = rel_path.lstrip("./").lstrip("/")
+    if rel.startswith("_downloads/"):
+        return os.path.join(DOWNLOADS_DIR, rel.replace("_downloads/", "", 1))
+    if rel.startswith("../_downloads/"):
+        return os.path.join(DOWNLOADS_DIR, rel.replace("../_downloads/", "", 1))
+    if job_dir:
+        return os.path.join(job_dir, rel)
+    return os.path.join(DOWNLOADS_DIR, rel)
+
+
+def is_untitled_or_empty_page(page: Page, job_dir: Optional[str] = None) -> bool:
+    """
+    Return True if a Page record represents an 'Untitled' or empty-body scrape
+    that should be re-scraped.
+    """
+    title_norm = (page.title or "").strip().lower()
+    if title_norm in ("untitled", "untitled page"):
+        return True
+
+    md_path = page.markdown_path or ""
+    if md_path:
+        base_md = os.path.basename(md_path).lower()
+        parent_dir_name = os.path.basename(os.path.dirname(md_path)).lower()
+        if base_md == "untitled.md" or parent_dir_name == "untitled" or parent_dir_name.startswith("untitled_"):
+            return True
+
+    if page.status == "completed":
+        if not title_norm:
+            return True
+        disk_path = resolve_disk_path(md_path, job_dir)
+        if not disk_path or not os.path.exists(disk_path):
+            return True
+        try:
+            with open(disk_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if "\n---\n" in content:
+                body = content.split("\n---\n", 1)[1].strip()
+            else:
+                body = content.strip()
+            if not body:
+                return True
+        except Exception:
+            return True
+
+    return False
+
+
+def cleanup_untitled_page_artifacts(page: Page, job_dir: Optional[str] = None) -> None:
+    """
+    Remove stale 'Untitled' / 'Untitled_<slug>' directories or files on disk for a page
+    before re-queuing or updating it, preventing orphan Untitled folders.
+    """
+    for rel_path in (page.markdown_path, page.screenshot_path):
+        disk_path = resolve_disk_path(rel_path, job_dir)
+        if not disk_path:
+            continue
+        parent_dir = os.path.dirname(disk_path)
+        parent_name = os.path.basename(parent_dir)
+        if parent_name == "Untitled" or parent_name.startswith("Untitled_"):
+            if os.path.isdir(parent_dir):
+                # Verify metadata.csv matches page.url if present, or remove if it's an Untitled dir for this page
+                meta_file = os.path.join(parent_dir, "metadata.csv")
+                should_remove_dir = True
+                if os.path.exists(meta_file) and page.url:
+                    try:
+                        with open(meta_file, "r", encoding="utf-8", errors="ignore") as mf:
+                            meta_text = mf.read()
+                        if page.url not in meta_text and meta_text.strip():
+                            should_remove_dir = False
+                    except Exception:
+                        pass
+                if should_remove_dir:
+                    shutil.rmtree(parent_dir, ignore_errors=True)
+                    continue
+        if os.path.isfile(disk_path) and os.path.basename(disk_path).lower().startswith(("untitled", "screenshot_")):
+            try:
+                os.remove(disk_path)
+            except Exception:
+                pass
+
+
+def _is_challenge_or_unrendered_html(html_content: Optional[str]) -> bool:
+    """Check if raw HTML is empty, a bot challenge, or an unrendered 'Untitled' blank page."""
+    if not html_content or len(html_content.strip()) < 500:
+        return True
+    html_lower = html_content.lower()
+    if (
+        "robot-suspicion" in html_lower
+        or "checking the site connection security" in html_lower
+        or "checking your browser" in html_lower
+        or "<title>just a moment" in html_lower
+        or "confirm you are human" in html_lower
+        or "sg-captcha" in html_lower
+    ):
+        return True
+    prelim_soup = BeautifulSoup(html_content, "html.parser")
+    prelim_title = extract_page_title(prelim_soup)
+    if prelim_title == "Untitled" or is_blank_page(prelim_soup):
+        return True
+    return False
+
+
 async def scrape_page(
     url: str,
     job_id: int,
@@ -184,33 +354,62 @@ async def scrape_page(
             timeout=60.0
         )
     except asyncio.TimeoutError:
-        logging.warning(f"Playwright timed out after 60s for {url}. Falling back to standard HTTP request...")
+        logging.warning(f"Playwright timed out after 60s for {url}. Falling back to retry/HTTP request...")
         html_content = ""
         screenshot_path = ""
         pw_cookies = []
 
-    # Check if browser failed or hit an unresolved Bot challenge
-    needs_fallback = False
-    html_lower = (html_content or "").lower()
-    if not html_content or len(html_content.strip()) < 500:
-        needs_fallback = True
-    elif (
-        "robot-suspicion" in html_lower
-        or "checking the site connection security" in html_lower
-        or "checking your browser" in html_lower
-        or "<title>just a moment" in html_lower
-        or "confirm you are human" in html_lower
-    ):
-        needs_fallback = True
+    # Check if browser failed, hit an unresolved Bot challenge, or returned an Untitled/blank page
+    needs_fallback = _is_challenge_or_unrendered_html(html_content)
+
+    # Retry once with browser after a short backoff if initial browser render returned Untitled/blank/challenge
+    if needs_fallback:
+        logging.info(f"Initial browser render for {url} was incomplete or Untitled/challenged. Retrying browser fetch once...")
+        if screenshot_path and os.path.exists(screenshot_path):
+            try:
+                os.remove(screenshot_path)
+            except Exception:
+                pass
+            screenshot_path = ""
+        await asyncio.sleep(2.0)
+        retry_temp_screenshot = os.path.join(job_dir, f"_temp_shot_retry_{int(time.time() * 1000)}.png")
+        try:
+            retry_html, retry_shot, retry_cookies = await asyncio.wait_for(
+                fetch_url_with_browser(
+                    url,
+                    take_screenshot=True,
+                    target_screenshot_path=retry_temp_screenshot
+                ),
+                timeout=60.0
+            )
+            if retry_html and (not _is_challenge_or_unrendered_html(retry_html) or len(retry_html) > len(html_content or "")):
+                html_content = retry_html
+                screenshot_path = retry_shot
+                pw_cookies = retry_cookies or pw_cookies
+                needs_fallback = _is_challenge_or_unrendered_html(html_content)
+            else:
+                if retry_shot and os.path.exists(retry_shot):
+                    try:
+                        os.remove(retry_shot)
+                    except Exception:
+                        pass
+        except Exception as retry_err:
+            logging.warning(f"Browser retry failed for {url}: {retry_err}")
 
     if needs_fallback:
         logging.warning(f"Browser failed or hit bot challenge for {url}. Falling back to standard HTTP request...")
         import requests
         try:
+            req_cookies = {}
+            if pw_cookies:
+                for c in pw_cookies:
+                    if isinstance(c, dict) and c.get("name") and c.get("value") is not None:
+                        req_cookies[c["name"]] = c["value"]
             response = await asyncio.to_thread(
                 requests.get,
                 url,
                 headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'},
+                cookies=req_cookies or None,
                 timeout=(6, 12)
             )
             response.raise_for_status()
@@ -221,6 +420,11 @@ async def scrape_page(
         except Exception as e:
             logging.error(f"Fallback fetch also failed for {url}: {e}. Proceeding with original browser content...")
             if not html_content or len(html_content.strip()) < 100:
+                if screenshot_path and os.path.exists(screenshot_path):
+                    try:
+                        os.remove(screenshot_path)
+                    except Exception:
+                        pass
                 raise RuntimeError(f"Failed to fetch content for {url}: {e}")
 
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -249,15 +453,35 @@ async def scrape_page(
     except Exception:
         pass
 
-    page_title = " ".join(soup.title.string.split()) if soup.title and soup.title.string else "Untitled"
+    page_title = extract_page_title(soup)
     safe_title = sanitize_filename(page_title) or f"Page_{job_id}"
 
     # Health checks: blank page & parked domain detection
-    if is_blank_page(soup):
+    blank_detected = is_blank_page(soup)
+    if blank_detected:
         logging.warning(f"Blank or nearly empty page detected for {url}")
     full_page_text = soup.get_text(separator=" ", strip=True)
     if check_parked_domain(full_page_text, url):
         logging.warning(f"Parked or spam domain content detected for {url}")
+
+    # Convert content to markdown before creating page_dir on disk so we never write empty "Untitled" directories
+    soup_for_md = BeautifulSoup(str(soup), "html.parser")
+    main_content = soup_for_md.find('main') or soup_for_md.find('body')
+    try:
+        raw_markdown = convert_content_to_markdown(main_content, soup_for_md, url, pw_cookies, None)
+    except Exception as e:
+        logging.error(f"Error converting to markdown: {e}")
+        raw_markdown = ""
+
+    if page_title == "Untitled" and (blank_detected or len((raw_markdown or "").strip()) < 50):
+        if screenshot_path and os.path.exists(screenshot_path):
+            try:
+                os.remove(screenshot_path)
+            except Exception:
+                pass
+        raise RuntimeError(
+            f"Refusing to save Untitled page without content for {url} (body length={len((raw_markdown or '').strip())})"
+        )
 
     # Extract best high-resolution icon URL once per job (or upgrade if previous was a Google Favicon fallback)
     existing_contact = _read_job_contact_csv(job_dir)
@@ -340,13 +564,6 @@ async def scrape_page(
         writer.writerow(["Key", "Value"])
         for k, v in metadata.items():
             writer.writerow([k, v])
-
-    main_content = soup.find('main') or soup.find('body')
-    try:
-        raw_markdown = convert_content_to_markdown(main_content, soup, url, pw_cookies, page_dir)
-    except Exception as e:
-        logging.error(f"Error converting to markdown: {e}")
-        raw_markdown = str(e)
         
     md_table = "## Metadata\n\n| Key | Value |\n|---|---|\n"
     for k, v in metadata.items():
@@ -476,6 +693,9 @@ async def scrape_page(
                 url=url,
             )
             session.add(page)
+        else:
+            if page.markdown_path and page.markdown_path != db_markdown_path:
+                cleanup_untitled_page_artifacts(page, job_dir)
             
         page.title = page_title
         page.description = metadata.get("Description") or ""
@@ -702,10 +922,24 @@ async def run_scrape_job(
                 existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 pages_by_url = {p.url: p for p in existing_pages}
 
+                untitled_rescrape_count = 0
                 for p in existing_pages:
                     if p.status == "failed":
                         p.status = "pending"
                         s.add(p)
+                    elif is_untitled_or_empty_page(p, job_dir):
+                        cleanup_untitled_page_artifacts(p, job_dir)
+                        p.status = "pending"
+                        p.title = p.url_path or urlparse(p.url).path or p.url
+                        p.markdown_path = None
+                        p.screenshot_path = None
+                        untitled_rescrape_count += 1
+                        s.add(p)
+
+                if untitled_rescrape_count > 0:
+                    logging.info(
+                        f"[Job {job_id}] Queued {untitled_rescrape_count} Untitled/empty page(s) for re-scraping."
+                    )
 
                 if not entries and not existing_pages:
                     job = s.get(ScrapeJob, job_id)
@@ -757,20 +991,15 @@ async def run_scrape_job(
                             elif entry.lastmod and not p.lastmod:
                                 p.lastmod = entry.lastmod
 
-                            # Check disk file
-                            file_missing = True
-                            if p.markdown_path:
-                                rel = p.markdown_path.lstrip("./").lstrip("/")
-                                if rel.startswith("_downloads/"):
-                                    disk_path = os.path.join(DOWNLOADS_DIR, rel.replace("_downloads/", "", 1))
-                                elif rel.startswith("../_downloads/"):
-                                    disk_path = os.path.join(DOWNLOADS_DIR, rel.replace("../_downloads/", "", 1))
-                                else:
-                                    disk_path = os.path.join(job_dir, rel)
-                                if os.path.exists(disk_path):
-                                    file_missing = False
+                            # Check disk file & Untitled/empty status
+                            file_missing_or_untitled = is_untitled_or_empty_page(p, job_dir)
+                            if file_missing_or_untitled:
+                                cleanup_untitled_page_artifacts(p, job_dir)
+                                p.title = p.url_path or parsed_path or u
+                                p.markdown_path = None
+                                p.screenshot_path = None
 
-                            if is_newer or file_missing:
+                            if is_newer or file_missing_or_untitled:
                                 p.status = "pending"
                                 if entry.lastmod:
                                     p.lastmod = entry.lastmod

@@ -122,6 +122,32 @@ async def wait_for_preloaders_to_hide(page) -> None:
             pass
 
 
+async def _safe_get_page_content(page, retries: int = 3) -> str:
+    """Retrieve page HTML safely, waiting and retrying if the page is mid-navigation."""
+    for attempt in range(retries):
+        try:
+            return await page.content()
+        except Exception as e:
+            err_msg = str(e).lower()
+            if "navigating" in err_msg or "changing the content" in err_msg or "execution context" in err_msg:
+                logger.info(
+                    f"[Browser] Page is mid-navigation (attempt {attempt + 1}/{retries}). Waiting for load state..."
+                )
+                try:
+                    await page.wait_for_load_state("domcontentloaded", timeout=6000)
+                except Exception:
+                    pass
+                await asyncio.sleep(1.0)
+            else:
+                if attempt == retries - 1:
+                    raise
+                await asyncio.sleep(0.5)
+    try:
+        return await page.content()
+    except Exception:
+        return ""
+
+
 async def fetch_url_with_browser(
     url: str,
     take_screenshot: bool = True,
@@ -147,22 +173,23 @@ async def fetch_url_with_browser(
                 is_aux_resource = urlparse(url).path.lower().endswith((".xml", ".txt", ".gz"))
                 try:
                     await page.goto(url, wait_until="load", timeout=22000)
-                    html_check = await page.content()
                 except Exception:
-                    try:
-                        await page.goto(url, wait_until="domcontentloaded", timeout=12000)
-                        html_check = await page.content()
-                    except Exception as e:
-                        current_url = getattr(page, "url", "") or ""
-                        if current_url in ("about:blank", ""):
-                            logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
-                            return "", "", []
-                        logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
+                    current_url = getattr(page, "url", "") or ""
+                    if current_url in ("about:blank", ""):
                         try:
-                            await page.wait_for_load_state('domcontentloaded', timeout=8000)
-                        except Exception:
-                            pass
-                        html_check = await page.content()
+                            await page.goto(url, wait_until="domcontentloaded", timeout=12000)
+                        except Exception as e:
+                            current_url = getattr(page, "url", "") or ""
+                            if current_url in ("about:blank", ""):
+                                logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
+                                return "", "", []
+                    logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
+                    try:
+                        await page.wait_for_load_state('domcontentloaded', timeout=8000)
+                    except Exception:
+                        pass
+
+                html_check = await _safe_get_page_content(page)
 
                 if getattr(page, "url", "") in ("about:blank", "") or len(html_check.strip()) < 60:
                     logger.warning(f"[Browser] Empty or blank document returned for {url}")
@@ -182,9 +209,22 @@ async def fetch_url_with_browser(
                 if is_bot_challenge:
                     logger.info("[Browser] Detected Bot Challenge. Waiting for Javascript challenge to clear...")
                     try:
-                        # Wait up to 15 seconds for the challenge to resolve and page to reload
+                        # Wait up to 15 seconds for the challenge to resolve and new page content/title to populate
                         await page.wait_for_function(
-                            "() => { const root = document.body || document.documentElement; if (!root) return false; const t = (root.innerText || root.textContent || '').toLowerCase(); const title = (document.title || '').toLowerCase(); return !t.includes('checking the site connection security') && !t.includes('just a moment') && !t.includes('checking your browser') && !t.includes('confirm you are human') && !title.includes('just a moment') && !title.includes('checking your browser'); }",
+                            "() => { "
+                            "if (document.readyState !== 'complete' && document.readyState !== 'interactive') return false; "
+                            "const root = document.body || document.documentElement; "
+                            "if (!root) return false; "
+                            "const t = (root.innerText || root.textContent || '').trim().toLowerCase(); "
+                            "const title = (document.title || '').trim().toLowerCase(); "
+                            "if (t.length < 50 && title.length === 0) return false; "
+                            "return !t.includes('checking the site connection security') && "
+                            "!t.includes('just a moment') && "
+                            "!t.includes('checking your browser') && "
+                            "!t.includes('confirm you are human') && "
+                            "!title.includes('just a moment') && "
+                            "!title.includes('checking your browser'); "
+                            "}",
                             timeout=15000
                         )
                         # Wait an additional 2 seconds for the actual DOM to settle after redirect
@@ -218,12 +258,25 @@ async def fetch_url_with_browser(
                     except Exception:
                         pass
 
-                    # Detect client-side SPA hydration delay (e.g. React / Salesforce Commerce Cloud)
+                    # Detect client-side SPA hydration delay or mid-redirect empty title/body
                     try:
-                        text_len = await page.evaluate("() => (document.body ? (document.body.innerText || '').length : 0)")
-                        if text_len < 300:
-                            logger.info(f"[Browser] Low content detected ({text_len} chars). Waiting up to 2.5s for SPA hydration...")
-                            await asyncio.sleep(2.5)
+                        state_info = await page.evaluate(
+                            "() => ({ "
+                            "textLen: document.body ? (document.body.innerText || '').trim().length : 0, "
+                            "titleLen: (document.title || '').trim().length "
+                            "})"
+                        )
+                        text_len = state_info.get("textLen", 0) if isinstance(state_info, dict) else 0
+                        title_len = state_info.get("titleLen", 0) if isinstance(state_info, dict) else 0
+                        if text_len < 300 or title_len == 0:
+                            logger.info(
+                                f"[Browser] Low content or missing title detected (text={text_len} chars, title={title_len} chars). "
+                                "Waiting up to 3s for hydration/navigation..."
+                            )
+                            try:
+                                await page.wait_for_load_state("networkidle", timeout=3000)
+                            except Exception:
+                                await asyncio.sleep(2.5)
                     except Exception:
                         pass
 
@@ -330,7 +383,7 @@ async def fetch_url_with_browser(
                     except Exception:
                         pass
 
-                html_content = await page.content()
+                html_content = await _safe_get_page_content(page)
                 logger.info(f"[Browser] Successfully rendered {url} using engine '{session.engine_name}'")
                 
             except Exception as nav_e:
