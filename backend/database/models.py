@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(unique=True, index=True)
-    slug: str = Field(unique=True, index=True)
+    name: str = Field(index=True)
+    slug: str = Field(index=True)
+    section: Optional[str] = Field(default=None, index=True)  # "goods" | "services"
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
@@ -53,6 +54,14 @@ class ScrapeJob(SQLModel, table=True):
     scraped_pages: int = Field(default=0)              # progress counter
     log_path: Optional[str] = Field(default=None)      # relative path to job.log
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Relational Taxonomies (Job-level)
+    category_id: Optional[int] = Field(default=None, foreign_key="category.id")
+    types_id: Optional[int] = Field(default=None, foreign_key="types.id")
+
+    category: Optional[Category] = Relationship()
+    types_rel: Optional[Types] = Relationship()
+
     pages: List["Page"] = Relationship(back_populates="job")
 
 class Page(SQLModel, table=True):
