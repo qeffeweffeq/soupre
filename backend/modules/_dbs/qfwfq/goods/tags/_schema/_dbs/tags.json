@@ -1,0 +1,58 @@
+{
+  "id": "2208539a-2cae-4e6f-b1a0-7bf00e14ac7a",
+  "title": "Tags",
+  "url": "https://app.notion.com/p/2208539a2cae4e6fb1a07bf00e14ac7a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-802d-b840-f0a7c7981016"
+  },
+  "properties": {
+    "Items Count": {
+      "id": "%3FdLg",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "UKi?",
+        "function": "count"
+      }
+    },
+    "Total Own": {
+      "id": "FF%3Fo",
+      "name": "Total Own",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Total Own",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "JnlT",
+        "relation_property_id": "UKi?",
+        "function": "sum"
+      }
+    },
+    "Items Relation": {
+      "id": "UKi%3F",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Tags"
+      }
+    },
+    "Meta": {
+      "id": "yWMQ",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🧿 Items → \" + prop(\"Items Count\")"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

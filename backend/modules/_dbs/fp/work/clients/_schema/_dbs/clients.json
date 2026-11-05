@@ -1,0 +1,253 @@
+{
+  "id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+  "title": "Clients",
+  "url": "https://app.notion.com/p/82c854018ace4dceac71cd0869c56d08",
+  "parent": {
+    "type": "block_id",
+    "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+  },
+  "properties": {
+    "WS Std New Vs Current": {
+      "id": "%40Omk",
+      "name": "WS Std New Vs Current",
+      "type": "formula",
+      "formula": {
+        "expression": "(prop(\"Final Plan Cost\") - prop(\"WS Current Price\")) / prop(\"Final Plan Cost\")"
+      }
+    },
+    "Active": {
+      "id": "AEMl",
+      "name": "Active",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Archive",
+        "relation_property_name": "Projects Relation",
+        "rollup_property_id": "`:Kq",
+        "relation_property_id": "orqr",
+        "function": "unchecked"
+      }
+    },
+    "Extra Cost": {
+      "id": "C%40%7DI",
+      "name": "Extra Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Annual Price",
+        "relation_property_name": "WS Extra",
+        "rollup_property_id": "Fm=b",
+        "relation_property_id": "wyFg",
+        "function": "sum"
+      }
+    },
+    "Plan + Extra Costs": {
+      "id": "CpCN",
+      "name": "Plan + Extra Costs",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Final Plan Cost\").sum() + prop(\"Extra Cost\").sum()\n"
+      }
+    },
+    "Ranking": {
+      "id": "I~Pg",
+      "name": "Ranking",
+      "type": "number"
+    },
+    "WS New Vs Current ": {
+      "id": "MQop",
+      "name": "WS New Vs Current ",
+      "type": "formula",
+      "formula": {
+        "expression": "(prop(\"WS Current Price\") - prop(\"Plan + Extra Costs\")) / prop(\"Plan + Extra Costs\")"
+      }
+    },
+    "WS Current Price": {
+      "id": "P%3EXF",
+      "name": "WS Current Price",
+      "type": "number"
+    },
+    "Created time": {
+      "id": "R%60G%40",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Symbol": {
+      "id": "%5C%5DRF",
+      "name": "Symbol",
+      "type": "select",
+      "options": [
+        {
+          "name": "S",
+          "id": "b322869a-8740-4b0c-ae28-aebab44db7cd",
+          "color": "default"
+        },
+        {
+          "name": "PL",
+          "id": "68e3e20d-2004-472c-a2d6-5b21e8e69f30",
+          "color": "default"
+        },
+        {
+          "name": "SCA",
+          "id": "93d748de-0f6a-426f-8768-f0ed49dcd7f0",
+          "color": "default"
+        },
+        {
+          "name": "ABY",
+          "id": "1ef5e6a6-7c15-480a-9d7c-c5f95f377760",
+          "color": "default"
+        },
+        {
+          "name": "PP",
+          "id": "f9c04b7f-6c7b-4231-8906-70179ad51a13",
+          "color": "default"
+        },
+        {
+          "name": "OEC",
+          "id": "d08470ed-a67f-4930-a609-c222fa52a9c5",
+          "color": "default"
+        },
+        {
+          "name": "FE",
+          "id": "d2ee9550-c382-4480-ac47-42277e1ade78",
+          "color": "default"
+        },
+        {
+          "name": "CSM",
+          "id": "7c877632-08fa-4776-bd1a-b63e7b0f2e00",
+          "color": "default"
+        },
+        {
+          "name": "SP",
+          "id": "115a73b0-2897-4842-a7d9-65fbdead924f",
+          "color": "default"
+        }
+      ]
+    },
+    "Progress": {
+      "id": "b_M%3B",
+      "name": "Progress",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Archive",
+        "relation_property_name": "Projects Relation",
+        "rollup_property_id": "`:Kq",
+        "relation_property_id": "orqr",
+        "function": "percent_checked"
+      }
+    },
+    "Plan Cost": {
+      "id": "c%3EFz",
+      "name": "Plan Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Price / Yr",
+        "relation_property_name": "WS Plan",
+        "rollup_property_id": "PMfS",
+        "relation_property_id": "sxLk",
+        "function": "show_original"
+      }
+    },
+    "Prompts": {
+      "id": "efN%5D",
+      "name": "Prompts",
+      "type": "relation",
+      "relation": {
+        "database_id": "5d385941-868a-4ab5-9f53-036221133911",
+        "type": "dual_property",
+        "synced_property_name": "Client"
+      }
+    },
+    "DPR": {
+      "id": "h%7DBk",
+      "name": "DPR",
+      "type": "relation",
+      "relation": {
+        "database_id": "107c7930-1516-8029-ad49-c7fe2997070c",
+        "type": "dual_property",
+        "synced_property_name": "Client"
+      }
+    },
+    "Meta": {
+      "id": "iG%3CW",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "(\"✏️ \" + \"×\" + format(prop(\"Projects\")))"
+      }
+    },
+    "Archive": {
+      "id": "mwFf",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Notes": {
+      "id": "oGCA",
+      "name": "Notes",
+      "type": "relation",
+      "relation": {
+        "database_id": "e546796f-824f-4079-adc5-c04d4953d39e",
+        "type": "dual_property",
+        "synced_property_name": "Client"
+      }
+    },
+    "Projects Relation": {
+      "id": "orqr",
+      "name": "Projects Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "698e1856-1639-446f-a079-133039fcee99",
+        "type": "dual_property",
+        "synced_property_name": "Client"
+      }
+    },
+    "WS Plan": {
+      "id": "sxLk",
+      "name": "WS Plan",
+      "type": "relation",
+      "relation": {
+        "database_id": "349c7930-1516-8016-81e9-c090de61013f",
+        "type": "dual_property",
+        "synced_property_name": "Clients"
+      }
+    },
+    "Final Plan Cost": {
+      "id": "uk%7CE",
+      "name": "Final Plan Cost",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Plan Cost\").first() * (1 - prop(\"WS Discount\"))"
+      }
+    },
+    "WS Extra": {
+      "id": "wyFg",
+      "name": "WS Extra",
+      "type": "relation",
+      "relation": {
+        "database_id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "WS Discount": {
+      "id": "yCT%3A",
+      "name": "WS Discount",
+      "type": "number"
+    },
+    "Projects": {
+      "id": "yvjl",
+      "name": "Projects",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Projects Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "orqr",
+        "function": "unique"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

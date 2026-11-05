@@ -1,0 +1,100 @@
+{
+  "id": "698e1856-1639-446f-a079-133039fcee99",
+  "title": "Projects",
+  "url": "https://app.notion.com/p/698e18561639446fa079133039fcee99",
+  "parent": {
+    "type": "block_id",
+    "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+  },
+  "properties": {
+    "Tasks Relation": {
+      "id": "BN%7BS",
+      "name": "Tasks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Project"
+      }
+    },
+    "Last edit": {
+      "id": "CE%3BY",
+      "name": "Last edit",
+      "type": "last_edited_time"
+    },
+    "Status": {
+      "id": "DV%60D",
+      "name": "Status",
+      "type": "relation",
+      "relation": {
+        "database_id": "e649e102-b26d-4bd8-9998-80105e5c544a",
+        "type": "dual_property",
+        "synced_property_name": "Projects Relation"
+      }
+    },
+    "Progress": {
+      "id": "D_A%3C",
+      "name": "Progress",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Done",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "gqV?",
+        "relation_property_id": "BN{S",
+        "function": "percent_checked"
+      }
+    },
+    "Rank": {
+      "id": "Lm%3B%7B",
+      "name": "Rank",
+      "type": "number"
+    },
+    "Archive": {
+      "id": "%60%3AKq",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Notes": {
+      "id": "%60wBf",
+      "name": "Notes",
+      "type": "relation",
+      "relation": {
+        "database_id": "e546796f-824f-4079-adc5-c04d4953d39e",
+        "type": "dual_property",
+        "synced_property_name": "Projects"
+      }
+    },
+    "Created": {
+      "id": "dl%60c",
+      "name": "Created",
+      "type": "created_time"
+    },
+    "Tasks Count": {
+      "id": "gIGU",
+      "name": "Tasks Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Task",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "BN{S",
+        "function": "count"
+      }
+    },
+    "Client": {
+      "id": "%7DgzP",
+      "name": "Client",
+      "type": "relation",
+      "relation": {
+        "database_id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+        "type": "dual_property",
+        "synced_property_name": "Projects Relation"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "id": "d74d19f8-6945-4eb0-8d40-e879f3b1d571",
+  "title": "Roles",
+  "url": "https://app.notion.com/p/d74d19f869454eb08d40e879f3b1d571",
+  "parent": {
+    "type": "block_id",
+    "block_id": "f6ebbb01-0ad3-426b-bf93-597a877d12ed"
+  },
+  "properties": {
+    "Tasks": {
+      "id": "F%5E%40i",
+      "name": "Tasks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Task",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "VbTi",
+        "function": "count"
+      }
+    },
+    "WebTools": {
+      "id": "QAbt",
+      "name": "WebTools",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Services Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "|TQI",
+        "function": "count"
+      }
+    },
+    "Projects": {
+      "id": "QGme",
+      "name": "Projects",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Project",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "Ng{{",
+        "relation_property_id": "VbTi",
+        "function": "unique"
+      }
+    },
+    "Tasks Relation": {
+      "id": "VbTi",
+      "name": "Tasks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Activity"
+      }
+    },
+    "Meta": {
+      "id": "f%3CXs",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "(\"✏️ ×\" + format(prop(\"Projects\")) + \" 📝 ×\" + format(prop(\"Tasks\")) + \" 👥 ×\" + format(prop(\"Personas Count\")))"
+      }
+    },
+    "Counting": {
+      "id": "hrbX",
+      "name": "Counting",
+      "type": "formula",
+      "formula": {
+        "expression": "(\"✏️ Projects ×\" + format(prop(\"Projects\")) + \" \\n📝 Tasks ×\" + format(prop(\"Tasks\")) + \" \\n👥 Personas ×\" + format(prop(\"Personas Count\"))) + \" \\n🧰 WebTools ×\" + prop(\"WebTools\")"
+      }
+    },
+    "Personas Relation": {
+      "id": "rQi%3B",
+      "name": "Personas Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "43750c98-df82-4272-983e-9bcc8865f95a",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Personas Count": {
+      "id": "tgvr",
+      "name": "Personas Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Personas Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "rQi;",
+        "function": "count"
+      }
+    },
+    "Services Relation": {
+      "id": "%7CTQI",
+      "name": "Services Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "dual_property",
+        "synced_property_name": "Roles"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

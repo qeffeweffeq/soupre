@@ -1,0 +1,65 @@
+[
+  {
+    "id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+    "title": "Shops",
+    "url": "https://app.notion.com/p/15863158bfa0800a8e34e6462c16d17a",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-8059-b503-f0f678afd7a4"
+    }
+  },
+  {
+    "id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+    "title": "Items",
+    "url": "https://app.notion.com/p/e74f045a24ba4f4eacbc1917636efaab",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-800f-ac13-c15867e2a591"
+    }
+  },
+  {
+    "id": "2208539a-2cae-4e6f-b1a0-7bf00e14ac7a",
+    "title": "Tags",
+    "url": "https://app.notion.com/p/2208539a2cae4e6fb1a07bf00e14ac7a",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-802d-b840-f0a7c7981016"
+    }
+  },
+  {
+    "id": "239e2e28-a234-4106-9ce7-ed737e9e1669",
+    "title": "Brands",
+    "url": "https://app.notion.com/p/239e2e28a23441069ce7ed737e9e1669",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-8084-9290-c76b619a7503"
+    }
+  },
+  {
+    "id": "689933d7-5077-4f4f-bb2e-8541cd1dcff0",
+    "title": "Types",
+    "url": "https://app.notion.com/p/689933d750774f4fbb2e8541cd1dcff0",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-8015-994c-edd81e56d003"
+    }
+  },
+  {
+    "id": "d46f6dbf-310c-4c4d-800e-813eeba04ab6",
+    "title": "Categories",
+    "url": "https://app.notion.com/p/d46f6dbf310c4c4d800e813eeba04ab6",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-80b7-a9c8-ee6bdfefdb41"
+    }
+  },
+  {
+    "id": "17e63158-bfa0-808e-aede-d06ca3cf0c74",
+    "title": "Return Points",
+    "url": "https://app.notion.com/p/17e63158bfa0808eaeded06ca3cf0c74",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-8061-9865-d785584d2248"
+    }
+  }
+]

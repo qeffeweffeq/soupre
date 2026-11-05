@@ -1,0 +1,135 @@
+{
+  "id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+  "title": "Shops",
+  "url": "https://app.notion.com/p/15863158bfa0800a8e34e6462c16d17a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8059-b503-f0f678afd7a4"
+  },
+  "properties": {
+    "Description": {
+      "id": "%3B%3CDh",
+      "name": "Description",
+      "type": "rich_text"
+    },
+    "Meta Items": {
+      "id": "%3B%3FwU",
+      "name": "Meta Items",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🧿 Items → \" + prop(\"Items Count\")"
+      }
+    },
+    "Meta": {
+      "id": "%3DAfW",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🧿 Items → \" + prop(\"Items Count\") + \"\\n\" + \n\"🧾 Costs Total → \" + round(prop(\"Costs Total\"), 10)"
+      }
+    },
+    "Type": {
+      "id": "%3ESo~",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "689933d7-5077-4f4f-bb2e-8541cd1dcff0",
+        "type": "dual_property",
+        "synced_property_name": "Shops Relation"
+      }
+    },
+    "Created time": {
+      "id": "CBUH",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Meta Costs": {
+      "id": "H%3C%3Fv",
+      "name": "Meta Costs",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🧾 Costs → \" + prop(\"Costs Count\")"
+      }
+    },
+    "Meta Counts": {
+      "id": "HUq%5E",
+      "name": "Meta Counts",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🛍️ → \" + prop(\"Costs Count\")+ \"  🧿 → \" + prop(\"Items Count\")"
+      }
+    },
+    "Pinned": {
+      "id": "LDH_",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "URL #2": {
+      "id": "N_ML",
+      "name": "URL #2",
+      "type": "url"
+    },
+    "Items Relation": {
+      "id": "STUi",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Shops"
+      }
+    },
+    "Note": {
+      "id": "%5D_W%3C",
+      "name": "Note",
+      "type": "rich_text"
+    },
+    "Categories": {
+      "id": "cSl%40",
+      "name": "Categories",
+      "type": "relation",
+      "relation": {
+        "database_id": "d46f6dbf-310c-4c4d-800e-813eeba04ab6",
+        "type": "dual_property",
+        "synced_property_name": "Shops Relation"
+      }
+    },
+    "URL": {
+      "id": "k%5D%5Ee",
+      "name": "URL",
+      "type": "url"
+    },
+    "Items Count": {
+      "id": "v%5BNh",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "STUi",
+        "function": "count"
+      }
+    },
+    "Archive": {
+      "id": "v%5Cz_",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "WTF": {
+      "id": "xBM%3D",
+      "name": "WTF",
+      "type": "checkbox"
+    },
+    "Location": {
+      "id": "%7CKMy",
+      "name": "Location",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

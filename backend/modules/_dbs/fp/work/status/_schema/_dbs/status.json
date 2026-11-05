@@ -1,0 +1,68 @@
+{
+  "id": "e649e102-b26d-4bd8-9998-80105e5c544a",
+  "title": "Status",
+  "url": "https://app.notion.com/p/e649e102b26d4bd8999880105e5c544a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "f6ebbb01-0ad3-426b-bf93-597a877d12ed"
+  },
+  "properties": {
+    "Projects": {
+      "id": "E%5Byl",
+      "name": "Projects",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Status",
+        "relation_property_name": "Projects Relation",
+        "rollup_property_id": "DV`D",
+        "relation_property_id": "Ouhe",
+        "function": "count"
+      }
+    },
+    "Projects Relation": {
+      "id": "Ouhe",
+      "name": "Projects Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "698e1856-1639-446f-a079-133039fcee99",
+        "type": "dual_property",
+        "synced_property_name": "Status"
+      }
+    },
+    "Tasks": {
+      "id": "iDVp",
+      "name": "Tasks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Task",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "yygz",
+        "function": "unique"
+      }
+    },
+    "Meta": {
+      "id": "nR%5Ce",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "(\"📝 ×\" + format(prop(\"Tasks\")))"
+      }
+    },
+    "Tasks Relation": {
+      "id": "yygz",
+      "name": "Tasks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Status"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

@@ -1,9 +1,22 @@
-from fastapi import FastAPI, Depends, BackgroundTasks
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
-from database.models import SQLModel, ScrapeJob, Page
+from typing import Optional, List
+from database.models import (
+    SQLModel,
+    ScrapeJob,
+    Page,
+    Category,
+    Types,
+    Tag,
+    Genre,
+    PageTagLink,
+)
+from database.seed_taxonomies import slugify
 from sqlmodel import create_engine, Session, select
+from sqlalchemy import func
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import os
 import asyncio
@@ -47,19 +60,30 @@ def _migrate_db(engine) -> None:
     from sqlalchemy import text
     migrations = [
         # (table_name, column_name, column_definition)
-        ("scrapejob", "title",         "TEXT"),
-        ("scrapejob", "icon_url",      "TEXT"),
-        ("scrapejob", "scrape_mode",   "TEXT NOT NULL DEFAULT 'single'"),
-        ("scrapejob", "total_pages",   "INTEGER"),
-        ("scrapejob", "scraped_pages", "INTEGER NOT NULL DEFAULT 0"),
-        ("scrapejob", "log_path",      "TEXT"),
-        ("page",      "icon_url",      "TEXT"),
-        ("page",      "url_path",      "TEXT"),
-        ("page",      "url_depth",     "INTEGER NOT NULL DEFAULT 0"),
-        ("page",      "status",        "TEXT NOT NULL DEFAULT 'completed'"),
-        ("page",      "hreflang",      "TEXT"),
-        ("page",      "lastmod",       "TEXT"),
-        ("page",      "content_type",  "TEXT"),
+        ("scrapejob", "title",                     "TEXT"),
+        ("scrapejob", "icon_url",                  "TEXT"),
+        ("scrapejob", "scrape_mode",               "TEXT NOT NULL DEFAULT 'single'"),
+        ("scrapejob", "total_pages",               "INTEGER"),
+        ("scrapejob", "scraped_pages",             "INTEGER NOT NULL DEFAULT 0"),
+        ("scrapejob", "log_path",                  "TEXT"),
+        ("page",      "icon_url",                  "TEXT"),
+        ("page",      "url_path",                  "TEXT"),
+        ("page",      "url_depth",                 "INTEGER NOT NULL DEFAULT 0"),
+        ("page",      "status",                    "TEXT NOT NULL DEFAULT 'completed'"),
+        ("page",      "hreflang",                  "TEXT"),
+        ("page",      "lastmod",                   "TEXT"),
+        ("page",      "content_type",              "TEXT"),
+        ("page",      "clean_url",                 "TEXT"),
+        ("page",      "description",              "TEXT"),
+        ("page",      "favicon_path",              "TEXT"),
+        ("page",      "category_id",               "INTEGER REFERENCES category(id)"),
+        ("page",      "types_id",                  "INTEGER REFERENCES types(id)"),
+        ("page",      "genre_id",                  "INTEGER REFERENCES genre(id)"),
+        ("page",      "categorization_source",     "TEXT NOT NULL DEFAULT 'dual_hybrid'"),
+        ("page",      "categorization_confidence", "REAL NOT NULL DEFAULT 0.0"),
+        ("page",      "notion_page_id",            "TEXT"),
+        ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
+        ("page",      "last_synced_at",            "TIMESTAMP"),
     ]
     with engine.connect() as conn:
         for table, column, definition in migrations:
@@ -122,6 +146,10 @@ def _migrate_db(engine) -> None:
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     _migrate_db(engine)
+
+    from database.seed_taxonomies import seed_taxonomies
+    with Session(engine) as session:
+        seed_taxonomies(session)
 
     # Initialize job logger event loop
     loop = asyncio.get_running_loop()
@@ -502,3 +530,337 @@ async def delete_job(
     session.commit()
     job_log_manager.cleanup_job(job_id)
     return {"status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy Pydantic Schemas & CRUD Endpoints
+# ---------------------------------------------------------------------------
+
+class CategoryCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class TypesCreate(BaseModel):
+    category_id: int
+    name: str
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class TypesUpdate(BaseModel):
+    category_id: Optional[int] = None
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class TagCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class TagUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class GenreCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+
+
+class GenreUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+
+
+@app.get("/api/taxonomies/tree")
+def get_taxonomies_tree(session: Session = Depends(get_session)):
+    categories = session.exec(select(Category).order_by(Category.name)).all()
+    tree = []
+    for cat in categories:
+        types_list = session.exec(
+            select(Types).where(Types.category_id == cat.id).order_by(Types.name)
+        ).all()
+        types_data = []
+        cat_page_count = session.exec(
+            select(func.count(Page.id)).where(Page.category_id == cat.id)
+        ).one() or 0
+        for t in types_list:
+            type_page_count = session.exec(
+                select(func.count(Page.id)).where(Page.types_id == t.id)
+            ).one() or 0
+            types_data.append({
+                "id": t.id,
+                "category_id": t.category_id,
+                "name": t.name,
+                "slug": t.slug,
+                "description": t.description,
+                "notion_id": t.notion_id,
+                "page_count": type_page_count,
+            })
+        tree.append({
+            "id": cat.id,
+            "name": cat.name,
+            "slug": cat.slug,
+            "description": cat.description,
+            "notion_id": cat.notion_id,
+            "page_count": cat_page_count,
+            "types": types_data,
+        })
+    return tree
+
+
+@app.get("/api/taxonomies/categories")
+def list_categories(session: Session = Depends(get_session)):
+    return session.exec(select(Category).order_by(Category.name)).all()
+
+
+@app.post("/api/taxonomies/categories")
+def create_category(payload: CategoryCreate, session: Session = Depends(get_session)):
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Category).where(Category.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Category with slug '{slug}' already exists")
+    category = Category(
+        name=payload.name,
+        slug=slug,
+        description=payload.description,
+        notion_id=payload.notion_id,
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+
+@app.put("/api/taxonomies/categories/{category_id}")
+def update_category(category_id: int, payload: CategoryUpdate, session: Session = Depends(get_session)):
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if payload.name is not None:
+        category.name = payload.name
+        if payload.slug is None:
+            category.slug = slugify(payload.name)
+    if payload.slug is not None:
+        category.slug = payload.slug
+    if payload.description is not None:
+        category.description = payload.description
+    if payload.notion_id is not None:
+        category.notion_id = payload.notion_id
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+
+@app.delete("/api/taxonomies/categories/{category_id}")
+def delete_category(category_id: int, session: Session = Depends(get_session)):
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    pages = session.exec(select(Page).where(Page.category_id == category_id)).all()
+    for p in pages:
+        p.category_id = None
+        session.add(p)
+    types_list = session.exec(select(Types).where(Types.category_id == category_id)).all()
+    for t in types_list:
+        sub_pages = session.exec(select(Page).where(Page.types_id == t.id)).all()
+        for sp in sub_pages:
+            sp.types_id = None
+            session.add(sp)
+        session.delete(t)
+    session.delete(category)
+    session.commit()
+    return {"status": "deleted", "id": category_id}
+
+
+@app.get("/api/taxonomies/types")
+def list_types(category_id: Optional[int] = None, session: Session = Depends(get_session)):
+    query = select(Types)
+    if category_id is not None:
+        query = query.where(Types.category_id == category_id)
+    return session.exec(query.order_by(Types.name)).all()
+
+
+@app.post("/api/taxonomies/types")
+def create_types(payload: TypesCreate, session: Session = Depends(get_session)):
+    parent_cat = session.get(Category, payload.category_id)
+    if not parent_cat:
+        raise HTTPException(status_code=404, detail="Parent category not found")
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Types).where(Types.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Types with slug '{slug}' already exists")
+    item_type = Types(
+        category_id=payload.category_id,
+        name=payload.name,
+        slug=slug,
+        description=payload.description,
+        notion_id=payload.notion_id,
+    )
+    session.add(item_type)
+    session.commit()
+    session.refresh(item_type)
+    return item_type
+
+
+@app.put("/api/taxonomies/types/{types_id}")
+def update_types(types_id: int, payload: TypesUpdate, session: Session = Depends(get_session)):
+    item_type = session.get(Types, types_id)
+    if not item_type:
+        raise HTTPException(status_code=404, detail="Types not found")
+    if payload.category_id is not None:
+        parent_cat = session.get(Category, payload.category_id)
+        if not parent_cat:
+            raise HTTPException(status_code=404, detail="Parent category not found")
+        item_type.category_id = payload.category_id
+    if payload.name is not None:
+        item_type.name = payload.name
+        if payload.slug is None:
+            item_type.slug = slugify(payload.name)
+    if payload.slug is not None:
+        item_type.slug = payload.slug
+    if payload.description is not None:
+        item_type.description = payload.description
+    if payload.notion_id is not None:
+        item_type.notion_id = payload.notion_id
+    session.add(item_type)
+    session.commit()
+    session.refresh(item_type)
+    return item_type
+
+
+@app.delete("/api/taxonomies/types/{types_id}")
+def delete_types(types_id: int, session: Session = Depends(get_session)):
+    item_type = session.get(Types, types_id)
+    if not item_type:
+        raise HTTPException(status_code=404, detail="Types not found")
+    pages = session.exec(select(Page).where(Page.types_id == types_id)).all()
+    for p in pages:
+        p.types_id = None
+        session.add(p)
+    session.delete(item_type)
+    session.commit()
+    return {"status": "deleted", "id": types_id}
+
+
+@app.get("/api/taxonomies/tags")
+def list_tags(session: Session = Depends(get_session)):
+    return session.exec(select(Tag).order_by(Tag.name)).all()
+
+
+@app.post("/api/taxonomies/tags")
+def create_tag(payload: TagCreate, session: Session = Depends(get_session)):
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Tag).where(Tag.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Tag with slug '{slug}' already exists")
+    tag = Tag(
+        name=payload.name,
+        slug=slug,
+        notion_id=payload.notion_id,
+    )
+    session.add(tag)
+    session.commit()
+    session.refresh(tag)
+    return tag
+
+
+@app.put("/api/taxonomies/tags/{tag_id}")
+def update_tag(tag_id: int, payload: TagUpdate, session: Session = Depends(get_session)):
+    tag = session.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    if payload.name is not None:
+        tag.name = payload.name
+        if payload.slug is None:
+            tag.slug = slugify(payload.name)
+    if payload.slug is not None:
+        tag.slug = payload.slug
+    if payload.notion_id is not None:
+        tag.notion_id = payload.notion_id
+    session.add(tag)
+    session.commit()
+    session.refresh(tag)
+    return tag
+
+
+@app.delete("/api/taxonomies/tags/{tag_id}")
+def delete_tag(tag_id: int, session: Session = Depends(get_session)):
+    tag = session.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    links = session.exec(select(PageTagLink).where(PageTagLink.tag_id == tag_id)).all()
+    for link in links:
+        session.delete(link)
+    session.delete(tag)
+    session.commit()
+    return {"status": "deleted", "id": tag_id}
+
+
+@app.get("/api/taxonomies/genres")
+def list_genres(session: Session = Depends(get_session)):
+    return session.exec(select(Genre).order_by(Genre.name)).all()
+
+
+@app.post("/api/taxonomies/genres")
+def create_genre(payload: GenreCreate, session: Session = Depends(get_session)):
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Genre).where(Genre.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Genre with slug '{slug}' already exists")
+    genre = Genre(
+        name=payload.name,
+        slug=slug,
+    )
+    session.add(genre)
+    session.commit()
+    session.refresh(genre)
+    return genre
+
+
+@app.put("/api/taxonomies/genres/{genre_id}")
+def update_genre(genre_id: int, payload: GenreUpdate, session: Session = Depends(get_session)):
+    genre = session.get(Genre, genre_id)
+    if not genre:
+        raise HTTPException(status_code=404, detail="Genre not found")
+    if payload.name is not None:
+        genre.name = payload.name
+        if payload.slug is None:
+            genre.slug = slugify(payload.name)
+    if payload.slug is not None:
+        genre.slug = payload.slug
+    session.add(genre)
+    session.commit()
+    session.refresh(genre)
+    return genre
+
+
+@app.delete("/api/taxonomies/genres/{genre_id}")
+def delete_genre(genre_id: int, session: Session = Depends(get_session)):
+    genre = session.get(Genre, genre_id)
+    if not genre:
+        raise HTTPException(status_code=404, detail="Genre not found")
+    pages = session.exec(select(Page).where(Page.genre_id == genre_id)).all()
+    for p in pages:
+        p.genre_id = None
+        session.add(p)
+    session.delete(genre)
+    session.commit()
+    return {"status": "deleted", "id": genre_id}

@@ -1,0 +1,111 @@
+{
+  "id": "43750c98-df82-4272-983e-9bcc8865f95a",
+  "title": "Personas",
+  "url": "https://app.notion.com/p/43750c98df824272983e9bcc8865f95a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+  },
+  "properties": {
+    "Single Setting": {
+      "id": "%3C%5Blc",
+      "name": "Single Setting",
+      "type": "formula",
+      "formula": {
+        "expression": "if(\n\tand(\n\t\t!empty(prop(\"What would you like LLM to know about you to provide better responses?\")), \n\t\t!empty(prop(\"How would you like LLM to respond?\"))\n\t), \n\t\"Know about me:\\n\" + prop(\"What would you like LLM to know about you to provide better responses?\") + \"\\n\\n\" + \n\t\"How to respond:\\n\" + prop(\"How would you like LLM to respond?\"),\n\t\"\"\n)"
+      }
+    },
+    "Pin": {
+      "id": "B%3E%3Ba",
+      "name": "Pin",
+      "type": "checkbox"
+    },
+    "Prompt Template Relation": {
+      "id": "Be%5C%40",
+      "name": "Prompt Template Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "5d385941-868a-4ab5-9f53-036221133911",
+        "type": "dual_property",
+        "synced_property_name": "Persona"
+      }
+    },
+    "How would you like LLM to respond?": {
+      "id": "DcyX",
+      "name": "How would you like LLM to respond?",
+      "type": "rich_text"
+    },
+    "Tasks Relation": {
+      "id": "G%3ETm",
+      "name": "Tasks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Persona"
+      }
+    },
+    "Tasks": {
+      "id": "Li%7De",
+      "name": "Tasks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Task",
+        "relation_property_name": "Tasks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "G>Tm",
+        "function": "count"
+      }
+    },
+    "Created time": {
+      "id": "O%40Gz",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "What would you like LLM to know about you to provide better responses?": {
+      "id": "Wlxt",
+      "name": "What would you like LLM to know about you to provide better responses?",
+      "type": "rich_text"
+    },
+    "Type": {
+      "id": "YZdk",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "d74d19f8-6945-4eb0-8d40-e879f3b1d571",
+        "type": "dual_property",
+        "synced_property_name": "Personas Relation"
+      }
+    },
+    "Prompts": {
+      "id": "%5Eelg",
+      "name": "Prompts",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Prompt Template Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Be\\@",
+        "function": "count"
+      }
+    },
+    "Meta": {
+      "id": "dC%3CZ",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Pin\"), \"📝 ×\" + prop(\"Tasks\") + \"  \" + \" 📌 Pinned\", \"📝 ×\" + prop(\"Tasks\"))"
+      }
+    },
+    "Version": {
+      "id": "zmjN",
+      "name": "Version",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

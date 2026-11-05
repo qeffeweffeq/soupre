@@ -1,0 +1,1705 @@
+{
+  "id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+  "title": "Items",
+  "url": "https://app.notion.com/p/e74f045a24ba4f4eacbc1917636efaab",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-800f-ac13-c15867e2a591"
+  },
+  "properties": {
+    "Url 5": {
+      "id": "%3DIYI",
+      "name": "Url 5",
+      "type": "url"
+    },
+    "Categories": {
+      "id": "%3EH%5DZ",
+      "name": "Categories",
+      "type": "relation",
+      "relation": {
+        "database_id": "d46f6dbf-310c-4c4d-800e-813eeba04ab6",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
+    "Attachments": {
+      "id": "%3FCyk",
+      "name": "Attachments",
+      "type": "files"
+    },
+    "Sale Percent": {
+      "id": "A%3Acl",
+      "name": "Sale Percent",
+      "type": "formula",
+      "formula": {
+        "expression": "if(!empty(prop(\"Sale\")), round(100 * (1 - prop(\"Sale\") / prop(\"Price\"))) / 100, 0)\t"
+      }
+    },
+    "Description": {
+      "id": "CB%5CF",
+      "name": "Description",
+      "type": "rich_text"
+    },
+    "Image": {
+      "id": "DFS%3C",
+      "name": "Image",
+      "type": "files"
+    },
+    "Own Q.ty": {
+      "id": "HAZI",
+      "name": "Own Q.ty",
+      "type": "number"
+    },
+    "Price": {
+      "id": "HCP%40",
+      "name": "Price",
+      "type": "number"
+    },
+    "Element": {
+      "id": "I%3B%7B%60",
+      "name": "Element",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Jersey",
+          "id": "33e28ace-46c0-4d73-944b-2ad94a68f85d",
+          "color": "default"
+        },
+        {
+          "name": "Hat",
+          "id": "9e6c126c-0325-47b7-acd5-53de3922d79e",
+          "color": "default"
+        },
+        {
+          "name": "Sleeves",
+          "id": "dd9864fc-2187-416f-bf3b-1d79b890d318",
+          "color": "default"
+        },
+        {
+          "name": "Mechanical",
+          "id": "a88d0f14-4c75-44e5-928b-b0140a6f9f25",
+          "color": "default"
+        },
+        {
+          "name": "Underwear",
+          "id": "1d6d46ab-266e-4c8b-a34d-ec43eed2675e",
+          "color": "default"
+        },
+        {
+          "name": "Brake",
+          "id": "62f01f79-c6ad-4379-a32b-b8a1ab9b32ac",
+          "color": "default"
+        },
+        {
+          "name": "Jacket",
+          "id": "c9fea7b3-1117-4300-aa56-71c567391c79",
+          "color": "default"
+        },
+        {
+          "name": "Buff",
+          "id": "234b444c-ca8f-46be-8115-8db70134ae44",
+          "color": "default"
+        },
+        {
+          "name": "Lube",
+          "id": "752eaa64-e3bf-48e8-9ecc-fde768ae4f3c",
+          "color": "default"
+        },
+        {
+          "name": "Pump",
+          "id": "9d48fe84-aa54-4bde-ad70-674bbada051a",
+          "color": "default"
+        },
+        {
+          "name": "GPS",
+          "id": "d820300e-8e31-47c6-b99f-b862e0b645e3",
+          "color": "default"
+        },
+        {
+          "name": "Handlebars",
+          "id": "f3c78949-f47b-4483-b7e0-c21b62aa1491",
+          "color": "default"
+        },
+        {
+          "name": "Device",
+          "id": "422ee429-c2e8-41cc-be80-8af8fd3e519f",
+          "color": "default"
+        },
+        {
+          "name": "Crankset",
+          "id": "920f98b4-41c1-433c-aeb9-74fc00401f70",
+          "color": "default"
+        },
+        {
+          "name": "Wheel",
+          "id": "123c5cd9-e7de-465a-acc9-fb0e38c8267f",
+          "color": "default"
+        },
+        {
+          "name": "Shaft",
+          "id": "f5d2c96c-cd25-4ef3-b32a-31fa79ef2c68",
+          "color": "default"
+        },
+        {
+          "name": "Gear",
+          "id": "1fb34e94-d330-4ce1-865c-a6024ab92a31",
+          "color": "default"
+        },
+        {
+          "name": "Pants",
+          "id": "e5a2b40c-9140-4e54-8034-2ad8fc3a59c8",
+          "color": "default"
+        },
+        {
+          "name": "Fleece",
+          "id": "19435bab-e5f3-422b-882b-b5db9b2c9afb",
+          "color": "default"
+        },
+        {
+          "name": "Pile",
+          "id": "671bfa8e-4db8-420a-a608-6e24df6ca73b",
+          "color": "default"
+        },
+        {
+          "name": "Shoes",
+          "id": "0be41e7e-b9e4-435a-b602-5776e989ebb9",
+          "color": "default"
+        },
+        {
+          "name": "Knitwear",
+          "id": "8ce01abe-8f49-484f-991a-a804b9180479",
+          "color": "default"
+        },
+        {
+          "name": "Sweater",
+          "id": "b7724a95-2f56-4f23-84e8-f641aeb01c13",
+          "color": "default"
+        },
+        {
+          "name": "Accessory",
+          "id": "c9aa6106-276c-45ff-ad21-1dbce6b9e160",
+          "color": "default"
+        },
+        {
+          "name": "Belt",
+          "id": "0aca7384-2339-4e0e-a0dc-ac5534cd1e2e",
+          "color": "default"
+        },
+        {
+          "name": "Seat",
+          "id": "746b26ee-763d-45f4-8b91-c47f24c331c7",
+          "color": "default"
+        },
+        {
+          "name": "Cabinet",
+          "id": "ee7124fa-0549-4199-92b3-8747504fe91a",
+          "color": "default"
+        },
+        {
+          "name": "Lamp",
+          "id": "fe4ccf72-9e49-4940-b825-a75e3f85c60b",
+          "color": "default"
+        },
+        {
+          "name": "Pen",
+          "id": "eff482bc-809c-48e1-8dca-6a0bd55a2a09",
+          "color": "default"
+        },
+        {
+          "name": "Mirror",
+          "id": "9becc397-9c17-4309-9937-21b995962903",
+          "color": "default"
+        },
+        {
+          "name": "Tier",
+          "id": "8c179ed8-c939-4bf2-8a3b-3a70a6a713f9",
+          "color": "default"
+        },
+        {
+          "name": "Case",
+          "id": "1c935c2e-e5bd-4794-9a1e-8d8ea2efeaeb",
+          "color": "default"
+        },
+        {
+          "name": "Toiletry",
+          "id": "1cac8cd0-99ed-4e6c-93f0-622dbf9687fe",
+          "color": "default"
+        },
+        {
+          "name": "Backpack",
+          "id": "32e51d89-823f-407d-aa1e-50168b537991",
+          "color": "default"
+        },
+        {
+          "name": "Shelf",
+          "id": "e594b16d-9c9a-4aff-a177-1c8043fc4e5e",
+          "color": "default"
+        },
+        {
+          "name": "Sneakers",
+          "id": "917ff7db-0376-4089-8457-2548f5fb1929",
+          "color": "default"
+        },
+        {
+          "name": "Shirt",
+          "id": "2357d8cd-1a89-420c-8ba8-0e5b08df8055",
+          "color": "default"
+        },
+        {
+          "name": "Bathrobe",
+          "id": "c386ae32-fa9d-4a18-a502-47caa8baafc0",
+          "color": "default"
+        },
+        {
+          "name": "Valet Tray",
+          "id": "9b2803d8-1ffe-4128-98d3-73547e31973f",
+          "color": "default"
+        },
+        {
+          "name": "Coat Hanger",
+          "id": "a7e3e0dc-eebb-4419-8045-cf6053ee4045",
+          "color": "default"
+        },
+        {
+          "name": "Gloves",
+          "id": "c1e67336-d7ca-4dd2-95a1-bdff569bc622",
+          "color": "default"
+        },
+        {
+          "name": "Sofa",
+          "id": "0ed89f3e-4e41-426e-8c1c-f366099db31d",
+          "color": "default"
+        },
+        {
+          "name": "Beanie",
+          "id": "b6f73780-7a93-4b15-a6f4-e224adca3371",
+          "color": "default"
+        },
+        {
+          "name": "Sandals",
+          "id": "45a445df-7871-4163-a07c-1b20b95b58b3",
+          "color": "default"
+        },
+        {
+          "name": "Box",
+          "id": "02052eb0-ef63-41b4-934e-8b6001bf41a9",
+          "color": "default"
+        },
+        {
+          "name": "Wall Hook",
+          "id": "b15ca1f2-1d2c-4e40-9eaf-915173e8bf17",
+          "color": "default"
+        },
+        {
+          "name": "Knife",
+          "id": "1081edb3-4a53-45bc-9b49-adedfeadcda4",
+          "color": "default"
+        },
+        {
+          "name": "Trolley",
+          "id": "96dc2b62-0cce-4227-8e02-e5d7c5ec0f9a",
+          "color": "default"
+        },
+        {
+          "name": "Cards",
+          "id": "d5a0c5b8-59a9-4675-802e-39a278c8eb20",
+          "color": "default"
+        },
+        {
+          "name": "Towel Holder",
+          "id": "d1c5f188-2864-4f0a-8a57-b33ec39f2c9a",
+          "color": "default"
+        },
+        {
+          "name": "Jeans",
+          "id": "e5eb8967-1e33-410e-afb6-7407cbe9ee08",
+          "color": "default"
+        },
+        {
+          "name": "Slippeer",
+          "id": "e994864f-fbcd-432f-8112-b9ffeee79898",
+          "color": "default"
+        },
+        {
+          "name": "Eyewear",
+          "id": "c4d2ae1e-cc8e-4a15-8cfc-2b68ee5bd2d4",
+          "color": "default"
+        },
+        {
+          "name": "Shorts",
+          "id": "631ad2dc-36f3-4036-b334-4ad306badf79",
+          "color": "default"
+        },
+        {
+          "name": "Deckchair",
+          "id": "55f60097-731f-4a91-a3c8-4679be52391d",
+          "color": "default"
+        },
+        {
+          "name": "Clipper",
+          "id": "78f1291b-93b1-41b8-abf0-59a74afc2824",
+          "color": "default"
+        },
+        {
+          "name": "Towel",
+          "id": "d1d4503c-3939-457e-8f18-55dd06c21d09",
+          "color": "default"
+        },
+        {
+          "name": "Chair",
+          "id": "b79dc7c3-19f2-4a60-b29c-0c94e9809912",
+          "color": "default"
+        },
+        {
+          "name": "Bicycle",
+          "id": "4cd2997b-8b6e-4bb5-b673-337ea03e731c",
+          "color": "default"
+        },
+        {
+          "name": "Bracelet",
+          "id": "3b8bf863-a5a6-44d1-8142-40f01890a30a",
+          "color": "default"
+        },
+        {
+          "name": "Blanket",
+          "id": "69df168f-6147-414d-9cdd-e6e35ea2edfa",
+          "color": "default"
+        },
+        {
+          "name": "Multitools",
+          "id": "309b49fb-6533-4aaa-a6c5-e76c9c122a2e",
+          "color": "default"
+        },
+        {
+          "name": "Silverware",
+          "id": "4bcad5f2-5b1b-4edd-8a48-3d476e37d49f",
+          "color": "default"
+        },
+        {
+          "name": "Tees",
+          "id": "9f7a5892-d8b7-47d9-b988-ee0142dad1c1",
+          "color": "default"
+        },
+        {
+          "name": "Container",
+          "id": "89187fd4-1e0e-460a-9202-796ee9fa8681",
+          "color": "default"
+        },
+        {
+          "name": "Basket",
+          "id": "2f515d9e-82f8-4a37-9de8-d9b1ec85052a",
+          "color": "default"
+        },
+        {
+          "name": "Calendar",
+          "id": "498a7f6b-ce15-498a-b844-f70385cbc984",
+          "color": "default"
+        },
+        {
+          "name": "Switches",
+          "id": "fc67a3c8-5fd1-458f-8c0e-4e70e9365ebe",
+          "color": "default"
+        },
+        {
+          "name": "Shower",
+          "id": "e54d1d1a-3c0e-48f8-9343-2f241f1962f1",
+          "color": "default"
+        },
+        {
+          "name": "Lights",
+          "id": "a256ee6c-6bf3-4921-a447-f46a91641b9a",
+          "color": "default"
+        },
+        {
+          "name": "Relay",
+          "id": "f107f471-a6a5-4d8b-bf4a-a4b8f281f10e",
+          "color": "default"
+        },
+        {
+          "name": "Thermostat",
+          "id": "12d5ba12-dbbf-41cf-8af2-ac7cd272d844",
+          "color": "default"
+        },
+        {
+          "name": "Detector",
+          "id": "0bd34096-f511-46bb-8078-0cac8e3bde12",
+          "color": "default"
+        },
+        {
+          "name": "Lighter",
+          "id": "5c116322-ed78-4d28-9684-07c0a5b481b5",
+          "color": "default"
+        },
+        {
+          "name": "Perfume",
+          "id": "769508c6-823a-4c1d-ab95-787c8b2b5a12",
+          "color": "default"
+        },
+        {
+          "name": "Bag",
+          "id": "6650db40-85a9-48e3-aa1b-b06fa9025b73",
+          "color": "default"
+        },
+        {
+          "name": "Pavement",
+          "id": "b3f9abd1-e56d-4df2-8516-88202fbc447a",
+          "color": "default"
+        },
+        {
+          "name": "Bidet",
+          "id": "a3fb7ecb-da49-4a05-9fa0-457f7dbde536",
+          "color": "default"
+        },
+        {
+          "name": "Toilet",
+          "id": "2e06aa1e-1aa6-4d5c-9775-33b5caa2571a",
+          "color": "default"
+        },
+        {
+          "name": "Taps",
+          "id": "2ae62659-0670-439e-b0a1-e8872e43d2c5",
+          "color": "default"
+        },
+        {
+          "name": "Cream",
+          "id": "9ddf4f23-6dbd-48b2-ad52-9695fd657f84",
+          "color": "default"
+        },
+        {
+          "name": "Pen Holder",
+          "id": "70286c87-eadc-4cf0-b7f9-71f3109839bb",
+          "color": "default"
+        },
+        {
+          "name": "Organizer",
+          "id": "acebaddc-3f96-41b5-bbb1-c6f3df66f1c3",
+          "color": "default"
+        },
+        {
+          "name": "Yoga Mat",
+          "id": "58002ce7-d2c0-400e-98e9-c63ffbc3083e",
+          "color": "default"
+        },
+        {
+          "name": "Yoga Roll",
+          "id": "a39b18f8-5b4c-43c2-b792-a3f41865070b",
+          "color": "default"
+        },
+        {
+          "name": "Coat",
+          "id": "eaa9eabb-c15a-4aeb-bb77-c2a4ed05757a",
+          "color": "default"
+        },
+        {
+          "name": "Pencil Sharpener",
+          "id": "d00b3e81-32d7-443d-a2cd-900795aa9ba2",
+          "color": "default"
+        },
+        {
+          "name": "Slippers",
+          "id": "9dcf6d94-7e7f-4c7b-bdb5-fc7f7fccb61d",
+          "color": "default"
+        },
+        {
+          "name": "Ashtray",
+          "id": "95ced645-9c5c-45db-8083-70be38360b14",
+          "color": "default"
+        },
+        {
+          "name": "Plate",
+          "id": "51087be9-033f-4b55-8dcb-6ea44bf47cf8",
+          "color": "default"
+        },
+        {
+          "name": "Mobile",
+          "id": "69eefa20-1c53-4f57-827b-173f92991975",
+          "color": "default"
+        },
+        {
+          "name": "Spotlight",
+          "id": "af75abeb-6567-4bb9-bd29-441b5f4948d7",
+          "color": "default"
+        },
+        {
+          "name": "Plugs",
+          "id": "1cfe4ed8-28df-4d0b-994c-c62ebf2cbca0",
+          "color": "default"
+        },
+        {
+          "name": "Frame",
+          "id": "dea7615e-4277-47dc-b40b-b375b444156a",
+          "color": "default"
+        },
+        {
+          "name": "Switch",
+          "id": "62d18ea9-692a-458d-ac3a-124b3d34626b",
+          "color": "default"
+        },
+        {
+          "name": "Door",
+          "id": "ebc844b4-c35c-4339-8342-ed5e5e7a0c19",
+          "color": "default"
+        },
+        {
+          "name": "Desk Leg",
+          "id": "6cbcb66b-043a-4625-b707-ee0f9db753bd",
+          "color": "default"
+        },
+        {
+          "name": "Shower Deck",
+          "id": "a418b3e6-0ffc-456f-b3f9-385f72e239ab",
+          "color": "default"
+        },
+        {
+          "name": "Induction Plate",
+          "id": "15d53150-6ef9-4e85-a78f-6b0c6bea8a64",
+          "color": "default"
+        },
+        {
+          "name": "Plug",
+          "id": "a0550c4c-4ca7-41ef-ad7a-79651d710308",
+          "color": "default"
+        },
+        {
+          "name": "Sensor",
+          "id": "448887b1-4527-46f0-8a45-b01e1f66eaae",
+          "color": "default"
+        },
+        {
+          "name": "Cap",
+          "id": "5e2a6a5b-efca-45b8-9101-8a16cb2b06e9",
+          "color": "default"
+        },
+        {
+          "name": "Floor Tiles",
+          "id": "b0b38c2a-03ee-433f-a934-6d0009a3f4a7",
+          "color": "default"
+        },
+        {
+          "name": "Handle",
+          "id": "7c68cb61-1e46-4cea-abee-1ffd9d06df97",
+          "color": "default"
+        },
+        {
+          "name": "Sliding Door",
+          "id": "940ecde5-906d-4ab5-8def-25aed9346071",
+          "color": "default"
+        },
+        {
+          "name": "Subframe",
+          "id": "3478d6cb-023d-43ee-9161-aa757dda7756",
+          "color": "default"
+        },
+        {
+          "name": "Skateboard",
+          "id": "e24eb084-f903-44a0-bd16-4db1e902a119",
+          "color": "default"
+        },
+        {
+          "name": "Goggles",
+          "id": "a4f6cf4a-3a2d-4734-b6b0-ba077a783df7",
+          "color": "default"
+        },
+        {
+          "name": "Skateboard Wheels",
+          "id": "26a8f9a9-18e4-4668-8dbf-10e2662c038c",
+          "color": "default"
+        },
+        {
+          "name": "Snowboard",
+          "id": "75a2e554-15fd-4aef-8cf3-bc6cbdbe6a50",
+          "color": "default"
+        },
+        {
+          "name": "Bindings",
+          "id": "9496489d-41cb-4e94-b178-5e92de98a355",
+          "color": "default"
+        },
+        {
+          "name": "Fridge",
+          "id": "6102a634-90f7-4721-b611-a540cae5bec6",
+          "color": "default"
+        },
+        {
+          "name": "Intercom",
+          "id": "44612953-bebe-4474-8c03-0c3de0f8175d",
+          "color": "default"
+        },
+        {
+          "name": "Toilet Brush",
+          "id": "73df0c08-30b9-4daf-8826-0e5837654442",
+          "color": "default"
+        },
+        {
+          "name": "Toilet Paper Holder",
+          "id": "30e5ac7c-f8e5-42ad-abde-9e56d24020a6",
+          "color": "default"
+        },
+        {
+          "name": "Keychain",
+          "id": "d71854e6-70e9-483b-9022-c45f5db4ccb5",
+          "color": "default"
+        },
+        {
+          "name": "Fan",
+          "id": "c7eecdaf-fdc4-4943-9af9-a12e2ccfe50a",
+          "color": "default"
+        },
+        {
+          "name": "Laundry",
+          "id": "151aa4d1-e3fa-4931-a729-d485c689001c",
+          "color": "default"
+        },
+        {
+          "name": "Stool",
+          "id": "c5c4596c-b058-4aeb-9332-287e1880e234",
+          "color": "default"
+        },
+        {
+          "name": "Moka",
+          "id": "f1155cad-f1f7-4af2-8897-df50b76bb714",
+          "color": "default"
+        },
+        {
+          "name": "Jar",
+          "id": "7600a1ff-24ab-48ce-abe0-d19a58565a33",
+          "color": "default"
+        },
+        {
+          "name": "Protection",
+          "id": "2d0dedfb-8afd-4dfa-8a1f-0fc1c5121329",
+          "color": "default"
+        },
+        {
+          "name": "Various",
+          "id": "5bbe6000-5481-40f8-833a-e1735f68d559",
+          "color": "default"
+        },
+        {
+          "name": "Wallet",
+          "id": "7c476b84-4f16-4278-b187-5ece58e5cf53",
+          "color": "default"
+        },
+        {
+          "name": "Striking Board",
+          "id": "709caad7-044b-42c6-b4f5-0c6fbbb8c11c",
+          "color": "default"
+        },
+        {
+          "name": "Picnic Basket",
+          "id": "c12b9fd2-9071-4700-9cae-28962c459f95",
+          "color": "default"
+        },
+        {
+          "name": "Longoboard",
+          "id": "58c71e68-3089-4ba0-bd5b-1ae006579076",
+          "color": "default"
+        },
+        {
+          "name": "Suit",
+          "id": "1fa65933-d7f9-4969-981a-0973231e3469",
+          "color": "default"
+        },
+        {
+          "name": "Stickers",
+          "id": "d8230233-4cbd-40c9-9fe0-92304e1feac5",
+          "color": "default"
+        },
+        {
+          "name": "Drug",
+          "id": "8b13d69d-de97-4194-a3d5-3261c84217bb",
+          "color": "default"
+        },
+        {
+          "name": "Supplement",
+          "id": "12745c2a-2306-4b64-9be3-b59fe074b959",
+          "color": "default"
+        },
+        {
+          "name": "Sunglassess",
+          "id": "4a681b18-7dc0-44c4-b2b5-d769da5f69a6",
+          "color": "default"
+        },
+        {
+          "name": "Clock",
+          "id": "c610f2ec-b425-428c-aab6-05cd5d506943",
+          "color": "default"
+        },
+        {
+          "name": "Bolster",
+          "id": "9e772e51-6e3c-49d1-933f-c070037bea82",
+          "color": "default"
+        },
+        {
+          "name": "Toilet Kit",
+          "id": "a5d7d4e3-e178-45f6-8f6c-08e38f1fb215",
+          "color": "default"
+        },
+        {
+          "name": "Scale Model",
+          "id": "bc367246-80a5-4913-b6c5-bb3064186586",
+          "color": "default"
+        },
+        {
+          "name": "Electric Shaver",
+          "id": "47bc6152-d960-4232-a04c-a2d384ac0496",
+          "color": "default"
+        },
+        {
+          "name": "Saddle",
+          "id": "c8f07339-2f10-4eb5-a068-ab4e40d64aa2",
+          "color": "default"
+        },
+        {
+          "name": "Tripod",
+          "id": "f79c3367-66a1-42b8-b195-7903f21d87c1",
+          "color": "default"
+        },
+        {
+          "name": "Packing Cube",
+          "id": "565d8dd9-d497-4281-8b29-3be84de39824",
+          "color": "default"
+        },
+        {
+          "name": "Pens",
+          "id": "8c102277-9ef3-4192-a2f8-88d71319a936",
+          "color": "default"
+        },
+        {
+          "name": "Pen Recharge",
+          "id": "a035625b-7fe7-4759-b093-a101df1da48b",
+          "color": "default"
+        },
+        {
+          "name": "Envelope",
+          "id": "b32b192d-24b9-4bd7-baaf-1e0838ca0b36",
+          "color": "default"
+        },
+        {
+          "name": "Clippers",
+          "id": "ae99b324-0fda-4449-8e72-497297e0a367",
+          "color": "default"
+        },
+        {
+          "name": "Rubber",
+          "id": "8c709ef8-46d8-4deb-92e5-06bc5aae4492",
+          "color": "default"
+        },
+        {
+          "name": "Bottle",
+          "id": "d5fcd088-06e4-4b8b-bf8d-f530ad973133",
+          "color": "default"
+        },
+        {
+          "name": "Tape",
+          "id": "a03a72f7-bc93-4ba9-93e8-638bc4851325",
+          "color": "default"
+        },
+        {
+          "name": "Pillow",
+          "id": "5d5facd3-8c08-4f7b-adf3-d4258e18164e",
+          "color": "default"
+        },
+        {
+          "name": "Drawer",
+          "id": "487fc083-d2e9-407f-b904-5857c9fbca23",
+          "color": "default"
+        },
+        {
+          "name": "Drawers",
+          "id": "eb2d8517-15c1-4660-8a95-e0ca37073b57",
+          "color": "default"
+        },
+        {
+          "name": "Mouse",
+          "id": "5792aa1d-0949-432d-920b-3c87491251cd",
+          "color": "default"
+        },
+        {
+          "name": "Projector",
+          "id": "ec132bb8-eb2c-4b3c-a3f3-0dec71530334",
+          "color": "default"
+        },
+        {
+          "name": "Portable HDD",
+          "id": "07cddf00-dd94-446b-8f8b-ef8f2575f071",
+          "color": "default"
+        },
+        {
+          "name": "Binder",
+          "id": "de58c565-0867-47bf-a77d-254f0b4a42f9",
+          "color": "default"
+        },
+        {
+          "name": "Earpods",
+          "id": "74a069e0-2e8c-4e7e-8a8b-1bd2dc821e43",
+          "color": "default"
+        },
+        {
+          "name": "Vacuum",
+          "id": "15a080ab-a420-4861-883c-0da6f2f664a0",
+          "color": "default"
+        },
+        {
+          "name": "Speaker",
+          "id": "b7b0c610-7df0-4ca5-a361-b38c3f897e6c",
+          "color": "default"
+        },
+        {
+          "name": "Cam",
+          "id": "04524a64-3a3c-4149-b7fc-9813255d36c3",
+          "color": "default"
+        },
+        {
+          "name": "Planner",
+          "id": "c9715fec-5951-44e0-8c28-2594db2f9693",
+          "color": "default"
+        },
+        {
+          "name": "Zip Bag",
+          "id": "7c9bddd9-a4cc-4d31-b220-0648caacca73",
+          "color": "default"
+        },
+        {
+          "name": "Cable",
+          "id": "4cc06b9b-fc2a-4bbc-9ac0-2fe4b5877bb1",
+          "color": "default"
+        },
+        {
+          "name": "Keyboard",
+          "id": "2cd3b171-aad7-477e-9503-372631ab67ac",
+          "color": "default"
+        },
+        {
+          "name": "Camera Clip",
+          "id": "f9f80eaf-2c8f-4c2d-9a4e-6698da984066",
+          "color": "default"
+        },
+        {
+          "name": "Pouch",
+          "id": "11c9c02c-f4a0-4774-ab81-3d1aebae76db",
+          "color": "default"
+        },
+        {
+          "name": "Bib Short",
+          "id": "e4f4f444-0518-4d16-937c-cfdbe4fd2f20",
+          "color": "default"
+        },
+        {
+          "name": "Umbrella",
+          "id": "697be9ca-d524-4072-b7b8-8f4ff49cccdf",
+          "color": "default"
+        },
+        {
+          "name": "Cleats",
+          "id": "bb386613-cbe2-4f81-b763-de3a55cfe2a5",
+          "color": "default"
+        },
+        {
+          "name": "Tag",
+          "id": "3c290ff0-0406-4a7a-9c10-e813682ec06d",
+          "color": "default"
+        },
+        {
+          "name": "Ruler",
+          "id": "9fe11b04-b10e-46fa-910a-c1fcca9fbeac",
+          "color": "default"
+        },
+        {
+          "name": "Pin",
+          "id": "3446b42c-406e-4d8e-ab07-f97f27ed51d6",
+          "color": "default"
+        },
+        {
+          "name": "Mug",
+          "id": "83b1f913-5f39-4b40-8f80-a93f18d62cf5",
+          "color": "default"
+        },
+        {
+          "name": "Pendant",
+          "id": "267ab4d7-69f0-43b9-9056-5bd4496d7bfe",
+          "color": "default"
+        },
+        {
+          "name": "Heat Pump",
+          "id": "3a28258c-2a28-4d3b-be2b-d3a128ab008a",
+          "color": "default"
+        },
+        {
+          "name": "Screen Protection",
+          "id": "0dda7e02-5299-47fd-b8cf-c289dd3cf956",
+          "color": "default"
+        },
+        {
+          "name": "Batteries",
+          "id": "0d2d9d52-8001-4757-8dbf-e4724fb77184",
+          "color": "default"
+        },
+        {
+          "name": "Panettone",
+          "id": "c6630b7a-ee63-4ee2-a8cb-f35bd4916f92",
+          "color": "default"
+        },
+        {
+          "name": "Windshield Wiper",
+          "id": "d515f488-dd19-40e2-a197-68b7fd3e7632",
+          "color": "default"
+        },
+        {
+          "name": "Shampoo",
+          "id": "d31ecd17-9d4e-4ee6-8262-496664daf110",
+          "color": "default"
+        },
+        {
+          "name": "Pills",
+          "id": "0213e89c-927c-4ee9-b5d4-20e81a9b725a",
+          "color": "default"
+        },
+        {
+          "name": "Lotion",
+          "id": "229a840e-ac44-40c8-b7cd-b23602d47a0c",
+          "color": "default"
+        },
+        {
+          "name": "Headlamp",
+          "id": "ace9271e-4160-4c48-9f39-3f245e574527",
+          "color": "default"
+        },
+        {
+          "name": "Phone Holder",
+          "id": "15027a31-a4b4-44fe-92ec-f54e4b1451d5",
+          "color": "default"
+        },
+        {
+          "name": "Marker",
+          "id": "4730c32c-0bda-4868-a7a8-1f14e4f6dc6b",
+          "color": "default"
+        },
+        {
+          "name": "Dongle",
+          "id": "73ba4eae-be56-4838-9d32-e356209edf3e",
+          "color": "default"
+        },
+        {
+          "name": "Holder",
+          "id": "04be1981-ef38-431b-81ea-ec6f0426c132",
+          "color": "default"
+        },
+        {
+          "name": "Charger",
+          "id": "bf5d527f-3f6b-4da9-b895-9ef517c61a59",
+          "color": "default"
+        },
+        {
+          "name": "Coffee Maker Set",
+          "id": "4c865bb7-8392-44b3-91a5-0483b67ea18a",
+          "color": "default"
+        },
+        {
+          "name": "Neon Sign",
+          "id": "f4c60e38-812a-454c-af2c-83cc9fdc64e9",
+          "color": "default"
+        },
+        {
+          "name": "Key Cap Clip",
+          "id": "06867cd1-f793-49db-95c5-040b96d85199",
+          "color": "default"
+        },
+        {
+          "name": "Soap",
+          "id": "6dab9eb8-e8d7-4742-a5ec-85e0793004dc",
+          "color": "default"
+        },
+        {
+          "name": "Necklace",
+          "id": "d17d9f60-7c44-43a7-898c-5ffdf926061c",
+          "color": "default"
+        },
+        {
+          "name": "Robe Handler",
+          "id": "65c3f07e-d54c-472d-9e34-19002f31c54a",
+          "color": "default"
+        },
+        {
+          "name": "Camera",
+          "id": "e4f1eddf-69ec-4727-a742-307a161393ef",
+          "color": "default"
+        },
+        {
+          "name": "Lense",
+          "id": "221561ba-64fb-46d1-9594-8eb8bf8e3b9c",
+          "color": "default"
+        },
+        {
+          "name": "Hook",
+          "id": "4e6f0dae-ab21-4757-b4b9-bdf56fea901e",
+          "color": "default"
+        },
+        {
+          "name": "Filter",
+          "id": "91d50928-de70-4a71-a2e1-134ab59e2063",
+          "color": "default"
+        },
+        {
+          "name": "Coffee Capsules",
+          "id": "b640a0c3-fc17-46e7-8e88-de5405707159",
+          "color": "default"
+        },
+        {
+          "name": "Zip-up Sweater",
+          "id": "203dbf9f-ccc8-4ee9-a296-27b87386bf08",
+          "color": "default"
+        },
+        {
+          "name": "Boxes",
+          "id": "89fa27ce-b79a-47bf-a919-8e16b28f310f",
+          "color": "default"
+        },
+        {
+          "name": "Door Panel",
+          "id": "4ad0f893-489e-4fb1-ac67-93045171878a",
+          "color": "default"
+        },
+        {
+          "name": "Display",
+          "id": "751d94a9-cb0a-4ee3-add8-799657ed4beb",
+          "color": "default"
+        },
+        {
+          "name": "Bed Linen",
+          "id": "03122b2a-a462-4c13-aa37-ab502bb817a9",
+          "color": "default"
+        },
+        {
+          "name": "Polo",
+          "id": "eed4a5bc-21d3-490f-9175-44adc238c03f",
+          "color": "default"
+        },
+        {
+          "name": "Earrings",
+          "id": "ce597da2-4dc7-43ce-ba8e-08cf6cd96ece",
+          "color": "default"
+        },
+        {
+          "name": "Trousers",
+          "id": "c7e42d29-63f0-43f7-960d-b323f55a728d",
+          "color": "default"
+        },
+        {
+          "name": "Hooded",
+          "id": "d584d2a4-c5a1-4ff6-b8a7-d1ab4816f2dd",
+          "color": "default"
+        },
+        {
+          "name": "Dress",
+          "id": "aaaf6d04-bee0-4af5-9889-8c1f6632e8ab",
+          "color": "default"
+        },
+        {
+          "name": "Glass",
+          "id": "dc305e15-af2b-4b5c-b6ce-ad5571f5585c",
+          "color": "default"
+        },
+        {
+          "name": "Empty Pockets",
+          "id": "220b5bae-13f3-41bf-a2b0-352d372e8ccd",
+          "color": "default"
+        },
+        {
+          "name": "Tray",
+          "id": "9fb5a317-0d41-4830-a241-c8c560b4ee7d",
+          "color": "default"
+        },
+        {
+          "name": "Travel set",
+          "id": "7e1835a7-8339-425a-b2a4-793f3e631695",
+          "color": "default"
+        },
+        {
+          "name": "Tracker",
+          "id": "e26739f8-8a9b-4790-a178-4298a36d8d7c",
+          "color": "default"
+        },
+        {
+          "name": "Cuff",
+          "id": "b8255600-1ccb-4305-a807-0c67e7ad5087",
+          "color": "default"
+        },
+        {
+          "name": "Sculpture",
+          "id": "83626920-2130-41cb-a7de-0d487ae90089",
+          "color": "default"
+        },
+        {
+          "name": "Smartphone Holder",
+          "id": "24e3ef4b-8a03-4a5a-a476-6c2dc847101f",
+          "color": "default"
+        },
+        {
+          "name": "Agenda",
+          "id": "8a692290-4b66-43b4-9342-9799f85aa06a",
+          "color": "default"
+        },
+        {
+          "name": "Comb",
+          "id": "ead85fdd-403d-499a-8902-e86755a9755c",
+          "color": "default"
+        },
+        {
+          "name": "Blazer",
+          "id": "ecab0632-191e-4761-bcb4-4d4ae26e41a6",
+          "color": "default"
+        },
+        {
+          "name": "Tie",
+          "id": "805f9743-8ad3-4249-a011-e6fbd51c8569",
+          "color": "default"
+        },
+        {
+          "name": "Socks",
+          "id": "d0590a3b-bd8f-42a9-9426-17443de68995",
+          "color": "default"
+        },
+        {
+          "name": "Base Layer",
+          "id": "dabca065-8159-4fc1-96c7-e06bb90f4b58",
+          "color": "default"
+        },
+        {
+          "name": "Smartwatch",
+          "id": "1df2e2fa-ca11-4702-8bcd-504fc273865a",
+          "color": "default"
+        },
+        {
+          "name": "Panel",
+          "id": "52b026cd-6900-4051-9118-f1011ae8194a",
+          "color": "default"
+        },
+        {
+          "name": "Hub",
+          "id": "2f5f279b-81c2-4a4d-84c1-13df9b43e56f",
+          "color": "default"
+        },
+        {
+          "name": "FindAll",
+          "id": "1a54751c-2271-453a-a54c-90f0880d8c56",
+          "color": "default"
+        },
+        {
+          "name": "LED Strip",
+          "id": "68ec5523-3cfc-4558-bd1c-a8d01e6a5e7f",
+          "color": "default"
+        },
+        {
+          "name": "Power Bank",
+          "id": "31598be4-51b3-4219-992c-2c23763ecf99",
+          "color": "default"
+        },
+        {
+          "name": "Tea",
+          "id": "7e9a395b-cb13-4d34-a7d5-9252b0796220",
+          "color": "default"
+        },
+        {
+          "name": "Thermometer",
+          "id": "3e5e2537-4e78-413d-8369-ab44492d2158",
+          "color": "default"
+        },
+        {
+          "name": "Plugs Strip",
+          "id": "4defec41-d05d-4e7b-80bc-e65aca46a6ef",
+          "color": "default"
+        },
+        {
+          "name": "Chip",
+          "id": "db16308a-d9ff-4e76-8896-88ca47d7902f",
+          "color": "default"
+        },
+        {
+          "name": "Router",
+          "id": "ef6e8ecc-1667-47a4-85cd-c92c41854ca8",
+          "color": "default"
+        },
+        {
+          "name": "Portable Lamp",
+          "id": "fc82f2c6-813e-4916-a31a-bba5651070ff",
+          "color": "default"
+        },
+        {
+          "name": "Profile",
+          "id": "50b2bff6-946e-4c1b-85f4-391a109d428c",
+          "color": "default"
+        },
+        {
+          "name": "Standard Kit",
+          "id": "a2be3cf9-559a-4bb0-95d1-841a6b78bfd9",
+          "color": "default"
+        },
+        {
+          "name": "Pins",
+          "id": "b03b2d58-f15e-46c9-864f-aac6a763a576",
+          "color": "default"
+        },
+        {
+          "name": "Chalice",
+          "id": "25c3d627-25fe-4588-b149-d5a33d1b8f14",
+          "color": "default"
+        },
+        {
+          "name": "Teeth Brush",
+          "id": "2fdf66ff-fbbb-4f04-91d9-1e1a8b615e98",
+          "color": "default"
+        },
+        {
+          "name": "Shoulder Strap",
+          "id": "4714b866-dda2-4cf6-926e-ad77c9617cd2",
+          "color": "default"
+        },
+        {
+          "name": "Knee Brace",
+          "id": "2d9f0de4-511e-401b-a289-f4c13f731741",
+          "color": "default"
+        },
+        {
+          "name": "Grid",
+          "id": "0a39bc48-e3d8-4f60-b551-e21b32cc8afe",
+          "color": "default"
+        },
+        {
+          "name": "Skirting Board",
+          "id": "ad2ecabf-832d-429e-852f-92323a4ab2c1",
+          "color": "default"
+        },
+        {
+          "name": "Ventilation Grilles",
+          "id": "ec0498f0-947a-4e30-9bd9-3fd3057056b3",
+          "color": "default"
+        },
+        {
+          "name": "Door Bell",
+          "id": "b7fcd0ee-2a0b-4b51-8b16-3fd7c612992f",
+          "color": "default"
+        },
+        {
+          "name": "Cover",
+          "id": "c0079694-e94f-4f71-9ecb-4417369d085b",
+          "color": "default"
+        },
+        {
+          "name": "Patch Panel",
+          "id": "700d87ae-6226-420b-9c7d-6d4db5c07710",
+          "color": "default"
+        },
+        {
+          "name": "Adapter",
+          "id": "87cc0ee1-7d64-4861-8c38-32628a5cb95d",
+          "color": "default"
+        },
+        {
+          "name": "Separator",
+          "id": "8f765bb3-d6b1-4fbc-978c-fd13d654aaf8",
+          "color": "default"
+        },
+        {
+          "name": "Van",
+          "id": "02c08a66-d431-45f4-933e-987223f32277",
+          "color": "default"
+        },
+        {
+          "name": "Trapdoor",
+          "id": "319e19ab-0097-4941-8cde-855e3239190a",
+          "color": "default"
+        },
+        {
+          "name": "Electrical Panel Box",
+          "id": "d9fe5a92-22b1-4558-ae03-b2cec88a2766",
+          "color": "default"
+        },
+        {
+          "name": "Video Kit",
+          "id": "c6993ce5-488d-4fdc-a363-13310c4d3b6c",
+          "color": "default"
+        },
+        {
+          "name": "Laptop",
+          "id": "ab079d91-8647-43a8-993a-f68563a41d00",
+          "color": "default"
+        },
+        {
+          "name": "HDD",
+          "id": "a4c26cf2-a82a-4494-bdea-89e5b242f8a1",
+          "color": "default"
+        },
+        {
+          "name": "SSD",
+          "id": "b77fa856-86bd-4d23-b548-5aef0391d66f",
+          "color": "default"
+        },
+        {
+          "name": "Smartphone",
+          "id": "0d314e12-3598-475c-82fe-93f0d3315793",
+          "color": "default"
+        },
+        {
+          "name": "Air Duster",
+          "id": "0356cdab-5b1c-4806-b884-6f2c9dd231b1",
+          "color": "default"
+        },
+        {
+          "name": "Support",
+          "id": "0ed0c2ad-be72-41cb-afe0-721bc104b608",
+          "color": "default"
+        },
+        {
+          "name": "Films",
+          "id": "1a6c5b9d-c611-466e-99e1-2b4255faab9f",
+          "color": "default"
+        },
+        {
+          "name": "NAS",
+          "id": "0db76f84-9690-41b0-baae-db37d5f608ed",
+          "color": "default"
+        },
+        {
+          "name": "Tablet",
+          "id": "5e74ac1f-72c0-42c1-b7d4-eb82d10d37cd",
+          "color": "default"
+        },
+        {
+          "name": "Gimbal",
+          "id": "ef1e7e04-dc5e-4559-b62d-08c67a56b2f0",
+          "color": "default"
+        },
+        {
+          "name": "Vacoom",
+          "id": "32ea22e1-e48d-4f82-8e9f-c285b1d8c631",
+          "color": "default"
+        },
+        {
+          "name": "Washbasin",
+          "id": "4fc28b47-31c0-4403-83fa-f915986b3317",
+          "color": "default"
+        },
+        {
+          "name": "Detergent",
+          "id": "b27ba64e-02f9-4f46-8414-8d89aa653019",
+          "color": "default"
+        },
+        {
+          "name": "Alarm",
+          "id": "8f70acbe-d59c-4705-a23b-e989a22df3ec",
+          "color": "default"
+        },
+        {
+          "name": "Fountain Pen",
+          "id": "eee04a09-27ec-42c7-afee-a505ddbea1be",
+          "color": "default"
+        },
+        {
+          "name": "Curtains",
+          "id": "04ed64b7-2e7f-4345-b0e3-ec15389b5dc6",
+          "color": "default"
+        },
+        {
+          "name": "Armchair",
+          "id": "0c87ba92-72b9-49ab-a8a7-172bf20510c3",
+          "color": "default"
+        },
+        {
+          "name": "Floor Lamp",
+          "id": "9ce0db4c-d7af-4364-9605-a34eaa809fea",
+          "color": "default"
+        },
+        {
+          "name": "Bin",
+          "id": "eb625c5f-b544-418e-b680-aea3005bad4a",
+          "color": "default"
+        }
+      ]
+    },
+    "Order URL": {
+      "id": "IKdO",
+      "name": "Order URL",
+      "type": "url"
+    },
+    "Total Own": {
+      "id": "JnlT",
+      "name": "Total Own",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Own\"), prop(\"Price\") * prop(\"Own Q.ty\"), 0)"
+      }
+    },
+    "Type": {
+      "id": "LqKx",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "689933d7-5077-4f4f-bb2e-8541cd1dcff0",
+        "type": "dual_property",
+        "synced_property_name": "🧿 Products"
+      }
+    },
+    "Excluded": {
+      "id": "N%3Cc%3D",
+      "name": "Excluded",
+      "type": "checkbox"
+    },
+    "Fix": {
+      "id": "NSDu",
+      "name": "Fix",
+      "type": "checkbox"
+    },
+    "Watching": {
+      "id": "OCe%3E",
+      "name": "Watching",
+      "type": "checkbox"
+    },
+    "Old Price Change": {
+      "id": "Q%7D%7CO",
+      "name": "Old Price Change",
+      "type": "formula",
+      "formula": {
+        "expression": "if(\n  !empty(prop(\"Old Price\")), \n  round(100 * (\n    (if(!empty(prop(\"Sale\")), prop(\"Sale\"), prop(\"Price\")) - prop(\"Old Price\")) / prop(\"Old Price\")\n  )) / 100, \n  0\n)"
+      }
+    },
+    "Re-sell": {
+      "id": "Waza",
+      "name": "Re-sell",
+      "type": "checkbox"
+    },
+    "Code": {
+      "id": "X%3Bdj",
+      "name": "Code",
+      "type": "rich_text"
+    },
+    "Note": {
+      "id": "XOs%3D",
+      "name": "Note",
+      "type": "rich_text"
+    },
+    "Buy Now": {
+      "id": "YtR%7B",
+      "name": "Buy Now",
+      "type": "checkbox"
+    },
+    "Created": {
+      "id": "ZI%5Er",
+      "name": "Created",
+      "type": "created_time"
+    },
+    "Shipping": {
+      "id": "%5BKbD",
+      "name": "Shipping",
+      "type": "number"
+    },
+    "Rank": {
+      "id": "%5BSHp",
+      "name": "Rank",
+      "type": "number"
+    },
+    "Total": {
+      "id": "%5C%3E%7Db",
+      "name": "Total",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"Shipping\")), if(empty(prop(\"Q.ty\")), if(empty(prop(\"Sale\")), prop(\"Price\") * 1, prop(\"Sale\") * 1), if(empty(prop(\"Sale\")), prop(\"Price\") * prop(\"Q.ty\"), prop(\"Sale\") * prop(\"Q.ty\"))), if(empty(prop(\"Q.ty\")), if(empty(prop(\"Sale\")), prop(\"Price\") * 1 + prop(\"Shipping\"), prop(\"Sale\") * 1 + prop(\"Shipping\")), if(empty(prop(\"Sale\")), prop(\"Price\") * prop(\"Q.ty\") + prop(\"Shipping\"), prop(\"Sale\") * prop(\"Q.ty\") + prop(\"Shipping\"))))\t"
+      }
+    },
+    "Pinned": {
+      "id": "%5CGYq",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Archive": {
+      "id": "%5CRS%60",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Year": {
+      "id": "%5E%5D~Y",
+      "name": "Year",
+      "type": "select",
+      "options": [
+        {
+          "name": "17",
+          "id": "@\\Zc",
+          "color": "default"
+        },
+        {
+          "name": "18",
+          "id": "cx=e",
+          "color": "default"
+        },
+        {
+          "name": "19",
+          "id": "g:S[",
+          "color": "default"
+        },
+        {
+          "name": "20",
+          "id": "tmZk",
+          "color": "default"
+        },
+        {
+          "name": "21",
+          "id": "EEVv",
+          "color": "default"
+        },
+        {
+          "name": "22",
+          "id": "\\uU@",
+          "color": "default"
+        },
+        {
+          "name": "23",
+          "id": "bqdd",
+          "color": "default"
+        },
+        {
+          "name": "24",
+          "id": "g|PL",
+          "color": "default"
+        },
+        {
+          "name": "25",
+          "id": "0faf8d63-a607-4789-a655-72b24a510024",
+          "color": "default"
+        },
+        {
+          "name": "26",
+          "id": "911606a6-a5cf-4934-8f8c-c8c021fb9777",
+          "color": "default"
+        }
+      ]
+    },
+    "Old Price": {
+      "id": "aAeJ",
+      "name": "Old Price",
+      "type": "number"
+    },
+    "S/N": {
+      "id": "eaZ%5D",
+      "name": "S/N",
+      "type": "rich_text"
+    },
+    "Own": {
+      "id": "h%5B%7Cq",
+      "name": "Own",
+      "type": "checkbox"
+    },
+    "Return Date": {
+      "id": "ik%3FZ",
+      "name": "Return Date",
+      "type": "date"
+    },
+    "Status": {
+      "id": "jusR",
+      "name": "Status",
+      "type": "formula",
+      "formula": {
+        "expression": "if({{notion:block_property:%5CRS%60:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"🗄️ Archived\",\n  if({{notion:block_property:N%3Cc%3D:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \n    if({{notion:block_property:h%5B%7Cq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"⛔ Excluded (Owned)\", \"❌ Excluded\"),\n    if({{notion:block_property:to%7B~:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"↩️ To Return\",\n      if({{notion:block_property:Waza:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \n        if({{notion:block_property:OCe%3E:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"🔄 Re-sell & Re-buy\",\n          if({{notion:block_property:%5CGYq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"💎 Premium Re-sale\", \n            \"🫰 For Re-sale\")),\n        if({{notion:block_property:YtR%7B:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \n          if({{notion:block_property:%5CGYq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"🎯 Priority Purchase\",\n            if({{notion:block_property:OCe%3E:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"⏳ Waiting for Deal\", \n              \"🛒 To Buy\")),\n          if({{notion:block_property:OCe%3E:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \n            if({{notion:block_property:h%5B%7Cq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"🔍 Upgrade Owned Item\", \"👀 Watching\"),\n            if({{notion:block_property:h%5B%7Cq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \n              if({{notion:block_property:%5CGYq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"⭐ Pinned & Owned\", \"✋ Owned\"),\n              if({{notion:block_property:%5CGYq:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, \"📌 Pinned\", \"❓ Unstated\")\n            )\n          )\n        )\n      )\n    )\n  )\n)"
+      }
+    },
+    "Url 2": {
+      "id": "pQ_a",
+      "name": "Url 2",
+      "type": "url"
+    },
+    "Q.ty": {
+      "id": "pe%5BY",
+      "name": "Q.ty",
+      "type": "number"
+    },
+    "Brand": {
+      "id": "p%7CDK",
+      "name": "Brand",
+      "type": "relation",
+      "relation": {
+        "database_id": "239e2e28-a234-4106-9ce7-ed737e9e1669",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
+    "Url 3": {
+      "id": "r%40g%40",
+      "name": "Url 3",
+      "type": "url"
+    },
+    "Tags": {
+      "id": "rh_%3B",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "2208539a-2cae-4e6f-b1a0-7bf00e14ac7a",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
+    "Url 1": {
+      "id": "ruA%3C",
+      "name": "Url 1",
+      "type": "url"
+    },
+    "Return": {
+      "id": "to%7B~",
+      "name": "Return",
+      "type": "checkbox"
+    },
+    "Shops": {
+      "id": "uNpM",
+      "name": "Shops",
+      "type": "relation",
+      "relation": {
+        "database_id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
+    "Return Point": {
+      "id": "uQhf",
+      "name": "Return Point",
+      "type": "relation",
+      "relation": {
+        "database_id": "17e63158-bfa0-808e-aede-d06ca3cf0c74",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
+    "Url 6": {
+      "id": "uzyM",
+      "name": "Url 6",
+      "type": "url"
+    },
+    "Insurance": {
+      "id": "vJyQ",
+      "name": "Insurance",
+      "type": "checkbox"
+    },
+    "Url 4": {
+      "id": "wtkO",
+      "name": "Url 4",
+      "type": "url"
+    },
+    "Sale": {
+      "id": "%7CDW_",
+      "name": "Sale",
+      "type": "number"
+    },
+    "Url 7": {
+      "id": "%7Dp%3Bb",
+      "name": "Url 7",
+      "type": "url"
+    },
+    "Gift": {
+      "id": "~m%3Di",
+      "name": "Gift",
+      "type": "checkbox"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

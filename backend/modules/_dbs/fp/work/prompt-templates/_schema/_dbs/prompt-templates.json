@@ -1,0 +1,116 @@
+{
+  "id": "5d385941-868a-4ab5-9f53-036221133911",
+  "title": "Prompt Templates",
+  "url": "https://app.notion.com/p/5d385941868a4ab59f53036221133911",
+  "parent": {
+    "type": "block_id",
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+  },
+  "properties": {
+    "Meta": {
+      "id": "D%7CRQ",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"📝 ×\" + prop(\"Tasks Count\") + \" \""
+      }
+    },
+    "Tasks": {
+      "id": "HG%3F%3D",
+      "name": "Tasks",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Prompt"
+      }
+    },
+    "Note": {
+      "id": "NCI%3D",
+      "name": "Note",
+      "type": "rich_text"
+    },
+    "Related Template": {
+      "id": "YmNJ",
+      "name": "Related Template",
+      "type": "relation",
+      "relation": {
+        "database_id": "5d385941-868a-4ab5-9f53-036221133911",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Version": {
+      "id": "ZNq%3A",
+      "name": "Version",
+      "type": "rich_text"
+    },
+    "Created time": {
+      "id": "%5EB%3D%3A",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Services": {
+      "id": "c%3Bes",
+      "name": "Services",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "dual_property",
+        "synced_property_name": "Prompts"
+      }
+    },
+    "Tasks Count": {
+      "id": "c%5ELc",
+      "name": "Tasks Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Task",
+        "relation_property_name": "Tasks",
+        "rollup_property_id": "title",
+        "relation_property_id": "HG?=",
+        "function": "count"
+      }
+    },
+    "Prompt": {
+      "id": "mQ%3D~",
+      "name": "Prompt",
+      "type": "rich_text"
+    },
+    "Persona": {
+      "id": "t%5EbN",
+      "name": "Persona",
+      "type": "relation",
+      "relation": {
+        "database_id": "43750c98-df82-4272-983e-9bcc8865f95a",
+        "type": "dual_property",
+        "synced_property_name": "Prompt Template Relation"
+      }
+    },
+    "Client": {
+      "id": "uuUm",
+      "name": "Client",
+      "type": "relation",
+      "relation": {
+        "database_id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+        "type": "dual_property",
+        "synced_property_name": "Prompts"
+      }
+    },
+    "Archive": {
+      "id": "yu%3DW",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Pinned": {
+      "id": "zRs%3A",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

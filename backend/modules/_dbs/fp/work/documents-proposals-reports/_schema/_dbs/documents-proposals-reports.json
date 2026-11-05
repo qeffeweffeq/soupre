@@ -1,0 +1,156 @@
+{
+  "id": "107c7930-1516-8029-ad49-c7fe2997070c",
+  "title": "Documents, Proposals & Reports",
+  "url": "https://app.notion.com/p/107c793015168029ad49c7fe2997070c",
+  "parent": {
+    "type": "block_id",
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+  },
+  "properties": {
+    "Type": {
+      "id": "BapV",
+      "name": "Type",
+      "type": "select",
+      "options": [
+        {
+          "name": "Documentation",
+          "id": "3f54c748-0b07-4af2-a5ce-4075ad093c17",
+          "color": "default"
+        },
+        {
+          "name": "Report",
+          "id": "9304e6ae-1c8b-48ee-b5e2-ba98e7981780",
+          "color": "default"
+        },
+        {
+          "name": "Review",
+          "id": "e6c93ae5-a5d0-4fea-8ad6-9da48de3a276",
+          "color": "default"
+        }
+      ]
+    },
+    "Collab": {
+      "id": "VwOq",
+      "name": "Collab",
+      "type": "people"
+    },
+    "Created time": {
+      "id": "%5Et%60r",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Tasks": {
+      "id": "_GvM",
+      "name": "Tasks",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "DPR"
+      }
+    },
+    "Version": {
+      "id": "aJr%5D",
+      "name": "Version",
+      "type": "rich_text"
+    },
+    "Client": {
+      "id": "ck~%7C",
+      "name": "Client",
+      "type": "relation",
+      "relation": {
+        "database_id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+        "type": "dual_property",
+        "synced_property_name": "DPR"
+      }
+    },
+    "Status": {
+      "id": "e%3A%3BN",
+      "name": "Status",
+      "type": "status",
+      "options": [
+        {
+          "id": "96887dda-907a-4d57-a1d3-b772d635225a",
+          "name": "Not started",
+          "color": "default",
+          "description": null
+        },
+        {
+          "id": "48cac417-119b-4df4-b188-526d6faf2775",
+          "name": "In progress",
+          "color": "blue",
+          "description": null
+        },
+        {
+          "id": "ty^T",
+          "name": "Not Approved",
+          "color": "red",
+          "description": null
+        },
+        {
+          "id": "2ccf2ce2-d77a-441f-bc12-8907e57f5942",
+          "name": "Approved",
+          "color": "green",
+          "description": null
+        }
+      ],
+      "groups": [
+        {
+          "id": "2cf5e484-8e25-4fb5-9655-45226c6ec0ef",
+          "name": "To-do",
+          "color": "gray",
+          "option_ids": [
+            "96887dda-907a-4d57-a1d3-b772d635225a"
+          ]
+        },
+        {
+          "id": "3216ea71-a186-41b8-94c7-6826b63b7f35",
+          "name": "In progress",
+          "color": "blue",
+          "option_ids": [
+            "48cac417-119b-4df4-b188-526d6faf2775"
+          ]
+        },
+        {
+          "id": "e532934a-da00-4c65-9ac0-5902c0c8a7a7",
+          "name": "Complete",
+          "color": "green",
+          "option_ids": [
+            "ty^T",
+            "2ccf2ce2-d77a-441f-bc12-8907e57f5942"
+          ]
+        }
+      ]
+    },
+    "Update": {
+      "id": "gXLs",
+      "name": "Update",
+      "type": "last_edited_time"
+    },
+    "Role": {
+      "id": "qHjr",
+      "name": "Role",
+      "type": "relation",
+      "relation": {
+        "database_id": "d74d19f8-6945-4eb0-8d40-e879f3b1d571",
+        "type": "dual_property",
+        "synced_property_name": "DPR"
+      }
+    },
+    "Date": {
+      "id": "sl%5EN",
+      "name": "Date",
+      "type": "date"
+    },
+    "Author": {
+      "id": "~%3DRq",
+      "name": "Author",
+      "type": "people"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

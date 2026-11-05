@@ -1,0 +1,26 @@
+{
+  "id": "349c7930-1516-80cb-953d-de340b29691b",
+  "title": "Types",
+  "url": "https://app.notion.com/p/349c7930151680cb953dde340b29691b",
+  "parent": {
+    "type": "block_id",
+    "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+  },
+  "properties": {
+    "Web Services": {
+      "id": "f%3Fg%3D",
+      "name": "Web Services",
+      "type": "relation",
+      "relation": {
+        "database_id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Type": {
+      "id": "title",
+      "name": "Type",
+      "type": "title"
+    }
+  }
+}

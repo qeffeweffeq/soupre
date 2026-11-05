@@ -1,0 +1,31 @@
+{
+  "id": "370c7930-1516-8093-9efd-ecaffbe41e9a",
+  "title": "RegEx",
+  "url": "https://app.notion.com/p/370c7930151680939efdecaffbe41e9a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+  },
+  "properties": {
+    "Service": {
+      "id": "ofOa",
+      "name": "Service",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "RegEx": {
+      "id": "ytnV",
+      "name": "RegEx",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

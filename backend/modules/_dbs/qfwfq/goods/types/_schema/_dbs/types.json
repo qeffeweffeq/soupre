@@ -1,0 +1,72 @@
+{
+  "id": "689933d7-5077-4f4f-bb2e-8541cd1dcff0",
+  "title": "Types",
+  "url": "https://app.notion.com/p/689933d750774f4fbb2e8541cd1dcff0",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8015-994c-edd81e56d003"
+  },
+  "properties": {
+    "Items Costs": {
+      "id": "%3BfGi",
+      "name": "Items Costs",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Price",
+        "relation_property_name": "🧿 Products",
+        "rollup_property_id": "HCP@",
+        "relation_property_id": "Awv]",
+        "function": "sum"
+      }
+    },
+    "🧿 Products": {
+      "id": "Awv%5D",
+      "name": "🧿 Products",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Shops Relation": {
+      "id": "FkeU",
+      "name": "Shops Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Shops Count": {
+      "id": "Q_F%5B",
+      "name": "Shops Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Shops Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "FkeU",
+        "function": "show_original"
+      }
+    },
+    "Items Count": {
+      "id": "bkSB",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "🧿 Products",
+        "rollup_property_id": "title",
+        "relation_property_id": "Awv]",
+        "function": "count"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}
