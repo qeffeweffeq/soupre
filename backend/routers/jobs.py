@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
-from database.models import ScrapeJob, Page, Category, Types
+from database.models import ScrapeJob, Page, Category, Types, Workspace
 from database.session import get_session, engine as default_engine
 from schemas.jobs import JobTaxonomyUpdate
 from modules.serializers import serialize_job_enriched, serialize_page_enriched
@@ -143,6 +143,7 @@ def create_job(
     target_url: str,
     background_tasks: BackgroundTasks,
     scrape_mode: str = "single",
+    workspace_id: Optional[int] = None,
     max_pages: int = 0,
     delay_min: float = 60.0,
     delay_max: float = 120.0,
@@ -168,6 +169,8 @@ def create_job(
 
             existing.target_url = (existing.target_url or "").strip()
             existing.status = "running"
+            if workspace_id is not None:
+                existing.workspace_id = workspace_id
             session.add(existing)
             session.commit()
             session.refresh(existing)
@@ -189,7 +192,7 @@ def create_job(
             )
             return {"job_id": existing.id, "status": "restored", "queued_pages": reset_count}
 
-    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
+    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode, workspace_id=workspace_id)
     session.add(job)
     session.commit()
     session.refresh(job)
@@ -213,8 +216,19 @@ def create_job(
 
 
 @router.get("")
-def get_jobs(session: Session = Depends(get_session)):
-    jobs = session.exec(select(ScrapeJob).order_by(ScrapeJob.created_at.desc())).all()
+def get_jobs(
+    workspace_id: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    query = select(ScrapeJob)
+    if workspace_id and workspace_id not in ("all", "__all__"):
+        if workspace_id.isdigit():
+            query = query.where(ScrapeJob.workspace_id == int(workspace_id))
+        else:
+            ws = session.exec(select(Workspace).where(Workspace.slug == workspace_id)).first()
+            if ws:
+                query = query.where(ScrapeJob.workspace_id == ws.id)
+    jobs = session.exec(query.order_by(ScrapeJob.created_at.desc())).all()
     return [serialize_job_enriched(j) for j in jobs]
 
 
@@ -463,6 +477,7 @@ async def delete_job(
 
 
 @router.patch("/{job_id}/taxonomy")
+@router.put("/{job_id}/taxonomy")
 def update_job_taxonomy(
     job_id: int,
     payload: JobTaxonomyUpdate,
@@ -474,11 +489,20 @@ def update_job_taxonomy(
 
     fields_set = payload.model_fields_set
 
+    if "workspace_id" in fields_set:
+        if payload.workspace_id is not None:
+            ws = session.get(Workspace, payload.workspace_id)
+            if not ws:
+                raise HTTPException(status_code=404, detail="Workspace not found")
+        job.workspace_id = payload.workspace_id
+
     if "category_id" in fields_set:
         if payload.category_id is not None:
             cat = session.get(Category, payload.category_id)
             if not cat:
                 raise HTTPException(status_code=404, detail="Category not found")
+            if "workspace_id" not in fields_set and cat.workspace_id:
+                job.workspace_id = cat.workspace_id
         job.category_id = payload.category_id
 
     if "types_id" in fields_set:
@@ -502,6 +526,9 @@ def update_job_taxonomy(
     # Bulk update all pages belonging to this job
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
+        if "workspace_id" in fields_set or ("category_id" in fields_set and job.workspace_id is not None):
+            page.workspace_id = job.workspace_id
+
         if "category_id" in fields_set:
             page.category_id = job.category_id
             page.categorization_source = "user_manual"

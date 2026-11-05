@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 from sqlalchemy import text
 
@@ -31,10 +32,28 @@ def migrate_db(engine) -> None:
         ("page",      "sync_status",               "TEXT NOT NULL DEFAULT 'unmerged'"),
         ("page",      "last_synced_at",            "TIMESTAMP"),
         ("category",  "section",                   "TEXT"),
+        ("category",  "workspace_id",              "INTEGER REFERENCES workspace(id)"),
         ("scrapejob", "category_id",               "INTEGER REFERENCES category(id)"),
         ("scrapejob", "types_id",                  "INTEGER REFERENCES types(id)"),
+        ("scrapejob", "workspace_id",              "INTEGER REFERENCES workspace(id)"),
+        ("page",      "workspace_id",              "INTEGER REFERENCES workspace(id)"),
     ]
     with engine.connect() as conn:
+        # Ensure workspace table exists
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS workspace (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                icon TEXT DEFAULT '📁',
+                color TEXT DEFAULT 'mauve',
+                description TEXT,
+                notion_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.commit()
+
         for table, column, definition in migrations:
             result = conn.execute(text(f"PRAGMA table_info({table})"))
             existing = [row[1] for row in result.fetchall()]
@@ -110,6 +129,81 @@ def migrate_db(engine) -> None:
                     text("UPDATE scrapejob SET category_id = :cid, types_id = :tid WHERE id = :jid"),
                     {"cid": page_tax[0], "tid": page_tax[1], "jid": j_id},
                 )
+        conn.commit()
+
+        # Seed canonical workspaces: fp and qfwfq
+        canonical_workspaces = [
+            ("FP", "fp", "⚡", "mauve", "Services, creative direction, portfolio & tasks"),
+            ("Qfwfq", "qfwfq", "🪐", "teal", "Goods, shops, items & commerce"),
+        ]
+        for w_name, w_slug, w_icon, w_color, w_desc in canonical_workspaces:
+            existing_w = conn.execute(
+                text("SELECT id FROM workspace WHERE slug = :slug"), {"slug": w_slug}
+            ).fetchone()
+            if not existing_w:
+                conn.execute(
+                    text(
+                        "INSERT INTO workspace (name, slug, icon, color, description, created_at) "
+                        "VALUES (:name, :slug, :icon, :color, :desc, :created_at)"
+                    ),
+                    {
+                        "name": w_name,
+                        "slug": w_slug,
+                        "icon": w_icon,
+                        "color": w_color,
+                        "desc": w_desc,
+                        "created_at": datetime.now(timezone.utc),
+                    },
+                )
+        conn.commit()
+
+        # Get workspace IDs
+        fp_row = conn.execute(text("SELECT id FROM workspace WHERE slug = 'fp'")).fetchone()
+        qfwfq_row = conn.execute(text("SELECT id FROM workspace WHERE slug = 'qfwfq'")).fetchone()
+        fp_id = fp_row[0] if fp_row else None
+        qfwfq_id = qfwfq_row[0] if qfwfq_row else None
+
+        # Check if category table exists before backfilling category-dependent relations
+        cat_table_exists = (
+            conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='category'")
+            ).fetchone()
+            is not None
+        )
+
+        # Backfill category workspace_id from section
+        if cat_table_exists and qfwfq_id:
+            conn.execute(
+                text("UPDATE category SET workspace_id = :wid WHERE section = 'goods' AND workspace_id IS NULL"),
+                {"wid": qfwfq_id},
+            )
+        if cat_table_exists and fp_id:
+            conn.execute(
+                text("UPDATE category SET workspace_id = :wid WHERE section = 'services' AND workspace_id IS NULL"),
+                {"wid": fp_id},
+            )
+        conn.commit()
+
+        # Backfill scrapejob.workspace_id and page.workspace_id from category.workspace_id
+        if cat_table_exists:
+            conn.execute(text("""
+                UPDATE scrapejob
+                SET workspace_id = (SELECT workspace_id FROM category WHERE category.id = scrapejob.category_id)
+                WHERE category_id IS NOT NULL AND workspace_id IS NULL
+            """))
+            conn.execute(text("""
+                UPDATE page
+                SET workspace_id = (SELECT workspace_id FROM category WHERE category.id = page.category_id)
+                WHERE category_id IS NOT NULL AND workspace_id IS NULL
+            """))
+            conn.commit()
+
+        # Backfill page.workspace_id from scrapejob.workspace_id
+        conn.execute(text("""
+            UPDATE page
+            SET workspace_id = (SELECT workspace_id FROM scrapejob WHERE scrapejob.id = page.job_id)
+            WHERE workspace_id IS NULL AND job_id IN (SELECT id FROM scrapejob WHERE workspace_id IS NOT NULL)
+        """))
         conn.commit()
 
 

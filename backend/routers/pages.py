@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 
-from database.models import Page, ScrapeJob, Category, Types, Genre, Tag
+from database.models import Page, ScrapeJob, Category, Types, Genre, Tag, Workspace
 from database.session import get_session
 from schemas.taxonomies import PageTaxonomyUpdate
 from modules.serializers import serialize_page_enriched
@@ -68,6 +68,7 @@ def rescrape_single_page(
 
 
 @router.patch("/{page_id}/taxonomy")
+@router.put("/{page_id}/taxonomy")
 def update_page_taxonomy(
     page_id: int,
     payload: PageTaxonomyUpdate,
@@ -79,11 +80,20 @@ def update_page_taxonomy(
 
     fields_set = payload.model_fields_set
 
+    if "workspace_id" in fields_set:
+        if payload.workspace_id is not None:
+            ws = session.get(Workspace, payload.workspace_id)
+            if not ws:
+                raise HTTPException(status_code=404, detail="Workspace not found")
+        page.workspace_id = payload.workspace_id
+
     if "category_id" in fields_set:
         if payload.category_id is not None:
             cat = session.get(Category, payload.category_id)
             if not cat:
                 raise HTTPException(status_code=404, detail="Category not found")
+            if "workspace_id" not in fields_set and cat.workspace_id:
+                page.workspace_id = cat.workspace_id
         page.category_id = payload.category_id
 
     if "types_id" in fields_set:

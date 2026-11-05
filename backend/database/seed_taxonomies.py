@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from sqlmodel import Session, select, text
 
-from database.models import Category, Types, Tag, Genre
+from database.models import Category, Types, Tag, Genre, Workspace
 
 log = logging.getLogger(__name__)
 
@@ -174,6 +174,11 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
     # 2. Seed Canonical Categories (16 Goods + 16 Services)
     category_map: dict[str, Category] = {}
 
+    fp_ws = session.exec(select(Workspace).where(Workspace.slug == "fp")).first()
+    qfwfq_ws = session.exec(select(Workspace).where(Workspace.slug == "qfwfq")).first()
+    fp_id = fp_ws.id if fp_ws else None
+    qfwfq_id = qfwfq_ws.id if qfwfq_ws else None
+
     # Seed Services Categories
     for cat_name, slug, desc in CANONICAL_SERVICES_CATEGORIES:
         existing = session.exec(select(Category).where(
@@ -184,6 +189,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
                 name=cat_name,
                 slug=slug,
                 section="services",
+                workspace_id=fp_id,
                 notion_id=SERVICES_NOTION_ID,
                 description=desc,
             )
@@ -192,6 +198,9 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             category_map[slug] = cat_obj
             counts["categories"] += 1
         else:
+            if existing.workspace_id is None and fp_id:
+                existing.workspace_id = fp_id
+                session.add(existing)
             category_map[slug] = existing
 
     # Seed Goods Categories
@@ -204,6 +213,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
                 name=cat_name,
                 slug=slug,
                 section="goods",
+                workspace_id=qfwfq_id,
                 notion_id=GOODS_NOTION_ID,
                 description=desc,
             )
@@ -212,6 +222,9 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             category_map[slug] = cat_obj
             counts["categories"] += 1
         else:
+            if existing.workspace_id is None and qfwfq_id:
+                existing.workspace_id = qfwfq_id
+                session.add(existing)
             category_map[slug] = existing
 
     # Fallback default category

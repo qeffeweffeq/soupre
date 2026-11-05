@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import func
 
-from database.models import Category, Types, Tag, Genre, Page, PageTagLink, ScrapeJob
+from database.models import Workspace, Category, Types, Tag, Genre, Page, PageTagLink, ScrapeJob
 from database.session import get_session
 from database.seed_taxonomies import slugify
 from schemas.taxonomies import (
+    WorkspaceCreate,
+    WorkspaceUpdate,
     CategoryCreate,
     CategoryUpdate,
     TypesCreate,
@@ -22,17 +24,126 @@ from modules.serializers import serialize_page_enriched
 router = APIRouter(prefix="/api/taxonomies", tags=["taxonomies"])
 
 
+@router.get("/workspaces")
+def list_workspaces(session: Session = Depends(get_session)):
+    """List all workspaces with attached counts."""
+    workspaces = session.exec(select(Workspace).order_by(Workspace.name)).all()
+    results = []
+    for w in workspaces:
+        cat_count = session.exec(select(func.count(Category.id)).where(Category.workspace_id == w.id)).one() or 0
+        job_count = session.exec(select(func.count(ScrapeJob.id)).where(ScrapeJob.workspace_id == w.id)).one() or 0
+        page_count = session.exec(select(func.count(Page.id)).where(Page.workspace_id == w.id)).one() or 0
+        results.append({
+            "id": w.id,
+            "name": w.name,
+            "slug": w.slug,
+            "icon": w.icon or "📁",
+            "color": w.color or "mauve",
+            "description": w.description,
+            "notion_id": w.notion_id,
+            "category_count": cat_count,
+            "job_count": job_count,
+            "page_count": page_count,
+        })
+    return results
+
+
+@router.post("/workspaces")
+def create_workspace(payload: WorkspaceCreate, session: Session = Depends(get_session)):
+    """Create a new workspace."""
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Workspace).where(Workspace.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Workspace with slug '{slug}' already exists")
+    ws = Workspace(
+        name=payload.name,
+        slug=slug,
+        icon=payload.icon or "📁",
+        color=payload.color or "mauve",
+        description=payload.description,
+        notion_id=payload.notion_id,
+    )
+    session.add(ws)
+    session.commit()
+    session.refresh(ws)
+    return ws
+
+
+@router.put("/workspaces/{workspace_id}")
+def update_workspace(workspace_id: int, payload: WorkspaceUpdate, session: Session = Depends(get_session)):
+    """Update workspace details."""
+    ws = session.get(Workspace, workspace_id)
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if payload.name is not None:
+        ws.name = payload.name
+        if payload.slug is None:
+            ws.slug = slugify(payload.name)
+    if payload.slug is not None:
+        ws.slug = payload.slug
+    if payload.icon is not None:
+        ws.icon = payload.icon
+    if payload.color is not None:
+        ws.color = payload.color
+    if payload.description is not None:
+        ws.description = payload.description
+    if payload.notion_id is not None:
+        ws.notion_id = payload.notion_id
+    session.add(ws)
+    session.commit()
+    session.refresh(ws)
+    return ws
+
+
+@router.delete("/workspaces/{workspace_id}")
+def delete_workspace(workspace_id: int, session: Session = Depends(get_session)):
+    """Delete workspace and unlink child categories, jobs, and pages."""
+    ws = session.get(Workspace, workspace_id)
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    categories = session.exec(select(Category).where(Category.workspace_id == workspace_id)).all()
+    for c in categories:
+        c.workspace_id = None
+        session.add(c)
+    jobs = session.exec(select(ScrapeJob).where(ScrapeJob.workspace_id == workspace_id)).all()
+    for j in jobs:
+        j.workspace_id = None
+        session.add(j)
+    pages = session.exec(select(Page).where(Page.workspace_id == workspace_id)).all()
+    for p in pages:
+        p.workspace_id = None
+        session.add(p)
+    session.delete(ws)
+    session.commit()
+    return {"status": "deleted", "id": workspace_id}
+
+
 @router.get("/explorer")
 def get_taxonomies_explorer(
     status: Optional[str] = None,
+    workspace_id: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
-    categories = session.exec(select(Category).order_by(Category.name)).all()
+    target_ws_id: Optional[int] = None
+    if workspace_id and workspace_id not in ("all", "__all__"):
+        if workspace_id.isdigit():
+            target_ws_id = int(workspace_id)
+        else:
+            ws = session.exec(select(Workspace).where(Workspace.slug == workspace_id)).first()
+            if ws:
+                target_ws_id = ws.id
+
+    cat_query = select(Category)
+    if target_ws_id is not None:
+        cat_query = cat_query.where(Category.workspace_id == target_ws_id)
+    categories = session.exec(cat_query.order_by(Category.name)).all()
     all_types = session.exec(select(Types).order_by(Types.name)).all()
 
     query = select(Page)
     if status is not None:
         query = query.where(Page.status == status)
+    if target_ws_id is not None:
+        query = query.where(Page.workspace_id == target_ws_id)
     pages = session.exec(query).all()
 
     job_ids = {p.job_id for p in pages if p.job_id is not None}
@@ -92,8 +203,14 @@ def get_taxonomies_explorer(
                 "pages": cat_untyped,
             })
 
+        ws = cat.workspace
         tree.append({
             "id": cat.id,
+            "workspace_id": cat.workspace_id,
+            "workspace_name": ws.name if ws else None,
+            "workspace_slug": ws.slug if ws else None,
+            "workspace_icon": ws.icon if ws else None,
+            "workspace_color": ws.color if ws else None,
             "name": cat.name,
             "slug": cat.slug,
             "section": cat.section,
@@ -107,6 +224,7 @@ def get_taxonomies_explorer(
     if unassigned_pages:
         tree.append({
             "id": None,
+            "workspace_id": target_ws_id,
             "name": "Uncategorized",
             "slug": "uncategorized",
             "description": "Pages without an assigned category",
@@ -130,8 +248,23 @@ def get_taxonomies_explorer(
 
 
 @router.get("/tree")
-def get_taxonomies_tree(session: Session = Depends(get_session)):
-    categories = session.exec(select(Category).order_by(Category.name)).all()
+def get_taxonomies_tree(
+    workspace_id: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    target_ws_id: Optional[int] = None
+    if workspace_id and workspace_id not in ("all", "__all__"):
+        if workspace_id.isdigit():
+            target_ws_id = int(workspace_id)
+        else:
+            ws = session.exec(select(Workspace).where(Workspace.slug == workspace_id)).first()
+            if ws:
+                target_ws_id = ws.id
+
+    cat_query = select(Category)
+    if target_ws_id is not None:
+        cat_query = cat_query.where(Category.workspace_id == target_ws_id)
+    categories = session.exec(cat_query.order_by(Category.name)).all()
     tree = []
     for cat in categories:
         types_list = session.exec(
@@ -154,8 +287,14 @@ def get_taxonomies_tree(session: Session = Depends(get_session)):
                 "notion_id": t.notion_id,
                 "page_count": type_page_count,
             })
+        ws = cat.workspace
         tree.append({
             "id": cat.id,
+            "workspace_id": cat.workspace_id,
+            "workspace_name": ws.name if ws else None,
+            "workspace_slug": ws.slug if ws else None,
+            "workspace_icon": ws.icon if ws else None,
+            "workspace_color": ws.color if ws else None,
             "name": cat.name,
             "slug": cat.slug,
             "section": cat.section,
@@ -168,8 +307,19 @@ def get_taxonomies_tree(session: Session = Depends(get_session)):
 
 
 @router.get("/categories")
-def list_categories(session: Session = Depends(get_session)):
-    return session.exec(select(Category).order_by(Category.name)).all()
+def list_categories(
+    workspace_id: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    query = select(Category)
+    if workspace_id and workspace_id not in ("all", "__all__"):
+        if workspace_id.isdigit():
+            query = query.where(Category.workspace_id == int(workspace_id))
+        else:
+            ws = session.exec(select(Workspace).where(Workspace.slug == workspace_id)).first()
+            if ws:
+                query = query.where(Category.workspace_id == ws.id)
+    return session.exec(query.order_by(Category.name)).all()
 
 
 @router.post("/categories")
@@ -178,9 +328,14 @@ def create_category(payload: CategoryCreate, session: Session = Depends(get_sess
     existing = session.exec(select(Category).where(Category.slug == slug)).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Category with slug '{slug}' already exists")
+    if payload.workspace_id is not None:
+        ws = session.get(Workspace, payload.workspace_id)
+        if not ws:
+            raise HTTPException(status_code=404, detail="Workspace not found")
     category = Category(
         name=payload.name,
         slug=slug,
+        workspace_id=payload.workspace_id,
         section=payload.section,
         description=payload.description,
         notion_id=payload.notion_id,
@@ -196,6 +351,13 @@ def update_category(category_id: int, payload: CategoryUpdate, session: Session 
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+    fields_set = payload.model_fields_set
+    if "workspace_id" in fields_set:
+        if payload.workspace_id is not None:
+            ws = session.get(Workspace, payload.workspace_id)
+            if not ws:
+                raise HTTPException(status_code=404, detail="Workspace not found")
+        category.workspace_id = payload.workspace_id
     if payload.name is not None:
         category.name = payload.name
         if payload.slug is None:

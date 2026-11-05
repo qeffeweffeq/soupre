@@ -24,6 +24,13 @@ _is_page_untitled_fast = is_page_untitled_fast
 def serialize_job_enriched(job: ScrapeJob) -> dict:
     """Serialize a ScrapeJob with taxonomy names and page status counters."""
     data = job.model_dump()
+    ws = job.workspace or (job.category.workspace if job.category else None)
+    data["workspace_id"] = job.workspace_id or (job.category.workspace_id if job.category else None)
+    data["workspace_name"] = ws.name if ws else None
+    data["workspace_slug"] = ws.slug if ws else None
+    data["workspace_icon"] = ws.icon if ws else None
+    data["workspace_color"] = ws.color if ws else None
+
     data["category_name"] = job.category.name if job.category else None
     data["category_slug"] = job.category.slug if job.category else None
     data["category_section"] = job.category.section if job.category else None
@@ -47,6 +54,13 @@ def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict
         scraped_at = page.lastmod
 
     data = page.model_dump()
+    ws = page.workspace or (page.category.workspace if page.category else None)
+    data["workspace_id"] = page.workspace_id or (page.category.workspace_id if page.category else None)
+    data["workspace_name"] = ws.name if ws else None
+    data["workspace_slug"] = ws.slug if ws else None
+    data["workspace_icon"] = ws.icon if ws else None
+    data["workspace_color"] = ws.color if ws else None
+
     data["category_name"] = page.category.name if page.category else None
     data["category_slug"] = page.category.slug if page.category else None
     data["category_section"] = page.category.section if page.category else None
