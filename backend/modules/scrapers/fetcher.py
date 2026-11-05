@@ -29,10 +29,16 @@ _BASE_CONSENT_SELECTORS = [
     "button[id*='acceptAll' i]",
     "button[id*='accept-cookies' i]",
     "button:has-text('Accept all')",
+    "button:has-text('Accetta tutti i cookie')",
     "button:has-text('Accetta tutti')",
+    "button:has-text('Accetto')",
     "button:has-text('Allow all')",
     "button:has-text('Accetta')",
     "button:has-text('Accept')",
+    "button:has-text('CONTINUA SU')",
+    "button:has-text('CONFERMA')",
+    "button:has-text('CONTINUE')",
+    "button:has-text('CONFIRM')",
     "button:has-text('Alle akzeptieren')",
     "button:has-text('Tout accepter')",
 ]
@@ -48,13 +54,24 @@ COOKIE_OVERLAY_SELECTOR = (
 
 async def dismiss_consent_banners(page) -> None:
     """Attempt to auto-dismiss common cookie consent banners and hide remaining overlays."""
+    initial_url = getattr(page, "url", "")
     for sel in CONSENT_SELECTORS:
         try:
             loc = page.locator(sel).first
-            if await loc.is_visible(timeout=400):
+            if await loc.is_visible(timeout=350):
+                # Verify that the element is not an anchor tag with an external navigation link
+                tag_name = await loc.evaluate("el => el.tagName.toLowerCase()")
+                href = await loc.evaluate("el => el.getAttribute('href') || ''")
+                if tag_name == "a" and href and not href.startswith("#") and not href.startswith("javascript:"):
+                    continue
                 await loc.click(timeout=1000)
                 logger.info(f"[Browser] Dismissed consent banner with selector '{sel}'")
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.4)
+                # Safeguard: if clicking navigated away to a cookie/privacy policy URL, return to initial_url
+                curr_url = getattr(page, "url", "")
+                if curr_url != initial_url and any(k in curr_url.lower() for k in ["cookie", "privacy", "consent", "legal"]):
+                    logger.warning(f"[Browser] Selector '{sel}' triggered navigation to policy URL {curr_url}. Returning to {initial_url}...")
+                    await page.goto(initial_url, wait_until="domcontentloaded", timeout=15000)
                 break
         except Exception:
             pass
@@ -129,19 +146,23 @@ async def fetch_url_with_browser(
             try:
                 is_aux_resource = urlparse(url).path.lower().endswith((".xml", ".txt", ".gz"))
                 try:
-                    await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                    await page.goto(url, wait_until="load", timeout=22000)
                     html_check = await page.content()
-                except Exception as e:
-                    current_url = getattr(page, "url", "") or ""
-                    if current_url in ("about:blank", ""):
-                        logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
-                        return "", "", []
-                    logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
+                except Exception:
                     try:
-                        await page.wait_for_load_state('domcontentloaded', timeout=8000)
-                    except Exception:
-                        pass
-                    html_check = await page.content()
+                        await page.goto(url, wait_until="domcontentloaded", timeout=12000)
+                        html_check = await page.content()
+                    except Exception as e:
+                        current_url = getattr(page, "url", "") or ""
+                        if current_url in ("about:blank", ""):
+                            logger.warning(f"[Browser] Navigation failed or timed out before reaching {url}: {e}")
+                            return "", "", []
+                        logger.info("[Browser] Page is navigating (likely bypassing challenge). Waiting...")
+                        try:
+                            await page.wait_for_load_state('domcontentloaded', timeout=8000)
+                        except Exception:
+                            pass
+                        html_check = await page.content()
 
                 if getattr(page, "url", "") in ("about:blank", "") or len(html_check.strip()) < 60:
                     logger.warning(f"[Browser] Empty or blank document returned for {url}")
@@ -186,7 +207,25 @@ async def fetch_url_with_browser(
                     # Auto-dismiss consent banners & wait for splash preloader overlays to clear
                     await dismiss_consent_banners(page)
                     await wait_for_preloaders_to_hide(page)
-                    await asyncio.sleep(0.8)
+                    await asyncio.sleep(0.5)
+
+                    # Simulate gentle human interactions (satisfies bot sensors and triggers lazy rendering)
+                    try:
+                        await page.mouse.move(250, 350)
+                        await asyncio.sleep(0.2)
+                        await page.mouse.wheel(0, 300)
+                        await asyncio.sleep(0.3)
+                    except Exception:
+                        pass
+
+                    # Detect client-side SPA hydration delay (e.g. React / Salesforce Commerce Cloud)
+                    try:
+                        text_len = await page.evaluate("() => (document.body ? (document.body.innerText || '').length : 0)")
+                        if text_len < 300:
+                            logger.info(f"[Browser] Low content detected ({text_len} chars). Waiting up to 2.5s for SPA hydration...")
+                            await asyncio.sleep(2.5)
+                    except Exception:
+                        pass
 
                 # Take screenshot for the UI if requested
                 if take_screenshot:
@@ -280,6 +319,16 @@ async def fetch_url_with_browser(
                         )
                     except Exception as eval_e:
                         logger.debug(f"[Browser] Pre-serialization DOM enrichment skipped: {eval_e}")
+
+                # Safeguard: Verify that the page did not redirect or navigate to a cookie/privacy policy page
+                final_page_url = getattr(page, "url", "") or ""
+                if final_page_url and final_page_url != url and any(k in final_page_url.lower() for k in ["cookie-policy", "privacy-policy", "cookie-popup"]):
+                    logger.warning(f"[Browser] Page navigated away to legal policy {final_page_url}. Reloading target {url}...")
+                    try:
+                        await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                        await asyncio.sleep(1.0)
+                    except Exception:
+                        pass
 
                 html_content = await page.content()
                 logger.info(f"[Browser] Successfully rendered {url} using engine '{session.engine_name}'")

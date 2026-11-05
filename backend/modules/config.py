@@ -45,8 +45,8 @@ CONTENT_SELECTORS = [
 COOKIE_BUTTON_SELECTORS = [
     "button[id*='cookie' i]",
     "button[class*='cookie' i]",
-    "a[id*='cookie' i]",
-    "a[class*='cookie' i]",
+    "[role='button'][id*='cookie' i]",
+    "[role='button'][class*='cookie' i]",
     "button[id*='accept' i]",
     "button[class*='accept' i]",
     "button[id*='consent' i]",
