@@ -2,9 +2,28 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 
+class WorkspaceCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+    icon: Optional[str] = "📁"
+    color: Optional[str] = "mauve"
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class WorkspaceUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
 class CategoryCreate(BaseModel):
     name: str
     slug: Optional[str] = None
+    workspace_id: Optional[int] = None
     section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
@@ -13,6 +32,7 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
+    workspace_id: Optional[int] = None
     section: Optional[str] = None
     description: Optional[str] = None
     notion_id: Optional[str] = None
@@ -57,6 +77,7 @@ class GenreUpdate(BaseModel):
 
 
 class PageTaxonomyUpdate(BaseModel):
+    workspace_id: Optional[int] = None
     category_id: Optional[int] = None
     types_id: Optional[int] = None
     genre_id: Optional[int] = None

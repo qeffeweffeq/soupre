@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from sqlmodel import Session, select, text
 
-from database.models import Category, Types, Tag, Genre
+from database.models import Category, Types, Tag, Genre, Workspace
 
 log = logging.getLogger(__name__)
 
@@ -171,8 +171,34 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             raw_types.extend(data.get("Type", []))
             raw_tags.extend(data.get("Tags", []))
 
-    # 2. Seed Canonical Categories (16 Goods + 16 Services)
+    # 2. Ensure Canonical Workspaces
+    canonical_workspaces = [
+        ("FP", "fp", "⚡", "mauve", "Services, creative direction, portfolio & tasks"),
+        ("Qfwfq", "qfwfq", "🪐", "teal", "Goods, shops, items & commerce"),
+        ("Full-Site", "full-site", "🌐", "sapphire", "Internal workspace for full-site scraping and content analysis (not linked to Notion)"),
+    ]
+    for w_name, w_slug, w_icon, w_color, w_desc in canonical_workspaces:
+        existing_w = session.exec(select(Workspace).where(Workspace.slug == w_slug)).first()
+        if not existing_w:
+            session.add(
+                Workspace(
+                    name=w_name,
+                    slug=w_slug,
+                    icon=w_icon,
+                    color=w_color,
+                    description=w_desc,
+                    notion_id=None,
+                )
+            )
+            session.flush()
+
+    # 3. Seed Canonical Categories (16 Goods + 16 Services)
     category_map: dict[str, Category] = {}
+
+    fp_ws = session.exec(select(Workspace).where(Workspace.slug == "fp")).first()
+    qfwfq_ws = session.exec(select(Workspace).where(Workspace.slug == "qfwfq")).first()
+    fp_id = fp_ws.id if fp_ws else None
+    qfwfq_id = qfwfq_ws.id if qfwfq_ws else None
 
     # Seed Services Categories
     for cat_name, slug, desc in CANONICAL_SERVICES_CATEGORIES:
@@ -184,6 +210,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
                 name=cat_name,
                 slug=slug,
                 section="services",
+                workspace_id=fp_id,
                 notion_id=SERVICES_NOTION_ID,
                 description=desc,
             )
@@ -192,6 +219,9 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             category_map[slug] = cat_obj
             counts["categories"] += 1
         else:
+            if existing.workspace_id is None and fp_id:
+                existing.workspace_id = fp_id
+                session.add(existing)
             category_map[slug] = existing
 
     # Seed Goods Categories
@@ -204,6 +234,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
                 name=cat_name,
                 slug=slug,
                 section="goods",
+                workspace_id=qfwfq_id,
                 notion_id=GOODS_NOTION_ID,
                 description=desc,
             )
@@ -212,6 +243,9 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             category_map[slug] = cat_obj
             counts["categories"] += 1
         else:
+            if existing.workspace_id is None and qfwfq_id:
+                existing.workspace_id = qfwfq_id
+                session.add(existing)
             category_map[slug] = existing
 
     # Fallback default category

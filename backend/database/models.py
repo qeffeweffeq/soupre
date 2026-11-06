@@ -2,14 +2,30 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, List
 from datetime import datetime, timezone
 
+class Workspace(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    slug: str = Field(unique=True, index=True)
+    icon: Optional[str] = Field(default="📁")
+    color: Optional[str] = Field(default="mauve")
+    description: Optional[str] = None
+    notion_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    categories: List["Category"] = Relationship(back_populates="workspace")
+    jobs: List["ScrapeJob"] = Relationship(back_populates="workspace")
+    pages: List["Page"] = Relationship(back_populates="workspace")
+
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: Optional[int] = Field(default=None, foreign_key="workspace.id", index=True)
     name: str = Field(index=True)
     slug: str = Field(index=True)
     section: Optional[str] = Field(default=None, index=True)  # "goods" | "services"
     description: Optional[str] = None
     notion_id: Optional[str] = None
 
+    workspace: Optional[Workspace] = Relationship(back_populates="categories")
     types: List["Types"] = Relationship(back_populates="category", cascade_delete=True)
     pages: List["Page"] = Relationship(back_populates="category")
 
@@ -56,9 +72,11 @@ class ScrapeJob(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relational Taxonomies (Job-level)
+    workspace_id: Optional[int] = Field(default=None, foreign_key="workspace.id", index=True)
     category_id: Optional[int] = Field(default=None, foreign_key="category.id")
     types_id: Optional[int] = Field(default=None, foreign_key="types.id")
 
+    workspace: Optional[Workspace] = Relationship(back_populates="jobs")
     category: Optional[Category] = Relationship()
     types_rel: Optional[Types] = Relationship()
 
@@ -83,10 +101,12 @@ class Page(SQLModel, table=True):
     content_type: Optional[str] = None               # e.g. "blog", "experiences", "pages"
 
     # Relational Taxonomies
+    workspace_id: Optional[int] = Field(default=None, foreign_key="workspace.id", index=True)
     category_id: Optional[int] = Field(default=None, foreign_key="category.id")
     types_id: Optional[int] = Field(default=None, foreign_key="types.id")
     genre_id: Optional[int] = Field(default=None, foreign_key="genre.id")
 
+    workspace: Optional[Workspace] = Relationship(back_populates="pages")
     category: Optional[Category] = Relationship(back_populates="pages")
     types_rel: Optional[Types] = Relationship(back_populates="pages")
     genre: Optional[Genre] = Relationship(back_populates="pages")

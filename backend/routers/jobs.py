@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import asyncio
 import logging
@@ -9,9 +10,15 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
-from database.models import ScrapeJob, Page, Category, Types
+from database.models import ScrapeJob, Page, Category, Types, Workspace
 from database.session import get_session, engine as default_engine
-from schemas.jobs import JobTaxonomyUpdate
+from schemas.jobs import (
+    JobTaxonomyUpdate,
+    BatchPreviewItem,
+    BatchPreviewResponse,
+    BatchCuratedItem,
+    BatchExecuteRequest,
+)
 from modules.serializers import serialize_job_enriched, serialize_page_enriched
 from modules.config import DOWNLOADS_DIR, PROJECT_ROOT
 from modules.core.job_logger import (
@@ -23,7 +30,10 @@ from modules.utils.url_utils import (
     normalize_target_url,
     sanitize_url,
     extract_urls_from_text,
+    extract_and_analyze_urls_from_text,
+    get_domain_from_url,
 )
+from modules.scrapers.sitemap_fetcher import determine_content_type
 from modules.utils.page_recovery import (
     get_job_dir,
     reset_job_retryable_pages,
@@ -96,18 +106,21 @@ def _dispatch_run_job(*args, **kwargs):
     return runner(*args, **kwargs)
 
 
-@router.post("/batch-upload")
+@router.post("/batch-upload", response_model=BatchPreviewResponse)
 async def batch_upload_urls(
     request: Request,
     file: Optional[UploadFile] = File(None),
     raw_text: Optional[str] = Form(None),
+    session: Session = Depends(get_session),
 ):
     """
-    Extract and sanitize URLs from an uploaded file (.txt, .csv, .md, .html)
-    or a raw text form/JSON payload.
+    Extract, sanitize, and analyze URLs from an uploaded file (.txt, .csv, .md, .html)
+    or a raw text form/JSON payload, returning rich preview metrics and taxonomy predictions.
     """
     content = ""
+    filename = None
     if file is not None:
+        filename = file.filename
         file_bytes = await file.read()
         content = file_bytes.decode("utf-8", errors="ignore")
     elif raw_text:
@@ -119,6 +132,7 @@ async def batch_upload_urls(
                 body_json = await request.json()
                 if isinstance(body_json, dict):
                     content = str(body_json.get("raw_text") or "")
+                    filename = body_json.get("filename")
                 elif isinstance(body_json, str):
                     content = body_json
             except Exception:
@@ -131,10 +145,259 @@ async def batch_upload_urls(
             except Exception:
                 pass
 
-    urls = extract_urls_from_text(content)
+    analyses = extract_and_analyze_urls_from_text(content)
+    if not analyses:
+        return BatchPreviewResponse(
+            count=0,
+            filename=filename,
+            items=[],
+            urls=[],
+        )
+
+    # Fetch categories, types, and workspaces for smart taxonomy prediction
+    categories = session.exec(select(Category)).all()
+    types_list = session.exec(select(Types)).all()
+    workspaces = session.exec(select(Workspace)).all()
+    ws_by_id = {w.id: w for w in workspaces}
+
+    cat_by_name = {c.name.lower(): c for c in categories}
+    cat_by_slug = {c.slug.lower(): c for c in categories}
+    type_by_name = {t.name.lower(): t for t in types_list}
+    type_by_slug = {t.slug.lower(): t for t in types_list}
+
+    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags)\b", re.I)
+    SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
+    HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
+    TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
+    DESIGN_RE = re.compile(r"\b(design|designer|branding|graphics?|typography|identity|visuals?|portfolio|studio|agency|pentagram)\b", re.I)
+    CONTENT_RE = re.compile(r"\b(article|articles|blog|posts?|magazine|journal|editorial|writing|news|notizie)\b", re.I)
+
+    items: List[BatchPreviewItem] = []
+    urls: List[str] = []
+
+    for idx, analysis in enumerate(analyses):
+        clean = analysis["clean_url"]
+        urls.append(clean)
+        domain = get_domain_from_url(clean)
+        content_type = determine_content_type(clean) or "pages"
+
+        parsed_url = urlparse(clean)
+        path = parsed_url.path.lower()
+        full_str = f"{domain} {path}".replace("/", " ").replace("-", " ").replace("_", " ").replace(".", " ")
+
+        matched_cat = None
+        matched_type = None
+
+        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma"))):
+            matched_cat = cat_by_name.get("street") or cat_by_slug.get("street")
+            if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet)\b", full_str, re.I):
+                matched_type = type_by_name.get("accessories") or type_by_slug.get("accessories")
+            elif re.search(r"\b(jeans|denim|trousers|pants|chino|apparel|clothing|cotton|velvet|pleats|jacket|coat|dress|skirt)\b", full_str, re.I):
+                matched_type = type_by_name.get("apparel") or type_by_slug.get("apparel")
+            elif re.search(r"\b(shop|store|boutique)\b", full_str, re.I):
+                matched_type = type_by_name.get("shop") or type_by_slug.get("shop")
+        elif HOSPITALITY_RE.search(full_str):
+            matched_cat = cat_by_name.get("traveller") or cat_by_slug.get("traveller")
+            matched_type = type_by_name.get("hotel") or type_by_slug.get("hotel")
+        elif TECH_RE.search(full_str):
+            matched_cat = cat_by_name.get("technology") or cat_by_slug.get("technology")
+            if re.search(r"\b(plugin|extension)\b", full_str, re.I):
+                matched_type = type_by_name.get("plugin")
+            elif re.search(r"\b(tools?|utils?)\b", full_str, re.I):
+                matched_type = type_by_name.get("tools")
+            else:
+                matched_type = type_by_name.get("application")
+        elif DESIGN_RE.search(full_str):
+            matched_cat = cat_by_name.get("design") or cat_by_name.get("creativity")
+            matched_type = type_by_name.get("solo") or type_by_name.get("business")
+        elif CONTENT_RE.search(full_str):
+            matched_cat = cat_by_name.get("writing") or cat_by_name.get("content creation")
+            matched_type = type_by_name.get("magazine")
+        elif content_type == "products":
+            matched_cat = cat_by_name.get("street")
+            matched_type = type_by_name.get("shop")
+        elif content_type in ("hotels", "rooms", "dining", "experiences"):
+            matched_cat = cat_by_name.get("traveller")
+            matched_type = type_by_name.get("hotel")
+        elif content_type in ("blog", "news"):
+            matched_cat = cat_by_name.get("writing")
+            matched_type = type_by_name.get("magazine")
+
+        # Fallback to direct token matching against database
+        if not matched_cat:
+            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+            for tok in tokens:
+                if tok in cat_by_name:
+                    matched_cat = cat_by_name[tok]
+                    break
+                if tok in cat_by_slug:
+                    matched_cat = cat_by_slug[tok]
+                    break
+
+        if not matched_type:
+            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+            for tok in tokens:
+                if tok in type_by_name:
+                    matched_type = type_by_name[tok]
+                    break
+                if tok in type_by_slug:
+                    matched_type = type_by_slug[tok]
+                    break
+
+        if not matched_cat and matched_type and matched_type.category_id:
+            for c in categories:
+                if c.id == matched_type.category_id:
+                    matched_cat = c
+                    break
+
+        matched_ws = None
+        if matched_cat and matched_cat.workspace_id:
+            matched_ws = ws_by_id.get(matched_cat.workspace_id)
+
+        # Determine Notion DB mapping (Full-Site is strictly unlinked/disabled)
+        notion_id = None
+        notion_db_name = None
+        if matched_ws and matched_ws.slug == "full-site":
+            notion_id = None
+            notion_db_name = None
+        elif matched_cat and matched_cat.notion_id:
+            notion_id = matched_cat.notion_id
+            notion_db_name = "Services" if (matched_cat.section == "services" or matched_cat.notion_id == "d74d19f8-6945-4eb0-8d40-e879f3b1d571") else "Goods"
+        elif matched_ws and matched_ws.notion_id:
+            notion_id = matched_ws.notion_id
+            notion_db_name = "Goods" if matched_ws.slug == "qfwfq" else "Services"
+
+        items.append(
+            BatchPreviewItem(
+                id=f"url-{idx + 1}",
+                raw_url=analysis["raw_url"],
+                clean_url=clean,
+                domain=domain,
+                stripped_params=analysis["stripped_params"],
+                has_stripped_params=analysis["has_stripped_params"],
+                content_type=content_type,
+                workspace_id=matched_ws.id if matched_ws else None,
+                workspace_name=matched_ws.name if matched_ws else None,
+                workspace_slug=matched_ws.slug if matched_ws else None,
+                workspace_icon=matched_ws.icon if matched_ws else None,
+                workspace_color=matched_ws.color if matched_ws else None,
+                notion_id=notion_id,
+                notion_db_name=notion_db_name,
+                predicted_category_id=matched_cat.id if matched_cat else None,
+                predicted_category_name=matched_cat.name if matched_cat else None,
+                predicted_types_id=matched_type.id if matched_type else None,
+                predicted_types_name=matched_type.name if matched_type else None,
+                selected=True,
+            )
+        )
+
+    return BatchPreviewResponse(
+        count=len(items),
+        filename=filename,
+        items=items,
+        urls=urls,
+    )
+
+
+@router.post("/batch-execute")
+def batch_execute_jobs(
+    payload: BatchExecuteRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    """
+    Enqueue multiple curated scrape jobs with pre-assigned workspace and taxonomies.
+    """
+    workspace_id = payload.workspace_id
+    if payload.scrape_mode == "sitemap" and workspace_id is None:
+        full_site_ws = session.exec(select(Workspace).where(Workspace.slug == "full-site")).first()
+        if full_site_ws:
+            workspace_id = full_site_ws.id
+
+    results = []
+    all_jobs = session.exec(select(ScrapeJob)).all()
+    jobs_by_norm = {normalize_target_url(j.target_url): j for j in all_jobs}
+
+    for item in payload.items:
+        raw_target = item.clean_url or item.url
+        target_url = sanitize_url(raw_target)
+        if not target_url:
+            continue
+
+        item_ws_id = item.workspace_id if item.workspace_id is not None else workspace_id
+
+        normalized_input = normalize_target_url(target_url)
+        existing = jobs_by_norm.get(normalized_input)
+
+        if existing:
+            if existing.status == "running":
+                results.append({"job_id": existing.id, "status": "already_running", "url": target_url})
+                continue
+
+            reset_count = reset_job_retryable_pages(session, existing)
+            existing.target_url = target_url
+            existing.status = "running"
+            if item_ws_id is not None:
+                existing.workspace_id = item_ws_id
+            if item.category_id is not None:
+                existing.category_id = item.category_id
+            if item.types_id is not None:
+                existing.types_id = item.types_id
+
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+
+            background_tasks.add_task(
+                _dispatch_run_job,
+                existing.id,
+                existing.target_url,
+                payload.scrape_mode,
+                0,
+                payload.delay_min,
+                payload.delay_max,
+                payload.session_min,
+                payload.session_max,
+                payload.cooldown_min,
+                payload.cooldown_max,
+                payload.large_threshold,
+                payload.large_pause_sec,
+            )
+            results.append({"job_id": existing.id, "status": "restored", "url": target_url, "queued_pages": reset_count})
+        else:
+            job = ScrapeJob(
+                target_url=target_url,
+                scrape_mode=payload.scrape_mode,
+                workspace_id=item_ws_id,
+                category_id=item.category_id,
+                types_id=item.types_id,
+            )
+            session.add(job)
+            session.commit()
+            session.refresh(job)
+
+            jobs_by_norm[normalized_input] = job
+
+            background_tasks.add_task(
+                _dispatch_run_job,
+                job.id,
+                target_url,
+                payload.scrape_mode,
+                0,
+                payload.delay_min,
+                payload.delay_max,
+                payload.session_min,
+                payload.session_max,
+                payload.cooldown_min,
+                payload.cooldown_max,
+                payload.large_threshold,
+                payload.large_pause_sec,
+            )
+            results.append({"job_id": job.id, "status": "started", "url": target_url})
+
     return {
-        "count": len(urls),
-        "urls": urls,
+        "queued": len(results),
+        "jobs": results,
     }
 
 
@@ -143,6 +406,7 @@ def create_job(
     target_url: str,
     background_tasks: BackgroundTasks,
     scrape_mode: str = "single",
+    workspace_id: Optional[int] = None,
     max_pages: int = 0,
     delay_min: float = 60.0,
     delay_max: float = 120.0,
@@ -154,6 +418,11 @@ def create_job(
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
+    if scrape_mode == "sitemap" and workspace_id is None:
+        full_site_ws = session.exec(select(Workspace).where(Workspace.slug == "full-site")).first()
+        if full_site_ws:
+            workspace_id = full_site_ws.id
+
     target_url = sanitize_url(target_url)
 
     normalized_input = normalize_target_url(target_url)
@@ -168,6 +437,8 @@ def create_job(
 
             existing.target_url = (existing.target_url or "").strip()
             existing.status = "running"
+            if workspace_id is not None:
+                existing.workspace_id = workspace_id
             session.add(existing)
             session.commit()
             session.refresh(existing)
@@ -189,7 +460,7 @@ def create_job(
             )
             return {"job_id": existing.id, "status": "restored", "queued_pages": reset_count}
 
-    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode)
+    job = ScrapeJob(target_url=target_url, scrape_mode=scrape_mode, workspace_id=workspace_id)
     session.add(job)
     session.commit()
     session.refresh(job)
@@ -213,8 +484,19 @@ def create_job(
 
 
 @router.get("")
-def get_jobs(session: Session = Depends(get_session)):
-    jobs = session.exec(select(ScrapeJob).order_by(ScrapeJob.created_at.desc())).all()
+def get_jobs(
+    workspace_id: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    query = select(ScrapeJob)
+    if workspace_id and workspace_id not in ("all", "__all__"):
+        if workspace_id.isdigit():
+            query = query.where(ScrapeJob.workspace_id == int(workspace_id))
+        else:
+            ws = session.exec(select(Workspace).where(Workspace.slug == workspace_id)).first()
+            if ws:
+                query = query.where(ScrapeJob.workspace_id == ws.id)
+    jobs = session.exec(query.order_by(ScrapeJob.created_at.desc())).all()
     return [serialize_job_enriched(j) for j in jobs]
 
 
@@ -463,6 +745,7 @@ async def delete_job(
 
 
 @router.patch("/{job_id}/taxonomy")
+@router.put("/{job_id}/taxonomy")
 def update_job_taxonomy(
     job_id: int,
     payload: JobTaxonomyUpdate,
@@ -474,11 +757,20 @@ def update_job_taxonomy(
 
     fields_set = payload.model_fields_set
 
+    if "workspace_id" in fields_set:
+        if payload.workspace_id is not None:
+            ws = session.get(Workspace, payload.workspace_id)
+            if not ws:
+                raise HTTPException(status_code=404, detail="Workspace not found")
+        job.workspace_id = payload.workspace_id
+
     if "category_id" in fields_set:
         if payload.category_id is not None:
             cat = session.get(Category, payload.category_id)
             if not cat:
                 raise HTTPException(status_code=404, detail="Category not found")
+            if "workspace_id" not in fields_set and cat.workspace_id:
+                job.workspace_id = cat.workspace_id
         job.category_id = payload.category_id
 
     if "types_id" in fields_set:
@@ -502,6 +794,9 @@ def update_job_taxonomy(
     # Bulk update all pages belonging to this job
     pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
     for page in pages:
+        if "workspace_id" in fields_set or ("category_id" in fields_set and job.workspace_id is not None):
+            page.workspace_id = job.workspace_id
+
         if "category_id" in fields_set:
             page.category_id = job.category_id
             page.categorization_source = "user_manual"

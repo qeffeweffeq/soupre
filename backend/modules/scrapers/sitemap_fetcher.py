@@ -34,8 +34,11 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
     path = parsed.path.lower().strip("/")
     segments = [s for s in path.split("/") if s]
 
-    # Strip language prefix if present (it, en, de, fr, etc.)
-    if segments and re.match(r"^[a-z]{2}(-[a-z]{2})?$", segments[0]):
+    # Strip language / locale prefix if present (e.g. it, en, it-it, us/en, it/it, etc.)
+    while segments and (
+        re.match(r"^[a-z]{2}(-[a-z]{2})?$", segments[0])
+        or segments[0] in ("us", "uk", "it", "en", "de", "fr", "es", "eu", "row", "global", "intl")
+    ):
         segments = segments[1:]
 
     if not segments:
@@ -55,7 +58,26 @@ def determine_content_type(url: str, sitemap_hint: Optional[str] = None) -> str:
             return "experiences"
         if first_seg in ("events", "eventi", "evenements", "veranstaltungen"):
             return "events"
-        if first_seg in ("products", "prodotti", "produkte", "shop", "negozio"):
+        if first_seg in (
+            "products",
+            "prodotti",
+            "produkte",
+            "shop",
+            "negozio",
+            "p",
+            "product",
+            "item",
+            "articolo",
+            "occhiali",
+            "sunglasses",
+            "eyewear",
+            "clothing",
+            "apparel",
+            "shoes",
+            "bags",
+            "accessori",
+            "accessories",
+        ):
             return "products"
         if any(r in first_seg for r in ("room", "camera", "camere", "alloggi", "alloggio", "zimmer", "chambre", "suite", "villa", "accommodation")):
             return "rooms"
