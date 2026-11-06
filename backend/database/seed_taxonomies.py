@@ -171,7 +171,28 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             raw_types.extend(data.get("Type", []))
             raw_tags.extend(data.get("Tags", []))
 
-    # 2. Seed Canonical Categories (16 Goods + 16 Services)
+    # 2. Ensure Canonical Workspaces
+    canonical_workspaces = [
+        ("FP", "fp", "⚡", "mauve", "Services, creative direction, portfolio & tasks"),
+        ("Qfwfq", "qfwfq", "🪐", "teal", "Goods, shops, items & commerce"),
+        ("Full-Site", "full-site", "🌐", "sapphire", "Internal workspace for full-site scraping and content analysis (not linked to Notion)"),
+    ]
+    for w_name, w_slug, w_icon, w_color, w_desc in canonical_workspaces:
+        existing_w = session.exec(select(Workspace).where(Workspace.slug == w_slug)).first()
+        if not existing_w:
+            session.add(
+                Workspace(
+                    name=w_name,
+                    slug=w_slug,
+                    icon=w_icon,
+                    color=w_color,
+                    description=w_desc,
+                    notion_id=None,
+                )
+            )
+            session.flush()
+
+    # 3. Seed Canonical Categories (16 Goods + 16 Services)
     category_map: dict[str, Category] = {}
 
     fp_ws = session.exec(select(Workspace).where(Workspace.slug == "fp")).first()
