@@ -154,20 +154,23 @@ async def batch_upload_urls(
             urls=[],
         )
 
-    # Fetch categories and types for taxonomy prediction
+    # Fetch categories, types, and workspaces for smart taxonomy prediction
     categories = session.exec(select(Category)).all()
     types_list = session.exec(select(Types)).all()
+    workspaces = session.exec(select(Workspace)).all()
+    ws_by_id = {w.id: w for w in workspaces}
 
-    cat_by_id = {c.id: c for c in categories if c.id is not None}
-    cat_lookup = {}
-    for c in categories:
-        cat_lookup[c.slug.lower()] = c
-        cat_lookup[c.name.lower()] = c
+    cat_by_name = {c.name.lower(): c for c in categories}
+    cat_by_slug = {c.slug.lower(): c for c in categories}
+    type_by_name = {t.name.lower(): t for t in types_list}
+    type_by_slug = {t.slug.lower(): t for t in types_list}
 
-    type_lookup = {}
-    for t in types_list:
-        type_lookup[t.slug.lower()] = t
-        type_lookup[t.name.lower()] = t
+    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags)\b", re.I)
+    SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
+    HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
+    TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
+    DESIGN_RE = re.compile(r"\b(design|designer|branding|graphics?|typography|identity|visuals?|portfolio|studio|agency|pentagram)\b", re.I)
+    CONTENT_RE = re.compile(r"\b(article|articles|blog|posts?|magazine|journal|editorial|writing|news|notizie)\b", re.I)
 
     items: List[BatchPreviewItem] = []
     urls: List[str] = []
@@ -178,24 +181,78 @@ async def batch_upload_urls(
         domain = get_domain_from_url(clean)
         content_type = determine_content_type(clean) or "pages"
 
-        # Match path tokens against Categories and Types
-        parsed_path = urlparse(clean).path
-        tokens = [tok.lower() for tok in re.split(r"[/_\-\.]+", parsed_path) if tok]
+        parsed_url = urlparse(clean)
+        path = parsed_url.path.lower()
+        full_str = f"{domain} {path}".replace("/", " ").replace("-", " ").replace("_", " ").replace(".", " ")
 
         matched_cat = None
-        for tok in tokens:
-            if tok in cat_lookup:
-                matched_cat = cat_lookup[tok]
-                break
-
         matched_type = None
-        for tok in tokens:
-            if tok in type_lookup:
-                matched_type = type_lookup[tok]
-                break
+
+        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma"))):
+            matched_cat = cat_by_name.get("street") or cat_by_slug.get("street")
+            if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet)\b", full_str, re.I):
+                matched_type = type_by_name.get("accessories") or type_by_slug.get("accessories")
+            elif re.search(r"\b(jeans|denim|trousers|pants|chino|apparel|clothing|cotton|velvet|pleats|jacket|coat|dress|skirt)\b", full_str, re.I):
+                matched_type = type_by_name.get("apparel") or type_by_slug.get("apparel")
+            elif re.search(r"\b(shop|store|boutique)\b", full_str, re.I):
+                matched_type = type_by_name.get("shop") or type_by_slug.get("shop")
+        elif HOSPITALITY_RE.search(full_str):
+            matched_cat = cat_by_name.get("traveller") or cat_by_slug.get("traveller")
+            matched_type = type_by_name.get("hotel") or type_by_slug.get("hotel")
+        elif TECH_RE.search(full_str):
+            matched_cat = cat_by_name.get("technology") or cat_by_slug.get("technology")
+            if re.search(r"\b(plugin|extension)\b", full_str, re.I):
+                matched_type = type_by_name.get("plugin")
+            elif re.search(r"\b(tools?|utils?)\b", full_str, re.I):
+                matched_type = type_by_name.get("tools")
+            else:
+                matched_type = type_by_name.get("application")
+        elif DESIGN_RE.search(full_str):
+            matched_cat = cat_by_name.get("design") or cat_by_name.get("creativity")
+            matched_type = type_by_name.get("solo") or type_by_name.get("business")
+        elif CONTENT_RE.search(full_str):
+            matched_cat = cat_by_name.get("writing") or cat_by_name.get("content creation")
+            matched_type = type_by_name.get("magazine")
+        elif content_type == "products":
+            matched_cat = cat_by_name.get("street")
+            matched_type = type_by_name.get("shop")
+        elif content_type in ("hotels", "rooms", "dining", "experiences"):
+            matched_cat = cat_by_name.get("traveller")
+            matched_type = type_by_name.get("hotel")
+        elif content_type in ("blog", "news"):
+            matched_cat = cat_by_name.get("writing")
+            matched_type = type_by_name.get("magazine")
+
+        # Fallback to direct token matching against database
+        if not matched_cat:
+            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+            for tok in tokens:
+                if tok in cat_by_name:
+                    matched_cat = cat_by_name[tok]
+                    break
+                if tok in cat_by_slug:
+                    matched_cat = cat_by_slug[tok]
+                    break
+
+        if not matched_type:
+            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+            for tok in tokens:
+                if tok in type_by_name:
+                    matched_type = type_by_name[tok]
+                    break
+                if tok in type_by_slug:
+                    matched_type = type_by_slug[tok]
+                    break
 
         if not matched_cat and matched_type and matched_type.category_id:
-            matched_cat = cat_by_id.get(matched_type.category_id)
+            for c in categories:
+                if c.id == matched_type.category_id:
+                    matched_cat = c
+                    break
+
+        matched_ws = None
+        if matched_cat and matched_cat.workspace_id:
+            matched_ws = ws_by_id.get(matched_cat.workspace_id)
 
         items.append(
             BatchPreviewItem(
@@ -206,6 +263,11 @@ async def batch_upload_urls(
                 stripped_params=analysis["stripped_params"],
                 has_stripped_params=analysis["has_stripped_params"],
                 content_type=content_type,
+                workspace_id=matched_ws.id if matched_ws else None,
+                workspace_name=matched_ws.name if matched_ws else None,
+                workspace_slug=matched_ws.slug if matched_ws else None,
+                workspace_icon=matched_ws.icon if matched_ws else None,
+                workspace_color=matched_ws.color if matched_ws else None,
                 predicted_category_id=matched_cat.id if matched_cat else None,
                 predicted_category_name=matched_cat.name if matched_cat else None,
                 predicted_types_id=matched_type.id if matched_type else None,
@@ -247,6 +309,8 @@ def batch_execute_jobs(
         if not target_url:
             continue
 
+        item_ws_id = item.workspace_id if item.workspace_id is not None else workspace_id
+
         normalized_input = normalize_target_url(target_url)
         existing = jobs_by_norm.get(normalized_input)
 
@@ -258,8 +322,8 @@ def batch_execute_jobs(
             reset_count = reset_job_retryable_pages(session, existing)
             existing.target_url = target_url
             existing.status = "running"
-            if workspace_id is not None:
-                existing.workspace_id = workspace_id
+            if item_ws_id is not None:
+                existing.workspace_id = item_ws_id
             if item.category_id is not None:
                 existing.category_id = item.category_id
             if item.types_id is not None:
@@ -289,7 +353,7 @@ def batch_execute_jobs(
             job = ScrapeJob(
                 target_url=target_url,
                 scrape_mode=payload.scrape_mode,
-                workspace_id=workspace_id,
+                workspace_id=item_ws_id,
                 category_id=item.category_id,
                 types_id=item.types_id,
             )

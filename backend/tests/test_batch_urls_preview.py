@@ -99,6 +99,7 @@ def test_batch_upload_with_taxonomy_prediction(client):
         t = Types(name="Apparel", slug="apparel", category_id=cat.id)
         session.add(t)
         session.commit()
+        ws_id = ws.id
 
     raw_text = """
     https://brand.com/street/apparel/cool-jacket?utm_source=ig&color=blue
@@ -121,6 +122,8 @@ def test_batch_upload_with_taxonomy_prediction(client):
     # Category and Type token matching
     assert first_item["predicted_category_name"] == "Street"
     assert first_item["predicted_types_name"] == "Apparel"
+    assert first_item["workspace_id"] == ws_id
+    assert first_item["workspace_name"] == "Test WS"
 
     second_item = data["items"][1]
     assert second_item["clean_url"] == "https://brand.com/news/spring-update"
@@ -130,14 +133,17 @@ def test_batch_upload_with_taxonomy_prediction(client):
 def test_batch_execute_jobs(client):
     with Session(test_engine) as session:
         ws = Workspace(name="Full-Site", slug="full-site", icon="🌐", color="sapphire")
+        ws2 = Workspace(name="Qfwfq", slug="qfwfq", icon="⚡", color="flamingo")
         cat = Category(name="Technology", slug="technology", section="services")
         session.add(ws)
+        session.add(ws2)
         session.add(cat)
         session.flush()
         t = Types(name="Service", slug="service", category_id=cat.id)
         session.add(t)
         session.commit()
         ws_id = ws.id
+        ws2_id = ws2.id
         cat_id = cat.id
         t_id = t.id
 
@@ -146,6 +152,7 @@ def test_batch_execute_jobs(client):
             {
                 "url": "https://api.dev/v1?utm_term=test",
                 "clean_url": "https://api.dev/v1",
+                "workspace_id": ws2_id,
                 "category_id": cat_id,
                 "types_id": t_id,
                 "content_type": "services",
@@ -173,9 +180,13 @@ def test_batch_execute_jobs(client):
         assert len(jobs) == 2
         job1 = session.exec(select(ScrapeJob).where(ScrapeJob.target_url == "https://api.dev/v1")).first()
         assert job1 is not None
-        assert job1.workspace_id == ws_id
+        assert job1.workspace_id == ws2_id  # Verified per-item workspace overrides payload fallback!
         assert job1.category_id == cat_id
         assert job1.types_id == t_id
+
+        job2 = session.exec(select(ScrapeJob).where(ScrapeJob.target_url == "https://example.com/docs")).first()
+        assert job2 is not None
+        assert job2.workspace_id == ws_id  # Falls back to batch payload workspace
 
 
 def test_sitemap_mode_auto_routes_to_full_site_workspace(client):

@@ -16,6 +16,11 @@ class BatchPreviewItem(BaseModel):
     stripped_params: List[str] = []
     has_stripped_params: bool = False
     content_type: str = "pages"
+    workspace_id: Optional[int] = None
+    workspace_name: Optional[str] = None
+    workspace_slug: Optional[str] = None
+    workspace_icon: Optional[str] = None
+    workspace_color: Optional[str] = None
     predicted_category_id: Optional[int] = None
     predicted_category_name: Optional[str] = None
     predicted_types_id: Optional[int] = None
@@ -33,6 +38,7 @@ class BatchPreviewResponse(BaseModel):
 class BatchCuratedItem(BaseModel):
     url: str
     clean_url: Optional[str] = None
+    workspace_id: Optional[int] = None
     category_id: Optional[int] = None
     types_id: Optional[int] = None
     content_type: Optional[str] = None
