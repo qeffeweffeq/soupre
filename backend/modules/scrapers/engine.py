@@ -498,6 +498,15 @@ async def scrape_page(
         if sitemap_lastmod:
             page.lastmod = sitemap_lastmod
 
+        job = session.get(ScrapeJob, job_id)
+        if job:
+            if job.workspace_id and not page.workspace_id:
+                page.workspace_id = job.workspace_id
+            if job.category_id and not page.category_id:
+                page.category_id = job.category_id
+            if job.types_id and not page.types_id:
+                page.types_id = job.types_id
+
         # Automatic dual classification (JEV & Embeddings)
         try:
             classification = classify_page(
@@ -507,9 +516,12 @@ async def scrape_page(
                 url=url,
                 db_session=session,
             )
-            page.category_id = classification.category_id
-            page.types_id = classification.types_id
-            page.genre_id = classification.genre_id
+            if not page.category_id and classification.category_id:
+                page.category_id = classification.category_id
+            if not page.types_id and classification.types_id:
+                page.types_id = classification.types_id
+            if not page.genre_id and classification.genre_id:
+                page.genre_id = classification.genre_id
             page.categorization_source = classification.source
             page.categorization_confidence = classification.confidence
 
@@ -571,6 +583,7 @@ async def scrape_page(
                             content_type=alt_ct,
                             category_id=job.category_id if job else None,
                             types_id=job.types_id if job else None,
+                            workspace_id=job.workspace_id if job else None,
                         )
                     )
                     existing_urls.add(alt_url)
@@ -758,6 +771,7 @@ async def run_scrape_job(
                             content_type=ct,
                             category_id=job.category_id if job else None,
                             types_id=job.types_id if job else None,
+                            workspace_id=job.workspace_id if job else None,
                         )
                         s.add(p)
                         pages_by_url[u] = p

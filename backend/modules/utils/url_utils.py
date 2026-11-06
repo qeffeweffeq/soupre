@@ -136,3 +136,72 @@ def get_domain_from_url(url: str, replace_dots: bool = False) -> str:
     if replace_dots:
         return domain.replace(".", "_")
     return domain
+
+
+def analyze_url_parameters(raw_url: str) -> dict:
+    """
+    Analyzes URL query parameters:
+    - raw_url: original string
+    - clean_url: sanitized URL without marketing/tracking params and fragments
+    - stripped_params: list of parameter strings removed (e.g. ['utm_source=spring', 'fbclid=...'])
+    - retained_params: list of parameter strings kept (e.g. ['variant=42'])
+    - has_stripped_params: bool
+    """
+    if not raw_url or not isinstance(raw_url, str):
+        return {
+            "raw_url": "",
+            "clean_url": "",
+            "stripped_params": [],
+            "retained_params": [],
+            "has_stripped_params": False,
+        }
+    raw = raw_url.strip()
+    clean = sanitize_url(raw)
+
+    url_for_parsing = raw
+    if not url_for_parsing.startswith("http://") and not url_for_parsing.startswith("https://"):
+        if "://" not in url_for_parsing:
+            url_for_parsing = "https://" + url_for_parsing
+
+    parsed_raw = urlparse(url_for_parsing)
+    parsed_clean = urlparse(clean)
+
+    raw_params = parse_qsl(parsed_raw.query, keep_blank_values=True)
+    clean_params = parse_qsl(parsed_clean.query, keep_blank_values=True)
+
+    clean_copy = list(clean_params)
+    stripped = []
+    for k, v in raw_params:
+        if (k, v) in clean_copy:
+            clean_copy.remove((k, v))
+        else:
+            stripped.append(f"{k}={v}" if v else k)
+
+    retained = [f"{k}={v}" if v else k for (k, v) in clean_params]
+
+    return {
+        "raw_url": raw,
+        "clean_url": clean,
+        "stripped_params": stripped,
+        "retained_params": retained,
+        "has_stripped_params": len(stripped) > 0,
+    }
+
+
+def extract_and_analyze_urls_from_text(raw_text: str) -> list[dict]:
+    """
+    Finds URLs in raw text and returns detailed parameter analysis for each unique URL.
+    """
+    if not raw_text or not isinstance(raw_text, str):
+        return []
+    seen = set()
+    results = []
+    for match in URL_REGEX.finditer(raw_text):
+        raw_found = match.group(0).rstrip(".,;:!?'\"")
+        analysis = analyze_url_parameters(raw_found)
+        clean = analysis["clean_url"]
+        if clean and clean not in seen:
+            seen.add(clean)
+            results.append(analysis)
+    return results
+

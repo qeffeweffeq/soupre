@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import asyncio
 import logging
@@ -11,7 +12,13 @@ from sqlmodel import Session, select
 
 from database.models import ScrapeJob, Page, Category, Types, Workspace
 from database.session import get_session, engine as default_engine
-from schemas.jobs import JobTaxonomyUpdate
+from schemas.jobs import (
+    JobTaxonomyUpdate,
+    BatchPreviewItem,
+    BatchPreviewResponse,
+    BatchCuratedItem,
+    BatchExecuteRequest,
+)
 from modules.serializers import serialize_job_enriched, serialize_page_enriched
 from modules.config import DOWNLOADS_DIR, PROJECT_ROOT
 from modules.core.job_logger import (
@@ -23,7 +30,10 @@ from modules.utils.url_utils import (
     normalize_target_url,
     sanitize_url,
     extract_urls_from_text,
+    extract_and_analyze_urls_from_text,
+    get_domain_from_url,
 )
+from modules.scrapers.sitemap_fetcher import determine_content_type
 from modules.utils.page_recovery import (
     get_job_dir,
     reset_job_retryable_pages,
@@ -96,18 +106,21 @@ def _dispatch_run_job(*args, **kwargs):
     return runner(*args, **kwargs)
 
 
-@router.post("/batch-upload")
+@router.post("/batch-upload", response_model=BatchPreviewResponse)
 async def batch_upload_urls(
     request: Request,
     file: Optional[UploadFile] = File(None),
     raw_text: Optional[str] = Form(None),
+    session: Session = Depends(get_session),
 ):
     """
-    Extract and sanitize URLs from an uploaded file (.txt, .csv, .md, .html)
-    or a raw text form/JSON payload.
+    Extract, sanitize, and analyze URLs from an uploaded file (.txt, .csv, .md, .html)
+    or a raw text form/JSON payload, returning rich preview metrics and taxonomy predictions.
     """
     content = ""
+    filename = None
     if file is not None:
+        filename = file.filename
         file_bytes = await file.read()
         content = file_bytes.decode("utf-8", errors="ignore")
     elif raw_text:
@@ -119,6 +132,7 @@ async def batch_upload_urls(
                 body_json = await request.json()
                 if isinstance(body_json, dict):
                     content = str(body_json.get("raw_text") or "")
+                    filename = body_json.get("filename")
                 elif isinstance(body_json, str):
                     content = body_json
             except Exception:
@@ -131,10 +145,180 @@ async def batch_upload_urls(
             except Exception:
                 pass
 
-    urls = extract_urls_from_text(content)
+    analyses = extract_and_analyze_urls_from_text(content)
+    if not analyses:
+        return BatchPreviewResponse(
+            count=0,
+            filename=filename,
+            items=[],
+            urls=[],
+        )
+
+    # Fetch categories and types for taxonomy prediction
+    categories = session.exec(select(Category)).all()
+    types_list = session.exec(select(Types)).all()
+
+    cat_by_id = {c.id: c for c in categories if c.id is not None}
+    cat_lookup = {}
+    for c in categories:
+        cat_lookup[c.slug.lower()] = c
+        cat_lookup[c.name.lower()] = c
+
+    type_lookup = {}
+    for t in types_list:
+        type_lookup[t.slug.lower()] = t
+        type_lookup[t.name.lower()] = t
+
+    items: List[BatchPreviewItem] = []
+    urls: List[str] = []
+
+    for idx, analysis in enumerate(analyses):
+        clean = analysis["clean_url"]
+        urls.append(clean)
+        domain = get_domain_from_url(clean)
+        content_type = determine_content_type(clean) or "pages"
+
+        # Match path tokens against Categories and Types
+        parsed_path = urlparse(clean).path
+        tokens = [tok.lower() for tok in re.split(r"[/_\-\.]+", parsed_path) if tok]
+
+        matched_cat = None
+        for tok in tokens:
+            if tok in cat_lookup:
+                matched_cat = cat_lookup[tok]
+                break
+
+        matched_type = None
+        for tok in tokens:
+            if tok in type_lookup:
+                matched_type = type_lookup[tok]
+                break
+
+        if not matched_cat and matched_type and matched_type.category_id:
+            matched_cat = cat_by_id.get(matched_type.category_id)
+
+        items.append(
+            BatchPreviewItem(
+                id=f"url-{idx + 1}",
+                raw_url=analysis["raw_url"],
+                clean_url=clean,
+                domain=domain,
+                stripped_params=analysis["stripped_params"],
+                has_stripped_params=analysis["has_stripped_params"],
+                content_type=content_type,
+                predicted_category_id=matched_cat.id if matched_cat else None,
+                predicted_category_name=matched_cat.name if matched_cat else None,
+                predicted_types_id=matched_type.id if matched_type else None,
+                predicted_types_name=matched_type.name if matched_type else None,
+                selected=True,
+            )
+        )
+
+    return BatchPreviewResponse(
+        count=len(items),
+        filename=filename,
+        items=items,
+        urls=urls,
+    )
+
+
+@router.post("/batch-execute")
+def batch_execute_jobs(
+    payload: BatchExecuteRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    """
+    Enqueue multiple curated scrape jobs with pre-assigned workspace and taxonomies.
+    """
+    workspace_id = payload.workspace_id
+    if payload.scrape_mode == "sitemap" and workspace_id is None:
+        full_site_ws = session.exec(select(Workspace).where(Workspace.slug == "full-site")).first()
+        if full_site_ws:
+            workspace_id = full_site_ws.id
+
+    results = []
+    all_jobs = session.exec(select(ScrapeJob)).all()
+    jobs_by_norm = {normalize_target_url(j.target_url): j for j in all_jobs}
+
+    for item in payload.items:
+        raw_target = item.clean_url or item.url
+        target_url = sanitize_url(raw_target)
+        if not target_url:
+            continue
+
+        normalized_input = normalize_target_url(target_url)
+        existing = jobs_by_norm.get(normalized_input)
+
+        if existing:
+            if existing.status == "running":
+                results.append({"job_id": existing.id, "status": "already_running", "url": target_url})
+                continue
+
+            reset_count = reset_job_retryable_pages(session, existing)
+            existing.target_url = target_url
+            existing.status = "running"
+            if workspace_id is not None:
+                existing.workspace_id = workspace_id
+            if item.category_id is not None:
+                existing.category_id = item.category_id
+            if item.types_id is not None:
+                existing.types_id = item.types_id
+
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+
+            background_tasks.add_task(
+                _dispatch_run_job,
+                existing.id,
+                existing.target_url,
+                payload.scrape_mode,
+                0,
+                payload.delay_min,
+                payload.delay_max,
+                payload.session_min,
+                payload.session_max,
+                payload.cooldown_min,
+                payload.cooldown_max,
+                payload.large_threshold,
+                payload.large_pause_sec,
+            )
+            results.append({"job_id": existing.id, "status": "restored", "url": target_url, "queued_pages": reset_count})
+        else:
+            job = ScrapeJob(
+                target_url=target_url,
+                scrape_mode=payload.scrape_mode,
+                workspace_id=workspace_id,
+                category_id=item.category_id,
+                types_id=item.types_id,
+            )
+            session.add(job)
+            session.commit()
+            session.refresh(job)
+
+            jobs_by_norm[normalized_input] = job
+
+            background_tasks.add_task(
+                _dispatch_run_job,
+                job.id,
+                target_url,
+                payload.scrape_mode,
+                0,
+                payload.delay_min,
+                payload.delay_max,
+                payload.session_min,
+                payload.session_max,
+                payload.cooldown_min,
+                payload.cooldown_max,
+                payload.large_threshold,
+                payload.large_pause_sec,
+            )
+            results.append({"job_id": job.id, "status": "started", "url": target_url})
+
     return {
-        "count": len(urls),
-        "urls": urls,
+        "queued": len(results),
+        "jobs": results,
     }
 
 
@@ -155,6 +339,11 @@ def create_job(
     large_pause_sec: int = 120,
     session: Session = Depends(get_session),
 ):
+    if scrape_mode == "sitemap" and workspace_id is None:
+        full_site_ws = session.exec(select(Workspace).where(Workspace.slug == "full-site")).first()
+        if full_site_ws:
+            workspace_id = full_site_ws.id
+
     target_url = sanitize_url(target_url)
 
     normalized_input = normalize_target_url(target_url)

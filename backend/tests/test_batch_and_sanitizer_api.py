@@ -95,4 +95,6 @@ def test_batch_upload_empty(client):
     response = client.post("/api/jobs/batch-upload", json={"raw_text": ""})
     assert response.status_code == 200
     data = response.json()
-    assert data == {"count": 0, "urls": []}
+    assert data["count"] == 0
+    assert data["urls"] == []
+    assert data["items"] == []
