@@ -34,7 +34,7 @@ from modules.utils.page_recovery import (
     _get_job_dir,
 )
 from routers.jobs import _run_job_with_logging
-from routers import jobs_router, pages_router, taxonomies_router
+from routers import jobs_router, pages_router, taxonomies_router, notion_router
 
 # Ensure downloads directory exists
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
@@ -83,3 +83,4 @@ app.add_middleware(
 app.include_router(jobs_router)
 app.include_router(pages_router)
 app.include_router(taxonomies_router)
+app.include_router(notion_router)
