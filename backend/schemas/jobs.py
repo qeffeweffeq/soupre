@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 class JobTaxonomyUpdate(BaseModel):
     workspace_id: Optional[int] = None
+    notion_id: Optional[str] = None
     category_id: Optional[int] = None
     types_id: Optional[int] = None
 
@@ -21,6 +22,8 @@ class BatchPreviewItem(BaseModel):
     workspace_slug: Optional[str] = None
     workspace_icon: Optional[str] = None
     workspace_color: Optional[str] = None
+    notion_id: Optional[str] = None
+    notion_db_name: Optional[str] = None
     predicted_category_id: Optional[int] = None
     predicted_category_name: Optional[str] = None
     predicted_types_id: Optional[int] = None
@@ -39,6 +42,7 @@ class BatchCuratedItem(BaseModel):
     url: str
     clean_url: Optional[str] = None
     workspace_id: Optional[int] = None
+    notion_id: Optional[str] = None
     category_id: Optional[int] = None
     types_id: Optional[int] = None
     content_type: Optional[str] = None

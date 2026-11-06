@@ -254,6 +254,19 @@ async def batch_upload_urls(
         if matched_cat and matched_cat.workspace_id:
             matched_ws = ws_by_id.get(matched_cat.workspace_id)
 
+        # Determine Notion DB mapping (Full-Site is strictly unlinked/disabled)
+        notion_id = None
+        notion_db_name = None
+        if matched_ws and matched_ws.slug == "full-site":
+            notion_id = None
+            notion_db_name = None
+        elif matched_cat and matched_cat.notion_id:
+            notion_id = matched_cat.notion_id
+            notion_db_name = "Services" if (matched_cat.section == "services" or matched_cat.notion_id == "d74d19f8-6945-4eb0-8d40-e879f3b1d571") else "Goods"
+        elif matched_ws and matched_ws.notion_id:
+            notion_id = matched_ws.notion_id
+            notion_db_name = "Goods" if matched_ws.slug == "qfwfq" else "Services"
+
         items.append(
             BatchPreviewItem(
                 id=f"url-{idx + 1}",
@@ -268,6 +281,8 @@ async def batch_upload_urls(
                 workspace_slug=matched_ws.slug if matched_ws else None,
                 workspace_icon=matched_ws.icon if matched_ws else None,
                 workspace_color=matched_ws.color if matched_ws else None,
+                notion_id=notion_id,
+                notion_db_name=notion_db_name,
                 predicted_category_id=matched_cat.id if matched_cat else None,
                 predicted_category_name=matched_cat.name if matched_cat else None,
                 predicted_types_id=matched_type.id if matched_type else None,

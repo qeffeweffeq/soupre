@@ -224,6 +224,26 @@ def migrate_db(engine) -> None:
             )
             conn.commit()
 
+        # Codify workspace Notion database associations (Full-Site is strictly unlinked)
+        GOODS_NOTION_ID = "d46f6dbf-310c-4c4d-800e-813eeba04ab6"
+        SERVICES_NOTION_ID = "d74d19f8-6945-4eb0-8d40-e879f3b1d571"
+        if qfwfq_id:
+            conn.execute(
+                text("UPDATE workspace SET notion_id = :nid WHERE id = :wid AND (notion_id IS NULL OR notion_id = '')"),
+                {"nid": GOODS_NOTION_ID, "wid": qfwfq_id},
+            )
+        if fp_id:
+            conn.execute(
+                text("UPDATE workspace SET notion_id = :nid WHERE id = :wid AND (notion_id IS NULL OR notion_id = '')"),
+                {"nid": SERVICES_NOTION_ID, "wid": fp_id},
+            )
+        if fullsite_id:
+            conn.execute(
+                text("UPDATE workspace SET notion_id = NULL WHERE id = :wid"),
+                {"wid": fullsite_id},
+            )
+        conn.commit()
+
 
 # Backward-compatible alias
 _migrate_db = migrate_db
