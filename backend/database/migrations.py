@@ -161,8 +161,10 @@ def migrate_db(engine) -> None:
         # Get workspace IDs
         fp_row = conn.execute(text("SELECT id FROM workspace WHERE slug = 'fp'")).fetchone()
         qfwfq_row = conn.execute(text("SELECT id FROM workspace WHERE slug = 'qfwfq'")).fetchone()
+        fullsite_row = conn.execute(text("SELECT id FROM workspace WHERE slug = 'full-site'")).fetchone()
         fp_id = fp_row[0] if fp_row else None
         qfwfq_id = qfwfq_row[0] if qfwfq_row else None
+        fullsite_id = fullsite_row[0] if fullsite_row else None
 
         # Check if category table exists before backfilling category-dependent relations
         cat_table_exists = (
@@ -206,6 +208,21 @@ def migrate_db(engine) -> None:
             WHERE workspace_id IS NULL AND job_id IN (SELECT id FROM scrapejob WHERE workspace_id IS NOT NULL)
         """))
         conn.commit()
+
+        # Ensure existing full-site/sitemap scrapes route to Full-Site workspace
+        if fullsite_id:
+            conn.execute(
+                text("UPDATE scrapejob SET workspace_id = :wid WHERE scrape_mode = 'sitemap'"),
+                {"wid": fullsite_id},
+            )
+            conn.execute(
+                text("""
+                    UPDATE page SET workspace_id = :wid 
+                    WHERE job_id IN (SELECT id FROM scrapejob WHERE scrape_mode = 'sitemap')
+                """),
+                {"wid": fullsite_id},
+            )
+            conn.commit()
 
 
 # Backward-compatible alias
