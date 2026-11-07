@@ -191,7 +191,7 @@ def test_bulk_assign_tags_api(client_and_session):
 def test_batch_upload_auto_tagging(client_and_session):
     client, _ = client_and_session
 
-    content = "https://brand.com/products/sunglasses-luxury-model\nhttps://hotelresort.com/luxury-beach-hotel\n"
+    content = "https://techhub.com/apps/ai-audio-copilot\nhttps://hotelresort.com/luxury-beach-hotel\n"
     resp = client.post("/api/jobs/batch-upload", json={"raw_text": content})
     assert resp.status_code == 200
     data = resp.json()
@@ -199,8 +199,8 @@ def test_batch_upload_auto_tagging(client_and_session):
 
     item0 = data["items"][0]
     assert len(item0["tag_ids"]) > 0 or len(item0["predicted_tags"]) > 0
-    assert any("sunglasses" in t.lower() or "eyewear" in t.lower() or "accessories" in t.lower() or "luxury" in t.lower() for t in item0["predicted_tags"])
+    assert any("ai" in t.lower() or "audio" in t.lower() for t in item0["predicted_tags"])
 
     item1 = data["items"][1]
     assert len(item1["tag_ids"]) > 0 or len(item1["predicted_tags"]) > 0
-    assert any("hotel" in t.lower() or "resort" in t.lower() or "beach" in t.lower() or "luxury" in t.lower() for t in item1["predicted_tags"])
+    assert any("hotel" in t.lower() or "resort" in t.lower() or "beach" in t.lower() for t in item1["predicted_tags"])

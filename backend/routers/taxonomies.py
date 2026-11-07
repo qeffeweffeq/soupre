@@ -24,6 +24,7 @@ from schemas.taxonomies import (
     GenreUpdate,
 )
 from modules.serializers import serialize_page_enriched
+from modules.rules import get_all_rules, evaluate_taxonomy_rules, TaxonomyRuleContext
 
 router = APIRouter(prefix="/api/taxonomies", tags=["taxonomies"])
 
@@ -773,3 +774,99 @@ def delete_genre(genre_id: int, session: Session = Depends(get_session)):
     session.delete(genre)
     session.commit()
     return {"status": "deleted", "id": genre_id}
+
+
+# --- Taxonomy Instruction Rules ---
+
+@router.get("/rules")
+def list_taxonomy_rules():
+    """List all configured taxonomy instruction rules."""
+    return get_all_rules()
+
+
+@router.post("/rules/apply")
+def apply_taxonomy_rules(
+    workspace_id: Optional[int] = None,
+    job_id: Optional[str] = None,
+    page_ids: Optional[List[int]] = None,
+    session: Session = Depends(get_session),
+):
+    """Bulk evaluate and apply taxonomy instruction rules to existing pages in the database.
+    
+    Strictly assigns only existing canonical tags.
+    """
+    query = select(Page)
+    if page_ids:
+        query = query.where(Page.id.in_(page_ids))
+    elif workspace_id is not None:
+        query = query.where(Page.workspace_id == workspace_id)
+    elif job_id:
+        query = query.where(Page.job_id == job_id)
+
+    pages = session.exec(query).all()
+    workspaces = {w.id: w for w in session.exec(select(Workspace)).all()}
+    categories = {c.id: c for c in session.exec(select(Category)).all()}
+    types_map = {t.id: t for t in session.exec(select(Types)).all()}
+
+    applied_details = []
+    total_links_added = 0
+
+    for page in pages:
+        ws = workspaces.get(page.workspace_id) if page.workspace_id else None
+        cat = categories.get(page.category_id) if page.category_id else None
+        typ = types_map.get(page.types_id) if page.types_id else None
+
+        notion_db_name = None
+        if ws and ws.slug == "qfwfq":
+            notion_db_name = "Goods"
+        elif ws and ws.slug == "fp":
+            notion_db_name = "Services"
+
+        elem_names = [e.name for e in page.elements] if page.elements else []
+        elem_ids = [e.id for e in page.elements if e.id is not None] if page.elements else []
+
+        ctx = TaxonomyRuleContext(
+            workspace_id=page.workspace_id,
+            workspace_slug=ws.slug if ws else None,
+            dashboard=notion_db_name.lower() if notion_db_name else None,
+            notion_db_name=notion_db_name,
+            notion_id=cat.notion_id if cat and cat.notion_id else (ws.notion_id if ws else None),
+            category_id=page.category_id,
+            category_name=cat.name if cat else None,
+            type_id=page.types_id,
+            type_name=typ.name if typ else None,
+            element_names=elem_names,
+            element_ids=elem_ids,
+            url=page.clean_url or page.url,
+        )
+
+        resolved_tags = evaluate_taxonomy_rules(ctx, session)
+        for r_tag in resolved_tags:
+            # Check if tag is already linked
+            link_exists = session.exec(
+                select(PageTagLink).where(
+                    (PageTagLink.page_id == page.id) & (PageTagLink.tag_id == r_tag.tag_id)
+                )
+            ).first()
+            if not link_exists:
+                session.add(PageTagLink(page_id=page.id, tag_id=r_tag.tag_id))
+                total_links_added += 1
+                applied_details.append({
+                    "page_id": page.id,
+                    "url": page.clean_url or page.url,
+                    "tag_id": r_tag.tag_id,
+                    "tag_name": r_tag.tag_name,
+                    "rule_id": r_tag.rule_id,
+                    "rule_name": r_tag.rule_name,
+                })
+
+    if total_links_added > 0:
+        session.commit()
+
+    return {
+        "status": "success",
+        "pages_evaluated": len(pages),
+        "links_added": total_links_added,
+        "details": applied_details,
+    }
+

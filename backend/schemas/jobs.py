@@ -30,6 +30,7 @@ class BatchPreviewItem(BaseModel):
     predicted_types_name: Optional[str] = None
     tag_ids: List[int] = []
     predicted_tags: List[str] = []
+    rule_applied_tags: List[str] = []
     element_ids: List[int] = []
     predicted_elements: List[str] = []
     url_status: Optional[str] = None

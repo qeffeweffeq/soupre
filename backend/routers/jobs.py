@@ -39,6 +39,7 @@ from modules.utils.url_utils import (
     get_domain_from_url,
 )
 from modules.scrapers.sitemap_fetcher import determine_content_type
+from modules.rules import TaxonomyRuleContext, evaluate_taxonomy_rules
 from modules.utils.page_recovery import (
     get_job_dir,
     reset_job_retryable_pages,
@@ -176,7 +177,8 @@ async def batch_upload_urls(
     elem_by_name = {e.name.lower(): e for e in elements}
     elem_by_slug = {e.slug.lower(): e for e in elements}
 
-    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|espadrillas|scarpe|stivali|sandali|mocassini|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|tela|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags|borsa|borse|shirt|shirts|camicia|maglia|pantalone|pantaloni|giacca|abito|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith|ralphlauren)\b", re.I)
+    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|espadrillas|scarpe|stivali|sandali|mocassini|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|tela|pleats|accessories|boutique|cucinelli|prada|aspesi|nike|gucci|zara|armani|fur|leather|scarf|hat|bag|bags|borsa|borse|shirt|shirts|camicia|maglia|pantalone|pantaloni|giacca|abito|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith|ralphlauren)\b", re.I)
+    HOME_RE = re.compile(r"\b(furniture|arredo|arredamento|mobile|mobili|tavol[io]|sedie|sedia|poltron[ae]|divan[io]|scaffal[ei]|ikea|usm|haller|vitra|cassina|flos|kartell|tiles?|piastrell[ae]|ceramica|ceramiche|marazzi|bathroom|kitchen|cucina|bagno|lighting|lampad[ae]|electricity|elettric\w*|interruttor\w*|bticino|vimar)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
     HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
     TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
@@ -207,6 +209,15 @@ async def batch_upload_urls(
                 matched_type = type_by_name.get("apparel") or type_by_slug.get("apparel")
             elif re.search(r"\b(shop|store|boutique)\b", full_str, re.I):
                 matched_type = type_by_name.get("shop") or type_by_slug.get("shop")
+        elif HOME_RE.search(full_str):
+            matched_cat = cat_by_name.get("home") or cat_by_slug.get("home")
+            if re.search(r"\b(tiles?|piastrell[ae]|ceramica|ceramiche|marazzi)\b", full_str, re.I):
+                matched_type = type_by_name.get("tiles") or type_by_slug.get("tiles")
+            elif re.search(r"\b(electricity|elettric\w*|interruttor\w*|bticino|vimar)\b", full_str, re.I):
+                matched_type = type_by_name.get("electricity") or type_by_slug.get("electricity")
+                matched_cat = cat_by_name.get("tech") or cat_by_slug.get("tech") or matched_cat
+            else:
+                matched_type = type_by_name.get("furniture") or type_by_slug.get("furniture")
         elif HOSPITALITY_RE.search(full_str):
             matched_cat = cat_by_name.get("traveller") or cat_by_slug.get("traveller")
             matched_type = type_by_name.get("hotel") or type_by_slug.get("hotel")
@@ -278,13 +289,12 @@ async def batch_upload_urls(
             notion_id = matched_ws.notion_id
             notion_db_name = "Goods" if matched_ws.slug == "qfwfq" else "Services"
 
-        # Smart tag predictions
+        # Smart tag predictions - STRICT ZERO-CREATION POLICY:
+        # Only existing canonical tags from the database are ever matched or assigned.
         pred_tag_ids: List[int] = []
         pred_tag_names: List[str] = []
 
         keyword_heuristics = [
-            (re.compile(r"\b(sunglasses|occhiali|eyewear)\b", re.I), "Sunglasses"),
-            (re.compile(r"\b(jeans|denim)\b", re.I), "Jeans"),
             (re.compile(r"\b(beach\s*hotel|beach)\b", re.I), "Beach Hotel"),
             (re.compile(r"\b(resort\w*)\b", re.I), "Beach Resort"),
             (re.compile(r"\b(hotel\w*|suites?|stay|hospitality)\b", re.I), "Hotel"),
@@ -303,18 +313,20 @@ async def batch_upload_urls(
                 cand_slug = re.sub(r"[^a-z0-9]+", "-", tag_name.lower()).strip("-")
                 t = tag_by_slug.get(cand_slug) or tag_by_name.get(tag_name.lower())
                 if t:
+                    # Filter by workspace compatibility if workspace is matched
+                    if matched_ws and t.workspace_id and t.workspace_id != matched_ws.id:
+                        continue
                     if t.id is not None and t.id not in pred_tag_ids:
                         pred_tag_ids.append(t.id)
                     if t.name not in pred_tag_names:
                         pred_tag_names.append(t.name)
-                else:
-                    if tag_name not in pred_tag_names:
-                        pred_tag_names.append(tag_name)
 
         tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
         for tok in tokens:
             t = tag_by_slug.get(tok) or tag_by_name.get(tok)
             if t:
+                if matched_ws and t.workspace_id and t.workspace_id != matched_ws.id:
+                    continue
                 if t.id is not None and t.id not in pred_tag_ids:
                     pred_tag_ids.append(t.id)
                 if t.name not in pred_tag_names:
@@ -340,6 +352,30 @@ async def batch_upload_urls(
                     if el.name not in pred_elem_names:
                         pred_elem_names.append(el.name)
 
+        # Evaluate Taxonomy Instruction Rules (e.g. apply Renovation to Furniture/Electricity/Tiles)
+        rule_applied_tags: List[str] = []
+        rule_ctx = TaxonomyRuleContext(
+            workspace_id=matched_ws.id if matched_ws else None,
+            workspace_slug=matched_ws.slug if matched_ws else None,
+            dashboard=notion_db_name.lower() if notion_db_name else None,
+            notion_db_name=notion_db_name,
+            notion_id=notion_id,
+            category_id=matched_cat.id if matched_cat else None,
+            category_name=matched_cat.name if matched_cat else None,
+            type_id=matched_type.id if matched_type else None,
+            type_name=matched_type.name if matched_type else None,
+            element_names=pred_elem_names,
+            element_ids=pred_elem_ids,
+            url=clean,
+        )
+        resolved_rule_tags = evaluate_taxonomy_rules(rule_ctx, session)
+        for r_tag in resolved_rule_tags:
+            if r_tag.tag_id not in pred_tag_ids:
+                pred_tag_ids.append(r_tag.tag_id)
+            if r_tag.tag_name not in pred_tag_names:
+                pred_tag_names.append(r_tag.tag_name)
+            rule_applied_tags.append(f"{r_tag.tag_name} (Rule: {r_tag.rule_name})")
+
         items.append(
             BatchPreviewItem(
                 id=f"url-{idx + 1}",
@@ -362,6 +398,7 @@ async def batch_upload_urls(
                 predicted_types_name=matched_type.name if matched_type else None,
                 tag_ids=pred_tag_ids,
                 predicted_tags=pred_tag_names,
+                rule_applied_tags=rule_applied_tags,
                 element_ids=pred_elem_ids,
                 predicted_elements=pred_elem_names,
                 selected=True,
@@ -569,6 +606,8 @@ def batch_execute_jobs(
                     pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
                 for p in pages:
                     for tid in item.tag_ids:
+                        if not session.get(Tag, tid):
+                            continue
                         link_exists = session.exec(
                             select(PageTagLink).where(
                                 (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
@@ -681,6 +720,8 @@ def batch_execute_jobs(
 
                 for p in pages:
                     for tid in item.tag_ids:
+                        if not session.get(Tag, tid):
+                            continue
                         link_exists = session.exec(
                             select(PageTagLink).where(
                                 (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
@@ -795,6 +836,8 @@ def create_job(
                     pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
                 for p in pages:
                     for tid in item.tag_ids:
+                        if not session.get(Tag, tid):
+                            continue
                         link_exists = session.exec(
                             select(PageTagLink).where(
                                 (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
