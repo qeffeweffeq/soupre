@@ -26,6 +26,7 @@ class NotionDatabaseMeta:
     has_tags: bool = False
     has_categories: bool = False
     has_types: bool = False
+    has_elements: bool = False
     properties: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -38,6 +39,7 @@ class NotionDatabaseMeta:
             "has_tags": self.has_tags,
             "has_categories": self.has_categories,
             "has_types": self.has_types,
+            "has_elements": self.has_elements,
             "properties": self.properties,
         }
 
@@ -201,7 +203,21 @@ CANONICAL_DATABASES: list[dict[str, Any]] = [
         "has_tags": True,
         "has_categories": True,
         "has_types": True,
-        "properties": ["Name", "Url 1", "Categories", "Type", "Tags", "Price", "Description", "Buy Now", "Order URL", "Brand", "Shops"],
+        "has_elements": True,
+        "properties": ["Name", "Url 1", "Categories", "Type", "Tags", "Elements", "Price", "Description", "Buy Now", "Order URL", "Brand", "Shops"],
+    },
+    {
+        "id": "41163158-bfa0-8110-9ec1-e4c34e3a9eec",
+        "name": "Elements",
+        "workspace": "qfwfq",
+        "dashboard": "goods",
+        "icon": "🧩",
+        "schema_key": "elements",
+        "has_tags": False,
+        "has_categories": False,
+        "has_types": False,
+        "has_elements": False,
+        "properties": ["Name", "Items Relation", "Items Costs", "Items Count", "Total Own"],
     },
     {
         "id": "15863158-bfa0-800a-8e34-e6462c16d17a",
@@ -328,6 +344,7 @@ def discover_databases_from_disk(dbs_dir: Optional[Path] = None) -> list[NotionD
                 has_tags = any(p.lower() in ("tags", "tag") for p in props)
                 has_categories = any(p.lower() in ("categories", "category", "roles", "role") for p in props)
                 has_types = any(p.lower() in ("type", "types") for p in props)
+                has_elements = any(p.lower() in ("elements", "element") for p in props)
 
                 parts = [p.lower() for p in schema_json.parts]
                 ws = "fp" if "fp" in parts else ("qfwfq" if "qfwfq" in parts else "fp")
@@ -341,8 +358,9 @@ def discover_databases_from_disk(dbs_dir: Optional[Path] = None) -> list[NotionD
                         existing.has_tags = existing.has_tags or has_tags
                         existing.has_categories = existing.has_categories or has_categories
                         existing.has_types = existing.has_types or has_types
+                        existing.has_elements = existing.has_elements or has_elements
                 else:
-                    icon = "⚡" if ws == "fp" else "🪐"
+                    icon = "⚡" if ws == "fp" else ("🧩" if "elements" in schema_json.stem.lower() else "🪐")
                     discovered[db_id] = NotionDatabaseMeta(
                         id=db_id,
                         name=title,
@@ -353,6 +371,7 @@ def discover_databases_from_disk(dbs_dir: Optional[Path] = None) -> list[NotionD
                         has_tags=has_tags,
                         has_categories=has_categories,
                         has_types=has_types,
+                        has_elements=has_elements,
                         properties=props,
                     )
             except Exception as e:

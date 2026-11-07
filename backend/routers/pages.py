@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 
-from database.models import Page, ScrapeJob, Category, Types, Genre, Tag, Workspace
+from database.models import Page, ScrapeJob, Category, Types, Genre, Tag, Workspace, Element
 from database.session import get_session
 from schemas.taxonomies import PageTaxonomyUpdate
 from modules.serializers import serialize_page_enriched
@@ -128,6 +128,16 @@ def update_page_taxonomy(
                 page.tags = []
         else:
             page.tags = []
+
+    if "element_ids" in fields_set:
+        if payload.element_ids is not None:
+            if payload.element_ids:
+                elements = session.exec(select(Element).where(Element.id.in_(payload.element_ids))).all()
+                page.elements = elements
+            else:
+                page.elements = []
+        else:
+            page.elements = []
 
     page.categorization_source = "user_manual"
     page.categorization_confidence = 1.0

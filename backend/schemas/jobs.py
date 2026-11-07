@@ -30,6 +30,8 @@ class BatchPreviewItem(BaseModel):
     predicted_types_name: Optional[str] = None
     tag_ids: List[int] = []
     predicted_tags: List[str] = []
+    element_ids: List[int] = []
+    predicted_elements: List[str] = []
     url_status: Optional[str] = None
     url_status_code: Optional[int] = None
     url_status_label: Optional[str] = None
@@ -77,6 +79,7 @@ class BatchCuratedItem(BaseModel):
     category_id: Optional[int] = None
     types_id: Optional[int] = None
     tag_ids: List[int] = []
+    element_ids: List[int] = []
     content_type: Optional[str] = None
 
 

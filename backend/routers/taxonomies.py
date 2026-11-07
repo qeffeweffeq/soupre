@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import func
 
-from database.models import Workspace, Category, Types, Tag, Genre, Page, PageTagLink, ScrapeJob
+from database.models import Workspace, Category, Types, Tag, Genre, Page, PageTagLink, ScrapeJob, Element, PageElementLink
 from database.session import get_session
 from database.seed_taxonomies import slugify
 from schemas.taxonomies import (
@@ -17,6 +17,9 @@ from schemas.taxonomies import (
     TagCreate,
     TagUpdate,
     BulkTagAssignRequest,
+    ElementCreate,
+    ElementUpdate,
+    BulkElementAssignRequest,
     GenreCreate,
     GenreUpdate,
 )
@@ -588,6 +591,136 @@ def delete_tag(tag_id: int, session: Session = Depends(get_session)):
     session.delete(tag)
     session.commit()
     return {"status": "deleted", "id": tag_id}
+
+
+@router.get("/elements")
+def list_elements(
+    workspace_id: Optional[int] = None,
+    session: Session = Depends(get_session),
+):
+    """List all GOODS Elements with attached page counts."""
+    query = select(Element)
+    if workspace_id is not None:
+        query = query.where((Element.workspace_id == workspace_id) | (Element.workspace_id.is_(None)))
+    elements = session.exec(query.order_by(Element.name)).all()
+
+    # Pre-aggregate page counts per element
+    counts_res = session.exec(
+        select(PageElementLink.element_id, func.count(PageElementLink.page_id))
+        .group_by(PageElementLink.element_id)
+    ).all()
+    count_map = {eid: cnt for eid, cnt in counts_res}
+
+    results = []
+    for e in elements:
+        results.append({
+            "id": e.id,
+            "workspace_id": e.workspace_id,
+            "workspace_name": e.workspace.name if e.workspace else None,
+            "workspace_slug": e.workspace.slug if e.workspace else None,
+            "name": e.name,
+            "slug": e.slug,
+            "icon": e.icon,
+            "section": e.section,
+            "notion_id": e.notion_id,
+            "page_count": count_map.get(e.id, 0),
+        })
+    return results
+
+
+@router.post("/elements")
+def create_element(payload: ElementCreate, session: Session = Depends(get_session)):
+    """Create a new element."""
+    slug = payload.slug or slugify(payload.name)
+    existing = session.exec(select(Element).where(Element.slug == slug)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Element with slug '{slug}' already exists")
+    element = Element(
+        name=payload.name,
+        slug=slug,
+        icon=payload.icon or "clothes-button",
+        workspace_id=payload.workspace_id,
+        section=payload.section or "goods",
+        notion_id=payload.notion_id,
+    )
+    session.add(element)
+    session.commit()
+    session.refresh(element)
+    return element
+
+
+@router.put("/elements/{element_id}")
+def update_element(element_id: int, payload: ElementUpdate, session: Session = Depends(get_session)):
+    """Update element properties."""
+    element = session.get(Element, element_id)
+    if not element:
+        raise HTTPException(status_code=404, detail="Element not found")
+    if payload.name is not None:
+        element.name = payload.name
+        if payload.slug is None:
+            element.slug = slugify(payload.name)
+    if payload.slug is not None:
+        element.slug = payload.slug
+    if payload.icon is not None:
+        element.icon = payload.icon
+    if payload.workspace_id is not None:
+        element.workspace_id = payload.workspace_id
+    if payload.section is not None:
+        element.section = payload.section
+    if payload.notion_id is not None:
+        element.notion_id = payload.notion_id
+    session.add(element)
+    session.commit()
+    session.refresh(element)
+    return element
+
+
+@router.post("/elements/bulk-assign")
+def bulk_assign_elements(payload: BulkElementAssignRequest, session: Session = Depends(get_session)):
+    """Assign multiple elements to multiple pages in bulk."""
+    if not payload.page_ids or not payload.element_ids:
+        return {"assigned_count": 0, "pages_affected": 0}
+
+    valid_elements = session.exec(select(Element).where(Element.id.in_(payload.element_ids))).all()
+    valid_element_ids = [e.id for e in valid_elements]
+    if not valid_element_ids:
+        raise HTTPException(status_code=400, detail="No valid element IDs provided")
+
+    assigned_count = 0
+    pages_affected = set()
+
+    for pid in payload.page_ids:
+        page = session.get(Page, pid)
+        if not page:
+            continue
+        existing_eids = {e.id for e in page.elements}
+        for eid in valid_element_ids:
+            if eid not in existing_eids:
+                link = PageElementLink(page_id=pid, element_id=eid)
+                session.add(link)
+                assigned_count += 1
+                pages_affected.add(pid)
+
+    session.commit()
+    return {
+        "status": "success",
+        "assigned_count": assigned_count,
+        "pages_affected": len(pages_affected),
+    }
+
+
+@router.delete("/elements/{element_id}")
+def delete_element(element_id: int, session: Session = Depends(get_session)):
+    """Delete an element and remove its page associations."""
+    element = session.get(Element, element_id)
+    if not element:
+        raise HTTPException(status_code=404, detail="Element not found")
+    links = session.exec(select(PageElementLink).where(PageElementLink.element_id == element_id)).all()
+    for link in links:
+        session.delete(link)
+    session.delete(element)
+    session.commit()
+    return {"status": "deleted", "id": element_id}
 
 
 @router.get("/genres")

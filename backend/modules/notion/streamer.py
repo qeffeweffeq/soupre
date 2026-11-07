@@ -15,7 +15,7 @@ from sqlmodel import Session, select
 from notion_client import Client
 from notion_client.errors import APIResponseError
 
-from database.models import Category, Page, Tag, Types, Workspace
+from database.models import Category, Page, Tag, Types, Workspace, Element
 from modules.notion.client import (
     get_notion_client,
     get_target_db_id,
@@ -88,29 +88,34 @@ def _resolve_item_workspace_slug(item: Any, session: Optional[Session] = None) -
     return "fp"  # default fallback workspace
 
 
-def _resolve_relation_notion_ids(item: Any, session: Optional[Session] = None) -> tuple[Optional[str], Optional[str], list[str]]:
+def _resolve_relation_notion_ids(item: Any, session: Optional[Session] = None) -> tuple[Optional[str], Optional[str], list[str], list[str]]:
     """
-    Resolve Notion IDs for Category, Types, and Tags from session or item dict.
-    Returns (category_notion_id, type_notion_id, tag_notion_ids).
+    Resolve Notion IDs for Category, Types, Tags, and Elements from session or item dict.
+    Returns (category_notion_id, type_notion_id, tag_notion_ids, element_notion_ids).
     """
     cat_notion_id = None
     type_notion_id = None
     tag_notion_ids: list[str] = []
+    element_notion_ids: list[str] = []
 
     if isinstance(item, dict):
         cat_notion_id = item.get("category_notion_id") or item.get("notion_id")
         type_notion_id = item.get("type_notion_id")
         tag_notion_ids = list(item.get("tag_notion_ids") or [])
+        element_notion_ids = list(item.get("element_notion_ids") or [])
         cat_id = item.get("category_id") or item.get("predicted_category_id")
         type_id = item.get("types_id") or item.get("predicted_types_id")
         tag_ids = item.get("tag_ids") or []
+        element_ids = item.get("element_ids") or []
     else:
         cat_notion_id = getattr(item, "category_notion_id", None) or getattr(item, "notion_id", None)
         type_notion_id = getattr(item, "type_notion_id", None)
         tag_notion_ids = list(getattr(item, "tag_notion_ids", []) or [])
+        element_notion_ids = list(getattr(item, "element_notion_ids", []) or [])
         cat_id = getattr(item, "category_id", None)
         type_id = getattr(item, "types_id", None)
         tag_ids = getattr(item, "tag_ids", []) or []
+        element_ids = getattr(item, "element_ids", []) or []
 
     if session:
         if not cat_notion_id and cat_id:
@@ -129,7 +134,13 @@ def _resolve_relation_notion_ids(item: Any, session: Optional[Session] = None) -
                 if tag_obj and tag_obj.notion_id:
                     tag_notion_ids.append(tag_obj.notion_id)
 
-    return cat_notion_id, type_notion_id, tag_notion_ids
+        if not element_notion_ids and element_ids:
+            for eid in element_ids:
+                el_obj = session.get(Element, eid)
+                if el_obj and el_obj.notion_id:
+                    element_notion_ids.append(el_obj.notion_id)
+
+    return cat_notion_id, type_notion_id, tag_notion_ids, element_notion_ids
 
 
 async def stream_batch_to_notion(
@@ -190,7 +201,7 @@ async def stream_batch_to_notion(
             continue
 
         # ── 2. Payload Construction & Mapping ──────────────────────────────
-        cat_notion_id, type_notion_id, tag_notion_ids = _resolve_relation_notion_ids(item, session)
+        cat_notion_id, type_notion_id, tag_notion_ids, element_notion_ids = _resolve_relation_notion_ids(item, session)
 
         if ws_slug in ("qfwfq", "goods"):
             payload = map_goods_payload(
@@ -198,6 +209,7 @@ async def stream_batch_to_notion(
                 category_notion_id=cat_notion_id,
                 type_notion_id=type_notion_id,
                 tag_notion_ids=tag_notion_ids,
+                element_notion_ids=element_notion_ids,
             )
         else:
             payload = map_services_payload(

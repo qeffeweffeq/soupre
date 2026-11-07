@@ -71,6 +71,24 @@ def migrate_db(engine) -> None:
                 PRIMARY KEY (page_id, tag_id)
             )
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS element (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workspace_id INTEGER REFERENCES workspace(id),
+                name TEXT NOT NULL UNIQUE,
+                slug TEXT NOT NULL UNIQUE,
+                icon TEXT DEFAULT 'clothes-button',
+                section TEXT DEFAULT 'goods',
+                notion_id TEXT
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pageelementlink (
+                page_id INTEGER REFERENCES page(id),
+                element_id INTEGER REFERENCES element(id),
+                PRIMARY KEY (page_id, element_id)
+            )
+        """))
         conn.commit()
 
         for table, column, definition in migrations:

@@ -46,6 +46,7 @@ QFWFQ_DATABASES = {
     "pinned": "a2d3d887-0ccc-4c3e-a67d-5a5a00750c5a",
     "trips": "fd7f7270-28b3-41be-a460-94671e024747",
     "type": "689933d7-5077-4f4f-bb2e-8541cd1dcff0",
+    "elements": "41163158-bfa0-8110-9ec1-e4c34e3a9eec",
     "tags": "2208539a-2cae-4e6f-b1a0-7bf00e14ac7a",
     "palace_lido_tags": "16f63158-bfa0-819b-a7ea-e4823cc42c68",
 }
@@ -78,6 +79,7 @@ COSTS_DB_ID = QFWFQ_DATABASES["costs"]
 PINNED_DB_ID = QFWFQ_DATABASES["pinned"]
 TRIPS_DB_ID = QFWFQ_DATABASES["trips"]
 QFWFQ_TYPE_DB_ID = QFWFQ_DATABASES["type"]
+QFWFQ_ELEMENTS_DB_ID = QFWFQ_DATABASES["elements"]
 QFWFQ_TAGS_DB_ID = QFWFQ_DATABASES["tags"]
 QFWFQ_PALACE_LIDO_TAGS_DB_ID = QFWFQ_DATABASES["palace_lido_tags"]
 

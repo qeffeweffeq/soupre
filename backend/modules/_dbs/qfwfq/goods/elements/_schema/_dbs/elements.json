@@ -1,0 +1,62 @@
+{
+  "id": "41163158-bfa0-8110-9ec1-e4c34e3a9eec",
+  "title": "Elements",
+  "url": "https://app.notion.com/p/41163158bfa081109ec1e4c34e3a9eec",
+  "parent": {
+    "type": "page_id",
+    "page_id": "13ed54fa-e11c-4e78-9374-5b93e7c36e15"
+  },
+  "properties": {
+    "Items Relation": {
+      "id": "T%5EfA",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
+        "type": "dual_property",
+        "synced_property_name": "Elements"
+      }
+    },
+    "Items Costs": {
+      "id": "l%3AXV",
+      "name": "Items Costs",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Total",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "\\>}b",
+        "relation_property_id": "T^fA",
+        "function": "sum"
+      }
+    },
+    "Items Count": {
+      "id": "%7CVP%7B",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "T^fA",
+        "function": "count"
+      }
+    },
+    "Total Own": {
+      "id": "%7C%5E%3Fc",
+      "name": "Total Own",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Total Own",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "JnlT",
+        "relation_property_id": "T^fA",
+        "function": "sum"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

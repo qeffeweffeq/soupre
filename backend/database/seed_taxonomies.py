@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from sqlmodel import Session, select, text
 
-from database.models import Category, Types, Tag, Genre, Workspace
+from database.models import Category, Types, Tag, Genre, Workspace, Element
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
     if dbs_dir is None:
         dbs_dir = Path(__file__).resolve().parent.parent / "modules" / "_dbs"
 
-    counts = {"categories": 0, "types": 0, "tags": 0, "genres": 0}
+    counts = {"categories": 0, "types": 0, "tags": 0, "genres": 0, "elements": 0}
 
     # 1. Collect candidate directories for _taxonomies.json
     candidate_dirs = [dbs_dir]
@@ -144,6 +144,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
 
     raw_types: list[str] = []
     raw_genres: list[str] = []
+    raw_elements: list[str] = []
     # Store tuples: (tag_name, ws_slug, section)
     tag_entries: list[tuple[str, str | None, str | None]] = []
 
@@ -189,6 +190,17 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
                             for v in tag_vals.keys():
                                 if isinstance(v, str) and v.strip():
                                     tag_entries.append((v.strip(), ws_slug, sec))
+
+                    for elem_key in ("Elements", "Element", "elements", "element"):
+                        elem_vals = data.get(elem_key, [])
+                        if isinstance(elem_vals, list):
+                            for v in elem_vals:
+                                if isinstance(v, str) and v.strip():
+                                    raw_elements.append(v.strip())
+                        elif isinstance(elem_vals, dict):
+                            for v in elem_vals.keys():
+                                if isinstance(v, str) and v.strip():
+                                    raw_elements.append(v.strip())
             except Exception as e:
                 log.debug(f"Failed parsing {tax_path}: {e}")
 
@@ -344,10 +356,56 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             session.flush()
             counts["genres"] += 1
 
+    # 6. Seed Elements (scoped to Qfwfq / GOODS)
+    icons_path = Path(__file__).resolve().parent.parent / "modules" / "notion" / "element_icons.json"
+    element_icons_map: dict[str, str] = {}
+    if icons_path.is_file():
+        try:
+            element_icons_map = json.loads(icons_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            log.debug(f"Failed to load element icons map: {e}")
+
+    # Combine raw_elements from _taxonomies.json and keys from element_icons_map
+    all_element_names = list(raw_elements) + list(element_icons_map.keys())
+    seen_element_slugs = set()
+    for el_name in all_element_names:
+        el_name = el_name.strip()
+        if not el_name:
+            continue
+        el_slug = slugify(el_name)
+        if el_slug in seen_element_slugs:
+            continue
+        seen_element_slugs.add(el_slug)
+
+        el_icon = element_icons_map.get(el_name, "clothes-button")
+        existing_el = session.exec(select(Element).where(Element.slug == el_slug)).first()
+        if not existing_el:
+            element_obj = Element(
+                name=el_name,
+                slug=el_slug,
+                icon=el_icon,
+                workspace_id=qfwfq_id,
+                section="goods",
+            )
+            session.add(element_obj)
+            session.flush()
+            counts["elements"] += 1
+        else:
+            updated = False
+            if existing_el.workspace_id is None and qfwfq_id is not None:
+                existing_el.workspace_id = qfwfq_id
+                updated = True
+            if existing_el.icon is None and el_icon:
+                existing_el.icon = el_icon
+                updated = True
+            if updated:
+                session.add(existing_el)
+
     session.commit()
     log.info(
         f"Taxonomy seeding complete: +{counts['categories']} Categories, "
-        f"+{counts['types']} Types, +{counts['tags']} Tags, +{counts['genres']} Genres"
+        f"+{counts['types']} Types, +{counts['tags']} Tags, +{counts['genres']} Genres, "
+        f"+{counts['elements']} Elements"
     )
     return counts
 

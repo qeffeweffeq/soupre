@@ -1473,6 +1473,16 @@
         "expression": "if(\n  !empty(prop(\"Old Price\")), \n  round(100 * (\n    (if(!empty(prop(\"Sale\")), prop(\"Sale\"), prop(\"Price\")) - prop(\"Old Price\")) / prop(\"Old Price\")\n  )) / 100, \n  0\n)"
       }
     },
+    "Elements": {
+      "id": "TpM%7D",
+      "name": "Elements",
+      "type": "relation",
+      "relation": {
+        "database_id": "41163158-bfa0-8110-9ec1-e4c34e3a9eec",
+        "type": "dual_property",
+        "synced_property_name": "Items Relation"
+      }
+    },
     "Re-sell": {
       "id": "Waza",
       "name": "Re-sell",

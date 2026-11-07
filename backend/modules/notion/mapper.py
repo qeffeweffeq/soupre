@@ -81,6 +81,7 @@ def map_goods_payload(
     category_notion_id: Optional[str] = None,
     type_notion_id: Optional[str] = None,
     tag_notion_ids: Optional[list[str]] = None,
+    element_notion_ids: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """
     Maps an item to a Notion page properties payload for the Goods / Items DB.
@@ -92,6 +93,7 @@ def map_goods_payload(
       - Price: number or rich_text
       - Description: rich_text (up to 2000 chars)
       - Tags: relation [tag_notion_ids]
+      - Elements: relation [element_notion_ids]
     """
     title_raw = _extract_field(item, "title", "name") or extract_domain(_extract_field(item, "url", "clean_url")) or "Untitled"
     clean_title = clean_notion_title(title_raw, max_len=100)
@@ -130,6 +132,14 @@ def map_goods_payload(
     tag_relations = [{"id": tid} for tid in tags if tid]
     if tag_relations:
         props["Tags"] = {"relation": tag_relations}
+
+    # Elements relation (Goods Elements DB)
+    elements = element_notion_ids or _extract_field(item, "element_notion_ids") or []
+    if isinstance(elements, str):
+        elements = [elements]
+    element_relations = [{"id": eid} for eid in elements if eid]
+    if element_relations:
+        props["Elements"] = {"relation": element_relations}
 
     # Price mapping
     price = _extract_field(item, "price")
@@ -215,11 +225,12 @@ def build_notion_payload(
     category_notion_id: Optional[str] = None,
     type_notion_id: Optional[str] = None,
     tag_notion_ids: Optional[list[str]] = None,
+    element_notion_ids: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """
     Dynamically build a Notion page property payload adapted to the target database's
     properties schema (from no-db-man), automatically mapping Title, URL, Tags,
-    Categories/Roles, Types, Description, Price, and related fields.
+    Elements, Categories/Roles, Types, Description, Price, and related fields.
     """
     from modules.notion.databases import get_database_meta
 
@@ -233,7 +244,7 @@ def build_notion_payload(
         if isinstance(item, dict):
             ws_slug = item.get("workspace_slug") or ws_slug
         if ws_slug in ("qfwfq", "goods"):
-            return map_goods_payload(item, category_notion_id, type_notion_id, tag_notion_ids)
+            return map_goods_payload(item, category_notion_id, type_notion_id, tag_notion_ids, element_notion_ids)
         return map_services_payload(item, category_notion_id, type_notion_id, tag_notion_ids)
 
     url = _extract_field(item, "url", "clean_url")
@@ -303,6 +314,17 @@ def build_notion_payload(
             props["Tags"] = {"relation": tag_relations}
         elif "tag" in props_keys:
             props["Tag"] = {"relation": tag_relations}
+
+    # 6b. Elements (GOODS Elements DB)
+    elements = element_notion_ids or _extract_field(item, "element_notion_ids") or []
+    if isinstance(elements, str):
+        elements = [elements]
+    element_relations = [{"id": eid} for eid in elements if eid]
+    if element_relations:
+        if "elements" in props_keys:
+            props["Elements"] = {"relation": element_relations}
+        elif "element" in props_keys:
+            props["Element"] = {"relation": element_relations}
 
     # 7. Description / Notes / Summary
     desc = _extract_description(item)

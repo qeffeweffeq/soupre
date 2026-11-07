@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
-from database.models import ScrapeJob, Page, Category, Types, Workspace, Tag, PageTagLink
+from database.models import ScrapeJob, Page, Category, Types, Workspace, Tag, PageTagLink, Element, PageElementLink
 from database.session import get_session, engine as default_engine
 from schemas.jobs import (
     JobTaxonomyUpdate,
@@ -159,11 +159,12 @@ async def batch_upload_urls(
             urls=[],
         )
 
-    # Fetch categories, types, tags, and workspaces for smart taxonomy prediction
+    # Fetch categories, types, tags, elements, and workspaces for smart taxonomy prediction
     categories = session.exec(select(Category)).all()
     types_list = session.exec(select(Types)).all()
     workspaces = session.exec(select(Workspace)).all()
     tags = session.exec(select(Tag)).all()
+    elements = session.exec(select(Element)).all()
     ws_by_id = {w.id: w for w in workspaces}
 
     cat_by_name = {c.name.lower(): c for c in categories}
@@ -172,6 +173,8 @@ async def batch_upload_urls(
     type_by_slug = {t.slug.lower(): t for t in types_list}
     tag_by_name = {t.name.lower(): t for t in tags}
     tag_by_slug = {t.slug.lower(): t for t in tags}
+    elem_by_name = {e.name.lower(): e for e in elements}
+    elem_by_slug = {e.slug.lower(): e for e in elements}
 
     FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|espadrillas|scarpe|stivali|sandali|mocassini|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|tela|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags|borsa|borse|shirt|shirts|camicia|maglia|pantalone|pantaloni|giacca|abito|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith|ralphlauren)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
@@ -317,6 +320,26 @@ async def batch_upload_urls(
                 if t.name not in pred_tag_names:
                     pred_tag_names.append(t.name)
 
+        # Smart Element predictions (matching 271 canonical GOODS elements)
+        pred_elem_ids: List[int] = []
+        pred_elem_names: List[str] = []
+        for tok in tokens:
+            el = elem_by_slug.get(tok) or elem_by_name.get(tok)
+            if not el and tok in ("sunglasses", "occhiali", "eyewear"):
+                el = elem_by_slug.get("sunglassess") or elem_by_name.get("sunglassess")
+            if el:
+                if el.id is not None and el.id not in pred_elem_ids:
+                    pred_elem_ids.append(el.id)
+                if el.name not in pred_elem_names:
+                    pred_elem_names.append(el.name)
+        for el in elements:
+            if " " in el.name or "-" in el.name:
+                if el.name.lower() in full_str:
+                    if el.id is not None and el.id not in pred_elem_ids:
+                        pred_elem_ids.append(el.id)
+                    if el.name not in pred_elem_names:
+                        pred_elem_names.append(el.name)
+
         items.append(
             BatchPreviewItem(
                 id=f"url-{idx + 1}",
@@ -339,6 +362,8 @@ async def batch_upload_urls(
                 predicted_types_name=matched_type.name if matched_type else None,
                 tag_ids=pred_tag_ids,
                 predicted_tags=pred_tag_names,
+                element_ids=pred_elem_ids,
+                predicted_elements=pred_elem_names,
                 selected=True,
             )
         )
@@ -553,6 +578,55 @@ def batch_execute_jobs(
                             session.add(PageTagLink(page_id=p.id, tag_id=tid))
                 session.commit()
 
+            # Link elements to existing or pending pages for this job
+            if item.element_ids:
+                target_job = existing if existing else job
+                pages = list(target_job.pages) if target_job.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                if not pages and payload.scrape_mode == "single":
+                    new_page = Page(
+                        job_id=target_job.id,
+                        url=target_url,
+                        clean_url=item.clean_url or target_url,
+                        title="Untitled",
+                        status="pending",
+                        workspace_id=item_ws_id,
+                        category_id=item.category_id,
+                        types_id=item.types_id,
+                    )
+                    session.add(new_page)
+                    session.commit()
+                    session.refresh(new_page)
+                    pages = [new_page]
+
+                for p in pages:
+                    for eid in item.element_ids:
+                        link_exists = session.exec(
+                            select(PageElementLink).where(
+                                (PageElementLink.page_id == p.id) & (PageElementLink.element_id == eid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageElementLink(page_id=p.id, element_id=eid))
+                session.commit()
+
+            # Link elements to existing pages for this job
+            if item.element_ids:
+                pages = list(existing.pages) if existing.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                for p in pages:
+                    for eid in item.element_ids:
+                        link_exists = session.exec(
+                            select(PageElementLink).where(
+                                (PageElementLink.page_id == p.id) & (PageElementLink.element_id == eid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageElementLink(page_id=p.id, element_id=eid))
+                session.commit()
+
             background_tasks.add_task(
                 _dispatch_run_job,
                 existing.id,
@@ -614,6 +688,39 @@ def batch_execute_jobs(
                         ).first()
                         if not link_exists:
                             session.add(PageTagLink(page_id=p.id, tag_id=tid))
+                session.commit()
+
+            # Link elements to existing or pending pages for this job
+            if item.element_ids:
+                target_job = existing if existing else job
+                pages = list(target_job.pages) if target_job.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                if not pages and payload.scrape_mode == "single":
+                    new_page = Page(
+                        job_id=target_job.id,
+                        url=target_url,
+                        clean_url=item.clean_url or target_url,
+                        title="Untitled",
+                        status="pending",
+                        workspace_id=item_ws_id,
+                        category_id=item.category_id,
+                        types_id=item.types_id,
+                    )
+                    session.add(new_page)
+                    session.commit()
+                    session.refresh(new_page)
+                    pages = [new_page]
+
+                for p in pages:
+                    for eid in item.element_ids:
+                        link_exists = session.exec(
+                            select(PageElementLink).where(
+                                (PageElementLink.page_id == p.id) & (PageElementLink.element_id == eid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageElementLink(page_id=p.id, element_id=eid))
                 session.commit()
 
             background_tasks.add_task(
@@ -695,6 +802,55 @@ def create_job(
                         ).first()
                         if not link_exists:
                             session.add(PageTagLink(page_id=p.id, tag_id=tid))
+                session.commit()
+
+            # Link elements to existing or pending pages for this job
+            if item.element_ids:
+                target_job = existing if existing else job
+                pages = list(target_job.pages) if target_job.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                if not pages and payload.scrape_mode == "single":
+                    new_page = Page(
+                        job_id=target_job.id,
+                        url=target_url,
+                        clean_url=item.clean_url or target_url,
+                        title="Untitled",
+                        status="pending",
+                        workspace_id=item_ws_id,
+                        category_id=item.category_id,
+                        types_id=item.types_id,
+                    )
+                    session.add(new_page)
+                    session.commit()
+                    session.refresh(new_page)
+                    pages = [new_page]
+
+                for p in pages:
+                    for eid in item.element_ids:
+                        link_exists = session.exec(
+                            select(PageElementLink).where(
+                                (PageElementLink.page_id == p.id) & (PageElementLink.element_id == eid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageElementLink(page_id=p.id, element_id=eid))
+                session.commit()
+
+            # Link elements to existing pages for this job
+            if item.element_ids:
+                pages = list(existing.pages) if existing.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                for p in pages:
+                    for eid in item.element_ids:
+                        link_exists = session.exec(
+                            select(PageElementLink).where(
+                                (PageElementLink.page_id == p.id) & (PageElementLink.element_id == eid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageElementLink(page_id=p.id, element_id=eid))
                 session.commit()
 
             background_tasks.add_task(

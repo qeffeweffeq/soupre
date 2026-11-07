@@ -75,6 +75,29 @@ class BulkTagAssignRequest(BaseModel):
     tag_ids: List[int]
 
 
+class ElementCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
+    icon: Optional[str] = "clothes-button"
+    workspace_id: Optional[int] = None
+    section: Optional[str] = "goods"
+    notion_id: Optional[str] = None
+
+
+class ElementUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    icon: Optional[str] = None
+    workspace_id: Optional[int] = None
+    section: Optional[str] = None
+    notion_id: Optional[str] = None
+
+
+class BulkElementAssignRequest(BaseModel):
+    page_ids: List[int]
+    element_ids: List[int]
+
+
 class GenreCreate(BaseModel):
     name: str
     slug: Optional[str] = None
@@ -91,3 +114,4 @@ class PageTaxonomyUpdate(BaseModel):
     types_id: Optional[int] = None
     genre_id: Optional[int] = None
     tag_ids: Optional[List[int]] = None
+    element_ids: Optional[List[int]] = None

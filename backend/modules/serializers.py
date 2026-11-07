@@ -80,6 +80,20 @@ def serialize_page_enriched(page: Page, job: Optional[ScrapeJob] = None) -> dict
         }
         for t in page.tags
     ] if page.tags else []
+    data["element_names"] = [e.name for e in page.elements] if page.elements else []
+    data["element_ids"] = [e.id for e in page.elements] if page.elements else []
+    data["elements"] = [
+        {
+            "id": e.id,
+            "name": e.name,
+            "slug": e.slug,
+            "icon": e.icon,
+            "workspace_id": e.workspace_id,
+            "section": e.section,
+            "notion_id": e.notion_id,
+        }
+        for e in page.elements
+    ] if page.elements else []
     data["scraped_at"] = scraped_at
     data["is_untitled"] = is_page_untitled_fast(page)
     return data

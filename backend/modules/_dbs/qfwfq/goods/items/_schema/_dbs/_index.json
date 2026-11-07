@@ -1,20 +1,20 @@
 [
   {
-    "id": "15863158-bfa0-800a-8e34-e6462c16d17a",
-    "title": "Shops",
-    "url": "https://app.notion.com/p/15863158bfa0800a8e34e6462c16d17a",
-    "parent": {
-      "type": "block_id",
-      "block_id": "1dd63158-bfa0-8059-b503-f0f678afd7a4"
-    }
-  },
-  {
     "id": "e74f045a-24ba-4f4e-acbc-1917636efaab",
     "title": "Items",
     "url": "https://app.notion.com/p/e74f045a24ba4f4eacbc1917636efaab",
     "parent": {
       "type": "block_id",
       "block_id": "1dd63158-bfa0-800f-ac13-c15867e2a591"
+    }
+  },
+  {
+    "id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+    "title": "Shops",
+    "url": "https://app.notion.com/p/15863158bfa0800a8e34e6462c16d17a",
+    "parent": {
+      "type": "block_id",
+      "block_id": "1dd63158-bfa0-8059-b503-f0f678afd7a4"
     }
   },
   {

@@ -16,6 +16,7 @@ class Workspace(SQLModel, table=True):
     jobs: List["ScrapeJob"] = Relationship(back_populates="workspace")
     pages: List["Page"] = Relationship(back_populates="workspace")
     tags: List["Tag"] = Relationship(back_populates="workspace")
+    elements: List["Element"] = Relationship(back_populates="workspace")
 
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -55,6 +56,22 @@ class Tag(SQLModel, table=True):
 
     workspace: Optional[Workspace] = Relationship(back_populates="tags")
     pages: List["Page"] = Relationship(back_populates="tags", link_model=PageTagLink)
+
+class PageElementLink(SQLModel, table=True):
+    page_id: Optional[int] = Field(default=None, foreign_key="page.id", primary_key=True)
+    element_id: Optional[int] = Field(default=None, foreign_key="element.id", primary_key=True)
+
+class Element(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: Optional[int] = Field(default=None, foreign_key="workspace.id", index=True)
+    name: str = Field(unique=True, index=True)
+    slug: str = Field(unique=True, index=True)
+    icon: Optional[str] = Field(default="clothes-button")
+    section: Optional[str] = Field(default="goods", index=True)
+    notion_id: Optional[str] = None
+
+    workspace: Optional[Workspace] = Relationship(back_populates="elements")
+    pages: List["Page"] = Relationship(back_populates="elements", link_model=PageElementLink)
 
 class Genre(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -115,6 +132,7 @@ class Page(SQLModel, table=True):
     types_rel: Optional[Types] = Relationship(back_populates="pages")
     genre: Optional[Genre] = Relationship(back_populates="pages")
     tags: List[Tag] = Relationship(back_populates="pages", link_model=PageTagLink)
+    elements: List[Element] = Relationship(back_populates="pages", link_model=PageElementLink)
 
     # Classification Metadata
     categorization_source: str = Field(default="dual_hybrid")  # jev | embedding | consensus | manual
