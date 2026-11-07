@@ -168,7 +168,7 @@ async def batch_upload_urls(
     tag_by_name = {t.name.lower(): t for t in tags}
     tag_by_slug = {t.slug.lower(): t for t in tags}
 
-    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags)\b", re.I)
+    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags|shirt|shirts|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
     HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
     TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
@@ -191,11 +191,11 @@ async def batch_upload_urls(
         matched_cat = None
         matched_type = None
 
-        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma"))):
+        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma", "paulsmith", "paul-smith"))):
             matched_cat = cat_by_name.get("street") or cat_by_slug.get("street")
             if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet)\b", full_str, re.I):
                 matched_type = type_by_name.get("accessories") or type_by_slug.get("accessories")
-            elif re.search(r"\b(jeans|denim|trousers|pants|chino|apparel|clothing|cotton|velvet|pleats|jacket|coat|dress|skirt)\b", full_str, re.I):
+            elif re.search(r"\b(jeans|denim|trousers|pants|chino|apparel|clothing|cotton|velvet|pleats|jacket|coat|dress|skirt|shirt|shirts|tee|t-shirt|polo|hoodie|sweater|knitwear|knit|socks|suit|blazer)\b", full_str, re.I):
                 matched_type = type_by_name.get("apparel") or type_by_slug.get("apparel")
             elif re.search(r"\b(shop|store|boutique)\b", full_str, re.I):
                 matched_type = type_by_name.get("shop") or type_by_slug.get("shop")

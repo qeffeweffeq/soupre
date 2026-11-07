@@ -205,3 +205,41 @@ def test_sitemap_mode_auto_routes_to_full_site_workspace(client):
         assert job is not None
         assert job.workspace_id == full_site_id
         assert job.scrape_mode == "sitemap"
+
+
+def test_unclassified_url_remains_unassigned_and_paulsmith_predicts_street_apparel(client):
+    with Session(test_engine) as session:
+        ws_goods = Workspace(name="Qfwfq", slug="qfwfq")
+        session.add(ws_goods)
+        session.flush()
+
+        cat = Category(name="Street", slug="street", section="goods", workspace_id=ws_goods.id)
+        session.add(cat)
+        session.flush()
+
+        t = Types(name="Apparel", slug="apparel", category_id=cat.id)
+        session.add(t)
+        session.commit()
+        goods_ws_id = ws_goods.id
+
+    raw_text = """
+    https://www.paulsmith.com/eu/river-collage-viscose-blend-shirt
+    https://totally-unclassified-domain.xyz/random/unknown/path-123
+    """
+
+    res = client.post("/api/jobs/batch-upload", json={"raw_text": raw_text, "filename": "test.txt"})
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["items"]) == 2
+
+    paul_item = data["items"][0]
+    assert paul_item["predicted_category_name"] == "Street"
+    assert paul_item["predicted_types_name"] == "Apparel"
+    assert paul_item["workspace_id"] == goods_ws_id
+
+    unclassified_item = data["items"][1]
+    assert unclassified_item["predicted_category_name"] is None
+    assert unclassified_item["predicted_types_name"] is None
+    # Crucial assertion: unclassified item is None (Unassigned), never forced to Full-Site
+    assert unclassified_item["workspace_id"] is None
+
