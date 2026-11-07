@@ -30,7 +30,36 @@ class BatchPreviewItem(BaseModel):
     predicted_types_name: Optional[str] = None
     tag_ids: List[int] = []
     predicted_tags: List[str] = []
+    url_status: Optional[str] = None
+    url_status_code: Optional[int] = None
+    url_status_label: Optional[str] = None
+    final_url: Optional[str] = None
+    use_raw_url: bool = False
     selected: bool = True
+
+
+class UrlVerifyInput(BaseModel):
+    id: str
+    raw_url: str
+    clean_url: str
+    has_stripped_params: bool = False
+
+
+class UrlVerifyResult(BaseModel):
+    id: str
+    url_status: str
+    url_status_code: Optional[int] = None
+    url_status_label: str
+    final_url: Optional[str] = None
+    use_raw_url: bool = False
+
+
+class BatchVerifyUrlsRequest(BaseModel):
+    items: List[UrlVerifyInput]
+
+
+class BatchVerifyUrlsResponse(BaseModel):
+    results: List[UrlVerifyResult]
 
 
 class BatchPreviewResponse(BaseModel):

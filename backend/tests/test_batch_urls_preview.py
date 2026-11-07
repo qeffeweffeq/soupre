@@ -243,3 +243,61 @@ def test_unclassified_url_remains_unassigned_and_paulsmith_predicts_street_appar
     # Crucial assertion: unclassified item is None (Unassigned), never forced to Full-Site
     assert unclassified_item["workspace_id"] is None
 
+
+def test_batch_verify_urls_detects_404_and_homepage_redirect_with_raw_fallback(client, monkeypatch):
+    import routers.jobs as jobs_router
+
+    async def fake_probe(http_client, target_url: str):
+        if target_url == "https://www.ralphlauren.it/it/espadrillas-cameryn-iii-in-tela-123":
+            return True, "Redirected to Homepage", 200, "https://www.ralphlauren.it/it"
+        if target_url == "https://www.ralphlauren.it/it/espadrillas-cameryn-iii-in-tela-123?dwvar=valid":
+            return True, "404 Not Found", 404, target_url
+        if target_url == "https://example.shop/item/abc":
+            return True, "404 Not Found", 404, target_url
+        if target_url == "https://example.shop/item/abc?sku=999":
+            return False, "OK", 200, target_url
+        return False, "OK", 200, target_url
+
+    monkeypatch.setattr(jobs_router, "_probe_url_reachability", fake_probe)
+
+    payload = {
+        "items": [
+            {
+                "id": "url-1",
+                "raw_url": "https://www.ralphlauren.it/it/espadrillas-cameryn-iii-in-tela-123?dwvar=valid",
+                "clean_url": "https://www.ralphlauren.it/it/espadrillas-cameryn-iii-in-tela-123",
+                "has_stripped_params": True,
+            },
+            {
+                "id": "url-2",
+                "raw_url": "https://example.shop/item/abc?sku=999",
+                "clean_url": "https://example.shop/item/abc",
+                "has_stripped_params": True,
+            },
+            {
+                "id": "url-3",
+                "raw_url": "https://www.paulsmith.com/eu/river-collage-viscose-blend-shirt",
+                "clean_url": "https://www.paulsmith.com/eu/river-collage-viscose-blend-shirt",
+                "has_stripped_params": False,
+            },
+        ]
+    }
+
+    res = client.post("/api/jobs/batch-verify-urls", json=payload)
+    assert res.status_code == 200
+    results = {r["id"]: r for r in res.json()["results"]}
+
+    # url-1: both clean_url (redirect to homepage) and raw_url (404) failed -> Page / Item Not Found
+    assert results["url-1"]["url_status"] == "not_found"
+    assert "Page / Item Not Found" in results["url-1"]["url_status_label"]
+    assert results["url-1"]["use_raw_url"] is False
+
+    # url-2: clean_url returned 404, but raw_url with params succeeded -> params_required
+    assert results["url-2"]["url_status"] == "params_required"
+    assert results["url-2"]["use_raw_url"] is True
+
+    # url-3: clean_url is live -> ok
+    assert results["url-3"]["url_status"] == "ok"
+    assert results["url-3"]["use_raw_url"] is False
+
+

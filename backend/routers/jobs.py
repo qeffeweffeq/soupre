@@ -5,6 +5,7 @@ import asyncio
 import logging
 from typing import Optional, List
 from urllib.parse import urlparse
+import httpx
 
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
@@ -18,6 +19,10 @@ from schemas.jobs import (
     BatchPreviewResponse,
     BatchCuratedItem,
     BatchExecuteRequest,
+    UrlVerifyInput,
+    UrlVerifyResult,
+    BatchVerifyUrlsRequest,
+    BatchVerifyUrlsResponse,
 )
 from modules.serializers import serialize_job_enriched, serialize_page_enriched
 from modules.config import DOWNLOADS_DIR, PROJECT_ROOT
@@ -168,7 +173,7 @@ async def batch_upload_urls(
     tag_by_name = {t.name.lower(): t for t in tags}
     tag_by_slug = {t.slug.lower(): t for t in tags}
 
-    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags|shirt|shirts|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith)\b", re.I)
+    FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|espadrillas|scarpe|stivali|sandali|mocassini|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|tela|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags|borsa|borse|shirt|shirts|camicia|maglia|pantalone|pantaloni|giacca|abito|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith|ralphlauren)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
     HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
     TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
@@ -191,11 +196,11 @@ async def batch_upload_urls(
         matched_cat = None
         matched_type = None
 
-        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma", "paulsmith", "paul-smith"))):
+        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma", "paulsmith", "paul-smith", "ralphlauren"))):
             matched_cat = cat_by_name.get("street") or cat_by_slug.get("street")
-            if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet)\b", full_str, re.I):
+            if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet|borsa|borse|bag|bags)\b", full_str, re.I):
                 matched_type = type_by_name.get("accessories") or type_by_slug.get("accessories")
-            elif re.search(r"\b(jeans|denim|trousers|pants|chino|apparel|clothing|cotton|velvet|pleats|jacket|coat|dress|skirt|shirt|shirts|tee|t-shirt|polo|hoodie|sweater|knitwear|knit|socks|suit|blazer)\b", full_str, re.I):
+            elif re.search(r"\b(jeans|denim|trousers|pants|pantalone|pantaloni|chino|apparel|clothing|cotton|tela|velvet|pleats|jacket|giacca|coat|dress|abito|skirt|shirt|shirts|camicia|maglia|tee|t-shirt|polo|hoodie|sweater|knitwear|knit|socks|suit|blazer|espadrillas|scarpe|shoes|sneakers|stivali|sandali|mocassini)\b", full_str, re.I):
                 matched_type = type_by_name.get("apparel") or type_by_slug.get("apparel")
             elif re.search(r"\b(shop|store|boutique)\b", full_str, re.I):
                 matched_type = type_by_name.get("shop") or type_by_slug.get("shop")
@@ -344,6 +349,143 @@ async def batch_upload_urls(
         items=items,
         urls=urls,
     )
+
+
+_LOCALE_ROOT_RE = re.compile(
+    r"^/(?:[a-z]{2}(?:-[a-z]{2})?|eu|uk|us|int|global)(?:/(?:home|index(?:\.html?)?)?)?/?$",
+    re.I,
+)
+_ERROR_PATH_RE = re.compile(
+    r"(?:/|^)(?:404|not-found|notfound|page-not-found|pagenotfound|error|item-not-found)(?:/|\.html?|$)",
+    re.I,
+)
+
+
+def _is_deep_content_path(path: str) -> bool:
+    norm = (path or "/").strip()
+    if norm in ("", "/", "/index.html", "/index.htm", "/home"):
+        return False
+    if _LOCALE_ROOT_RE.match(norm):
+        return False
+    return True
+
+
+def _detect_redirect_to_home_or_404(orig_url: str, final_url: str, status_code: int) -> tuple[bool, str]:
+    """
+    Returns (is_bad, reason_label) if the URL returned 404/410 or redirected from a deep
+    item/page URL to the site homepage, locale root, or a 404 error page.
+    """
+    if status_code in (404, 410):
+        return True, f"{status_code} Not Found"
+
+    orig_parsed = urlparse(orig_url)
+    final_parsed = urlparse(final_url)
+    orig_path = orig_parsed.path or "/"
+    final_path = final_parsed.path or "/"
+
+    if _ERROR_PATH_RE.search(final_path) or "404" in (final_parsed.query or ""):
+        return True, "Redirected to 404"
+
+    if _is_deep_content_path(orig_path):
+        norm_final = final_path.rstrip("/") or "/"
+        if norm_final in ("/", "/home", "/index.html", "/index.htm") or _LOCALE_ROOT_RE.match(final_path):
+            return True, "Redirected to Homepage"
+
+    return False, "OK"
+
+
+async def _probe_url_reachability(
+    client: httpx.AsyncClient, target_url: str
+) -> tuple[bool, str, Optional[int], Optional[str]]:
+    """
+    Probe a single URL and return (is_bad, reason_label, status_code, final_url).
+    """
+    try:
+        resp = await client.get(target_url, follow_redirects=True)
+        final_url = str(resp.url)
+        status_code = resp.status_code
+        is_bad, reason = _detect_redirect_to_home_or_404(target_url, final_url, status_code)
+        return is_bad, reason, status_code, final_url
+    except Exception as exc:
+        logging.debug(f"URL probe exception for {target_url}: {exc}")
+        return False, "Unverified", None, None
+
+
+async def _verify_single_url_item(
+    client: httpx.AsyncClient, item: UrlVerifyInput, sem: asyncio.Semaphore
+) -> UrlVerifyResult:
+    async with sem:
+        is_bad_clean, reason_clean, code_clean, final_clean = await _probe_url_reachability(
+            client, item.clean_url
+        )
+        if not is_bad_clean:
+            return UrlVerifyResult(
+                id=item.id,
+                url_status="ok",
+                url_status_code=code_clean,
+                url_status_label="Live URL",
+                final_url=final_clean,
+                use_raw_url=False,
+            )
+
+        # Clean URL returned 404 or redirected to homepage/404.
+        # Double-check original parameterized URL if parameters were stripped!
+        if item.has_stripped_params and item.raw_url and item.raw_url != item.clean_url:
+            is_bad_raw, reason_raw, code_raw, final_raw = await _probe_url_reachability(
+                client, item.raw_url
+            )
+            if not is_bad_raw:
+                return UrlVerifyResult(
+                    id=item.id,
+                    url_status="params_required",
+                    url_status_code=code_raw,
+                    url_status_label=f"Params Required (Clean URL {reason_clean})",
+                    final_url=final_raw,
+                    use_raw_url=True,
+                )
+            return UrlVerifyResult(
+                id=item.id,
+                url_status="not_found",
+                url_status_code=code_raw or code_clean,
+                url_status_label=f"Page / Item Not Found ({reason_raw})",
+                final_url=final_raw or final_clean,
+                use_raw_url=False,
+            )
+
+        return UrlVerifyResult(
+            id=item.id,
+            url_status="not_found",
+            url_status_code=code_clean,
+            url_status_label=f"Page / Item Not Found ({reason_clean})",
+            final_url=final_clean,
+            use_raw_url=False,
+        )
+
+
+@router.post("/batch-verify-urls", response_model=BatchVerifyUrlsResponse)
+async def batch_verify_urls(payload: BatchVerifyUrlsRequest):
+    """
+    Verify batch URLs for 404 Not Found or Homepage Redirects.
+    If a stripped clean_url returns 404 or redirects to homepage, double-checks the original
+    parameterized raw_url before marking as 'not_found' (Page / Item Not Found) vs 'params_required'.
+    """
+    if not payload.items:
+        return BatchVerifyUrlsResponse(results=[])
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    }
+    sem = asyncio.Semaphore(8)
+    async with httpx.AsyncClient(headers=headers, timeout=6.0, verify=False) as client:
+        tasks = [_verify_single_url_item(client, item, sem) for item in payload.items]
+        results = await asyncio.gather(*tasks)
+
+    return BatchVerifyUrlsResponse(results=list(results))
 
 
 @router.post("/batch-execute")
