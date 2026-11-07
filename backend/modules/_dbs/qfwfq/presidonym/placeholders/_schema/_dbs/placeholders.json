@@ -1,0 +1,34 @@
+{
+  "id": "40963158-bfa0-8085-b7dd-ec4b64a9c289",
+  "title": "Placeholders",
+  "url": "https://app.notion.com/p/40963158bfa08085b7ddec4b64a9c289",
+  "parent": {
+    "type": "block_id",
+    "block_id": "40963158-bfa0-80ea-bb09-f95388e7e837"
+  },
+  "properties": {
+    "Placeholder": {
+      "id": "iZdv",
+      "name": "Placeholder",
+      "type": "formula",
+      "formula": {
+        "expression": "\"{{ \" + prop(\"Placeholder Value\") + \" }}\""
+      }
+    },
+    "Presidonym": {
+      "id": "~Hje",
+      "name": "Presidonym",
+      "type": "relation",
+      "relation": {
+        "database_id": "40963158-bfa0-8071-a395-e86990248ee1",
+        "type": "dual_property",
+        "synced_property_name": "Placeholder"
+      }
+    },
+    "Placeholder Value": {
+      "id": "title",
+      "name": "Placeholder Value",
+      "type": "title"
+    }
+  }
+}

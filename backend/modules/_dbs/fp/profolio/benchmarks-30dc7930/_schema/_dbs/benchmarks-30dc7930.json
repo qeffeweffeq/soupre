@@ -1,0 +1,116 @@
+{
+  "id": "30dc7930-1516-8159-b637-d355e5e1ffa9",
+  "title": "Benchmarks",
+  "url": "https://app.notion.com/p/30dc793015168159b637d355e5e1ffa9",
+  "parent": {
+    "type": "page_id",
+    "page_id": "30dc7930-1516-8152-b11c-f4f0c8bc284d"
+  },
+  "properties": {
+    "IG Followers": {
+      "id": "%3At%3BT",
+      "name": "IG Followers",
+      "type": "number"
+    },
+    "IG Bio": {
+      "id": "%3DghH",
+      "name": "IG Bio",
+      "type": "rich_text"
+    },
+    "IG Context": {
+      "id": "%3F_%3D%5E",
+      "name": "IG Context",
+      "type": "rich_text"
+    },
+    "IG Following": {
+      "id": "Ao%3DA",
+      "name": "IG Following",
+      "type": "number"
+    },
+    "Web": {
+      "id": "BjR%7C",
+      "name": "Web",
+      "type": "url"
+    },
+    "Type": {
+      "id": "DP%5E%5C",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "30dc7930-1516-8107-84ca-f2dbe2c886e9",
+        "type": "dual_property",
+        "synced_property_name": "Benchmarks Relation"
+      }
+    },
+    "Pk": {
+      "id": "I%40c%7C",
+      "name": "Pk",
+      "type": "number"
+    },
+    "FB Url": {
+      "id": "JOJs",
+      "name": "FB Url",
+      "type": "url"
+    },
+    "FB Page Id": {
+      "id": "KqD%3B",
+      "name": "FB Page Id",
+      "type": "number"
+    },
+    "IG Username": {
+      "id": "PX%40%3D",
+      "name": "IG Username",
+      "type": "rich_text"
+    },
+    "YT Url": {
+      "id": "XbDO",
+      "name": "YT Url",
+      "type": "url"
+    },
+    "Created ": {
+      "id": "Xgvx",
+      "name": "Created ",
+      "type": "created_time"
+    },
+    "Rank": {
+      "id": "%5C%7BJS",
+      "name": "Rank",
+      "type": "number"
+    },
+    "IG Picture Id": {
+      "id": "%5D%3EWz",
+      "name": "IG Picture Id",
+      "type": "rich_text"
+    },
+    "IG Followers Mutual": {
+      "id": "pI%3DZ",
+      "name": "IG Followers Mutual",
+      "type": "number"
+    },
+    "Export Date": {
+      "id": "uWWd",
+      "name": "Export Date",
+      "type": "date"
+    },
+    "Notes": {
+      "id": "v%7CGX",
+      "name": "Notes",
+      "type": "rich_text"
+    },
+    "IG Posts": {
+      "id": "%7Cwkl",
+      "name": "IG Posts",
+      "type": "number"
+    },
+    "IG Url": {
+      "id": "%7DwAB",
+      "name": "IG Url",
+      "type": "url"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

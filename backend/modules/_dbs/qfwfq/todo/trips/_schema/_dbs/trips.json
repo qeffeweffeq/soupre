@@ -1,0 +1,66 @@
+{
+  "id": "fd7f7270-28b3-41be-a460-94671e024747",
+  "title": "Trips",
+  "url": "https://app.notion.com/p/fd7f727028b341bea46094671e024747",
+  "parent": {
+    "type": "block_id",
+    "block_id": "0d4a11da-834d-4551-a626-4929c50d1b4b"
+  },
+  "properties": {
+    "URL": {
+      "id": "Fnew",
+      "name": "URL",
+      "type": "url"
+    },
+    "Archive": {
+      "id": "GG%3Dv",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Created time": {
+      "id": "Wa_%7C",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Date": {
+      "id": "Y%3C%60%5E",
+      "name": "Date",
+      "type": "date"
+    },
+    "Type": {
+      "id": "ZQha",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8136-896e-f9602ddca411",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Done": {
+      "id": "%5B%60%5B%3F",
+      "name": "Done",
+      "type": "checkbox"
+    },
+    "Master Category": {
+      "id": "iEG%5B",
+      "name": "Master Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "40a63158-bfa0-81fb-8298-cd2dcba285c6",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Location": {
+      "id": "o%3ATE",
+      "name": "Location",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "40963158-bfa0-8071-a395-e86990248ee1",
+  "title": "Values",
+  "url": "https://app.notion.com/p/40963158bfa08071a395e86990248ee1",
+  "parent": {
+    "type": "block_id",
+    "block_id": "40963158-bfa0-801d-9933-d3a2d4fabfa7"
+  },
+  "properties": {
+    "Archive": {
+      "id": "Q%7BHx",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Final Placeholder": {
+      "id": "dr%7CI",
+      "name": "Final Placeholder",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Placeholder",
+        "relation_property_name": "Placeholder",
+        "rollup_property_id": "iZdv",
+        "relation_property_id": "dwxQ",
+        "function": "show_original"
+      }
+    },
+    "Placeholder": {
+      "id": "dwxQ",
+      "name": "Placeholder",
+      "type": "relation",
+      "relation": {
+        "database_id": "40963158-bfa0-8085-b7dd-ec4b64a9c289",
+        "type": "dual_property",
+        "synced_property_name": "Presidonym"
+      }
+    },
+    "Enable": {
+      "id": "%7BNia",
+      "name": "Enable",
+      "type": "checkbox"
+    },
+    "Value": {
+      "id": "title",
+      "name": "Value",
+      "type": "title"
+    }
+  }
+}

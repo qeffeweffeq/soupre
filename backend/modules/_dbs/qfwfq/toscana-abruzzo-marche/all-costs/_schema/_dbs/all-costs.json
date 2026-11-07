@@ -1,0 +1,65 @@
+{
+  "id": "168158fb-90a4-48a5-aed9-2f4c531b9d62",
+  "title": "All Costs",
+  "url": "https://app.notion.com/p/168158fb90a448a5aed92f4c531b9d62",
+  "parent": {
+    "type": "page_id",
+    "page_id": "dd3d44f1-cb54-4b07-a567-69450642351a"
+  },
+  "properties": {
+    "Person": {
+      "id": "Lt%3CC",
+      "name": "Person",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Fab",
+          "id": "bad461ac-9f4b-49c0-ba87-670fd232459e",
+          "color": "blue"
+        },
+        {
+          "name": "Schecs",
+          "id": "9446c458-de44-4275-b71e-b2689199dbed",
+          "color": "pink"
+        }
+      ]
+    },
+    "Type": {
+      "id": "dALk",
+      "name": "Type",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Food",
+          "id": "78691930-3ad1-4b9d-9dfa-3e1a01c8102d",
+          "color": "green"
+        },
+        {
+          "name": "Car",
+          "id": "b3c4c20a-7af6-436f-8c8e-ef0000ac9292",
+          "color": "default"
+        },
+        {
+          "name": "Hotel",
+          "id": "71be59b8-deb7-4ba5-8885-36b1deea48aa",
+          "color": "pink"
+        }
+      ]
+    },
+    "Date": {
+      "id": "eioP",
+      "name": "Date",
+      "type": "date"
+    },
+    "Value": {
+      "id": "p%5DZ%7D",
+      "name": "Value",
+      "type": "number"
+    },
+    "Obj": {
+      "id": "title",
+      "name": "Obj",
+      "type": "title"
+    }
+  }
+}

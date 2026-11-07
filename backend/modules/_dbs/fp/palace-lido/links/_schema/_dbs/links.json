@@ -1,0 +1,203 @@
+{
+  "id": "94ef0233-fa38-4dc7-80d3-f9d37d03aaed",
+  "title": "Links",
+  "url": "https://app.notion.com/p/94ef0233fa384dc780d3f9d37d03aaed",
+  "parent": {
+    "type": "block_id",
+    "block_id": "5bd5f838-514e-428c-82e6-af4c22af7987"
+  },
+  "properties": {
+    "WEB": {
+      "id": "%3BEN%3A",
+      "name": "WEB",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Title",
+        "relation_property_name": "WEB Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "}aWd",
+        "function": "count"
+      }
+    },
+    "Sitelinks Relation": {
+      "id": "%3Ee%3EH",
+      "name": "Sitelinks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "10aaf09c-1e80-40fc-b71f-548e86fc4122",
+        "type": "dual_property",
+        "synced_property_name": "Link"
+      }
+    },
+    "Market": {
+      "id": "%40x%5D%60",
+      "name": "Market",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80a0-953c-e4d667789c9b",
+        "type": "dual_property",
+        "synced_property_name": "Links Relation"
+      }
+    },
+    "Contents Relation": {
+      "id": "AZ%3CC",
+      "name": "Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "6bdabb53-d224-4a02-b91b-6f0bf4b8588d",
+        "type": "dual_property",
+        "synced_property_name": "Link"
+      }
+    },
+    "Created time": {
+      "id": "AgYG",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Parent Slug": {
+      "id": "FscT",
+      "name": "Parent Slug",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Custom Slug",
+        "relation_property_name": "Page Parent",
+        "rollup_property_id": "N{x_",
+        "relation_property_id": "Wl[w",
+        "function": "show_original"
+      }
+    },
+    "Sitelinks": {
+      "id": "IpUC",
+      "name": "Sitelinks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Sitelink",
+        "relation_property_name": "Sitelinks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": ">e>H",
+        "function": "count"
+      }
+    },
+    "Ranking": {
+      "id": "KSdw",
+      "name": "Ranking",
+      "type": "number"
+    },
+    "ADS": {
+      "id": "NwjL",
+      "name": "ADS",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Ad",
+        "relation_property_name": "Ads Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "nSem",
+        "function": "count"
+      }
+    },
+    "Custom Slug": {
+      "id": "N%7Bx_",
+      "name": "Custom Slug",
+      "type": "rich_text"
+    },
+    "Custom URL Value": {
+      "id": "R%3Ey%5C",
+      "name": "Custom URL Value",
+      "type": "url"
+    },
+    "Page Parent": {
+      "id": "Wl%5Bw",
+      "name": "Page Parent",
+      "type": "relation",
+      "relation": {
+        "database_id": "94ef0233-fa38-4dc7-80d3-f9d37d03aaed",
+        "type": "dual_property",
+        "synced_property_name": "Related URLS"
+      }
+    },
+    "Related URLS": {
+      "id": "arJe",
+      "name": "Related URLS",
+      "type": "relation",
+      "relation": {
+        "database_id": "94ef0233-fa38-4dc7-80d3-f9d37d03aaed",
+        "type": "dual_property",
+        "synced_property_name": "Page Parent"
+      }
+    },
+    "Contents": {
+      "id": "d%5EMI",
+      "name": "Contents",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Content",
+        "relation_property_name": "Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "AZ<C",
+        "function": "count"
+      }
+    },
+    "URL": {
+      "id": "jlOF",
+      "name": "URL",
+      "type": "formula",
+      "formula": {
+        "expression": "let(\n  /* 1a. Extract: Get the raw path based on properties */\n  raw_path, ifs(\n    !empty(prop(\"Custom Slug\")), prop(\"Custom Slug\"),\n    !empty(prop(\"Parent Slug\")), prop(\"Parent Slug\") + \"/\" + prop(\"Page Slug\"),\n    prop(\"Page Slug\")\n  ),\n  \n  /* 1b. Transform: If the path contains 'homepage', make it blank */\n  path_str, if(test(lower(raw_path), \"homepage\"), \"\", raw_path),\n  \n  /* 2. Extract & Transform: Define the Market Prefix */\n  market_prefix, ifs(\n    format(prop(\"Market\")) == \"DEU\", \"/de\",\n    format(prop(\"Market\")) == \"INT\", \"/en\",\n    \"\"\n  ),\n  \n  /* 3. Load: Construct the Generated Friendly URL */\n  /* Ensures no trailing slash is left if the path_str is blank */\n  friendly_url, \"palacelidosuites.com\" + market_prefix + if(empty(path_str), \"\", \"/\" + path_str),\n  \n  /* 4. Final Output Logic: Evaluate Overrides */\n  ifs(\n    prop(\"Custom URL\"), prop(\"Custom URL Value\"),\n    \"https://\" + friendly_url\n  )\n)\n\t"
+      }
+    },
+    "Path": {
+      "id": "maBi",
+      "name": "Path",
+      "type": "formula",
+      "formula": {
+        "expression": "let(\n  generatedSlug,\n  ifs(\n    and(empty(prop(\"Parent Slug\")), empty(prop(\"Custom Slug\"))), prop(\"Page Slug\"),\n    and(!empty(prop(\"Parent Slug\")), empty(prop(\"Custom Slug\"))), prop(\"Parent Slug\") + \"/\" + prop(\"Page Slug\"),\n    !empty(prop(\"Custom Slug\")), prop(\"Custom Slug\")\n  ),\n  if(test(generatedSlug, \"homepage\"), \"\", generatedSlug)\n)"
+      }
+    },
+    "Ads Relation": {
+      "id": "nSem",
+      "name": "Ads Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "f5fa8a2f-810b-47a3-b381-e4c7e6d68b3d",
+        "type": "dual_property",
+        "synced_property_name": "Link"
+      }
+    },
+    "Custom URL": {
+      "id": "pI%3CN",
+      "name": "Custom URL",
+      "type": "checkbox"
+    },
+    "Friendly URL": {
+      "id": "rRWo",
+      "name": "Friendly URL",
+      "type": "formula",
+      "formula": {
+        "expression": "let(\n  /* Define the base domain and market routing once */\n  base_url, \"palacelidosuites.com\" + ifs(\n    format(prop(\"Market\")) == \"DEU\", \"/de\", \n    format(prop(\"Market\")) == \"INT\", \"/en\", \n    \"\"\n  ),\n  \n  /* Output logic */\n  ifs(\n    prop(\"Custom URL\"), \"\", \n    base_url + \"/\" + prop(\"Path\")\n  )\n)"
+      }
+    },
+    "Page Slug": {
+      "id": "%7D%3A%3BZ",
+      "name": "Page Slug",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"Page Name\")), \"\", lower(replaceAll(replaceAll(replaceAll(replaceAll(prop(\"Page Name\"), \"—\", \" \"), \"–\", \" \"), \" \", \"-\"), \"[^a-zA-Z0-9-]\", \"\")))"
+      }
+    },
+    "WEB Relation": {
+      "id": "%7DaWd",
+      "name": "WEB Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "dual_property",
+        "synced_property_name": "Page URL"
+      }
+    },
+    "Page Name": {
+      "id": "title",
+      "name": "Page Name",
+      "type": "title"
+    }
+  }
+}

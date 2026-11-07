@@ -1,0 +1,70 @@
+{
+  "id": "8807c77f-4d17-4566-af0c-4389540a8a02",
+  "title": "All Costs",
+  "url": "https://app.notion.com/p/8807c77f4d174566af0c4389540a8a02",
+  "parent": {
+    "type": "page_id",
+    "page_id": "436aba4a-afec-4838-a40d-a2755848b30e"
+  },
+  "properties": {
+    "Person": {
+      "id": "Lt%3CC",
+      "name": "Person",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Fab",
+          "id": "bad461ac-9f4b-49c0-ba87-670fd232459e",
+          "color": "blue"
+        },
+        {
+          "name": "Schecs",
+          "id": "9446c458-de44-4275-b71e-b2689199dbed",
+          "color": "pink"
+        },
+        {
+          "name": "Adam & Emma",
+          "id": "610f08ba-c48b-478c-a880-2207f74886b0",
+          "color": "purple"
+        }
+      ]
+    },
+    "Type": {
+      "id": "dALk",
+      "name": "Type",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "Couple",
+          "id": "ZM}:",
+          "color": "red"
+        },
+        {
+          "name": "Group",
+          "id": "999b678e-3d66-4cc4-8d6a-ac01663174a9",
+          "color": "orange"
+        },
+        {
+          "name": "Personal",
+          "id": "dbd34d4e-cd23-486e-ba35-ddc4937ef8cc",
+          "color": "green"
+        }
+      ]
+    },
+    "Date": {
+      "id": "eioP",
+      "name": "Date",
+      "type": "date"
+    },
+    "Value": {
+      "id": "p%5DZ%7D",
+      "name": "Value",
+      "type": "number"
+    },
+    "Obj": {
+      "id": "title",
+      "name": "Obj",
+      "type": "title"
+    }
+  }
+}

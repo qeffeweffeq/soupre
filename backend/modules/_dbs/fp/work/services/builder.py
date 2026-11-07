@@ -42,16 +42,16 @@ def build_update_payload(
     # Handle dead links (404, 403, 503, DNS error, timeout) or parked domains
     if scraped.get("status_code") in (404, 403, 503) or scraped.get("dead_link") or scraped.get("is_blank") or scraped.get("is_parked"):
         properties["Name"] = {"title": [{"text": {"content": cleaned_name}}]}
-
+        
         if "Archive" in page.get("properties", {}):
             properties["Archive"] = {"checkbox": True}
-
+        
         if "TBP-U" in page.get("properties", {}):
             properties["TBP-U"] = {"checkbox": False}
-
+            
         if "Not Autofilled" in page.get("properties", {}):
             properties["Not Autofilled"] = {"checkbox": True}
-
+        
         if scraped.get("status_code") != 404:
             # Maybe add a "Closed" or "Error" tag if available
             closed_tag_id = relation_maps.get("tags", {}).get("closed")
@@ -60,7 +60,7 @@ def build_update_payload(
                 if not any(t.get("id") == closed_tag_id for t in existing_tags):
                     existing_tags.append({"id": closed_tag_id})
                     properties["Tags"] = {"relation": existing_tags}
-
+                    
         result["properties"] = properties
         return result
 
@@ -155,7 +155,7 @@ def build_update_payload(
     # Flags
     if "TBP-U" in page.get("properties", {}):
         properties["TBP-U"] = {"checkbox": False}
-
+        
     if "Autofilled" in page.get("properties", {}):
         properties["Autofilled"] = {"checkbox": True}
 

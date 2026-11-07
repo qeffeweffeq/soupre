@@ -35,10 +35,10 @@ def _get_web_url(page: dict) -> str | None:
     url = web_prop.get("url")
     if not url:
         return None
-
+        
     if not url.startswith(("http://", "https://")):
         url = "http://" + url
-
+        
     parsed = urlparse(url)
     if parsed.netloc:
         return f"{parsed.scheme}://{parsed.netloc}/"
@@ -96,7 +96,7 @@ def _fetch_relation_maps(client, db_ctx) -> dict:
     Returns {relation_key: {lowercase_name: page_id}}.
     """
     maps = {}
-
+    
     for rel_key, rel_db_id in db_ctx.relations.items():
         if rel_db_id and rel_db_id != "dummy_id_for_dry_run":
             log.info(f"  Loading {rel_key.title()} relation map …")
@@ -104,7 +104,7 @@ def _fetch_relation_maps(client, db_ctx) -> dict:
             log.info(f"  → {len(maps[rel_key])} {rel_key}(s)")
         else:
             maps[rel_key] = {}
-
+            
     return maps
 
 def run(
@@ -132,7 +132,7 @@ def run(
                 log.error(f"Configuration error: {exc2}")
                 return
             ctx = WorkspaceContext(workspace="FP", client=client, database=resolved)
-
+            
     db_id = ctx.database.db_id
     if not db_id:
         log.error("NOTION_SERVICES_DB_ID not set in .env — aborting.")
@@ -206,13 +206,13 @@ def run(
 
             display_name = "(untitled)" if is_untitled else cleaned_name
             log.info(f"{prefix} 🔍  Scraping {display_name[:40]:<40} │ {web_url}")
-
+            
             scraped = scrape_website(
-                web_url,
-                browser,
+                web_url, 
+                browser, 
                 cleaned_name="" if is_untitled else cleaned_name
             )
-
+            
             if scraped and not scraped.get("is_parked") and not scraped.get("is_blank") and not scraped.get("dead_link") and scraped.get("status_code") not in (403, 404, 503):
                 # Sanitize name and extract field/topic from page_title if not already present
                 if scraped.get("page_title"):
@@ -230,10 +230,10 @@ def run(
                     s for s in (cleaned_name, short_about or "", scraped.get("page_title") or "", scraped.get("about") or "") if s
                 )
                 body_text = scraped.get("body_text", "")
-
+                
                 roles_inferred = infer_roles(primary_text, body_text)
                 types_inferred = infer_types(primary_text, body_text)
-
+                
                 tags_map = relation_maps.get("tags", {})
                 tags_inferred = infer_tags(primary_text, available_tags=tags_map, body_text=body_text)
 

@@ -1,0 +1,36 @@
+{
+  "id": "30dc7930-1516-81c8-aed9-f4efae3da26e",
+  "title": "PL Globs",
+  "url": "https://app.notion.com/p/30dc7930151681c8aed9f4efae3da26e",
+  "parent": {
+    "type": "block_id",
+    "block_id": "30dc7930-1516-81a0-8685-e457f1c2dad0"
+  },
+  "properties": {
+    "Rank": {
+      "id": "%3C%3Ap%7D",
+      "name": "Rank",
+      "type": "number"
+    },
+    "Description EN": {
+      "id": "%3Ez%3AM",
+      "name": "Description EN",
+      "type": "rich_text"
+    },
+    "Description DE": {
+      "id": "FHrv",
+      "name": "Description DE",
+      "type": "rich_text"
+    },
+    "Description IT": {
+      "id": "~c_C",
+      "name": "Description IT",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

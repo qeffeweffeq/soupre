@@ -16,6 +16,7 @@ from schemas.taxonomies import (
     TypesUpdate,
     TagCreate,
     TagUpdate,
+    BulkTagAssignRequest,
     GenreCreate,
     GenreUpdate,
 )
@@ -468,8 +469,36 @@ def delete_types(types_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/tags")
-def list_tags(session: Session = Depends(get_session)):
-    return session.exec(select(Tag).order_by(Tag.name)).all()
+def list_tags(
+    workspace_id: Optional[int] = None,
+    session: Session = Depends(get_session),
+):
+    query = select(Tag)
+    if workspace_id is not None:
+        query = query.where((Tag.workspace_id == workspace_id) | (Tag.workspace_id.is_(None)))
+    tags = session.exec(query.order_by(Tag.name)).all()
+
+    # Pre-aggregate page counts per tag
+    counts_res = session.exec(
+        select(PageTagLink.tag_id, func.count(PageTagLink.page_id))
+        .group_by(PageTagLink.tag_id)
+    ).all()
+    count_map = {tid: cnt for tid, cnt in counts_res}
+
+    results = []
+    for t in tags:
+        results.append({
+            "id": t.id,
+            "workspace_id": t.workspace_id,
+            "workspace_name": t.workspace.name if t.workspace else None,
+            "workspace_slug": t.workspace.slug if t.workspace else None,
+            "name": t.name,
+            "slug": t.slug,
+            "section": t.section,
+            "notion_id": t.notion_id,
+            "page_count": count_map.get(t.id, 0),
+        })
+    return results
 
 
 @router.post("/tags")
@@ -481,6 +510,8 @@ def create_tag(payload: TagCreate, session: Session = Depends(get_session)):
     tag = Tag(
         name=payload.name,
         slug=slug,
+        workspace_id=payload.workspace_id,
+        section=payload.section,
         notion_id=payload.notion_id,
     )
     session.add(tag)
@@ -500,12 +531,50 @@ def update_tag(tag_id: int, payload: TagUpdate, session: Session = Depends(get_s
             tag.slug = slugify(payload.name)
     if payload.slug is not None:
         tag.slug = payload.slug
+    if payload.workspace_id is not None:
+        tag.workspace_id = payload.workspace_id
+    if payload.section is not None:
+        tag.section = payload.section
     if payload.notion_id is not None:
         tag.notion_id = payload.notion_id
     session.add(tag)
     session.commit()
     session.refresh(tag)
     return tag
+
+
+@router.post("/tags/bulk-assign")
+def bulk_assign_tags(payload: BulkTagAssignRequest, session: Session = Depends(get_session)):
+    """Assign a list of tag IDs to a list of page IDs."""
+    if not payload.page_ids or not payload.tag_ids:
+        return {"assigned_count": 0, "pages_affected": 0}
+
+    valid_tags = session.exec(select(Tag).where(Tag.id.in_(payload.tag_ids))).all()
+    valid_tag_ids = [t.id for t in valid_tags]
+    if not valid_tag_ids:
+        raise HTTPException(status_code=400, detail="No valid tag IDs provided")
+
+    assigned_count = 0
+    pages_affected = set()
+
+    for pid in payload.page_ids:
+        page = session.get(Page, pid)
+        if not page:
+            continue
+        existing_tids = {t.id for t in page.tags}
+        for tid in valid_tag_ids:
+            if tid not in existing_tids:
+                link = PageTagLink(page_id=pid, tag_id=tid)
+                session.add(link)
+                assigned_count += 1
+                pages_affected.add(pid)
+
+    session.commit()
+    return {
+        "status": "success",
+        "assigned_count": assigned_count,
+        "pages_affected": len(pages_affected),
+    }
 
 
 @router.delete("/tags/{tag_id}")

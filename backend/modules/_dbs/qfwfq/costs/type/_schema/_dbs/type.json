@@ -1,0 +1,75 @@
+{
+  "id": "16f63158-bfa0-8136-896e-f9602ddca411",
+  "title": "Type",
+  "url": "https://app.notion.com/p/16f63158bfa08136896ef9602ddca411",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-80f1-9cc0-f63df5d39bd0"
+  },
+  "properties": {
+    "Categories": {
+      "id": "%3ASVv",
+      "name": "Categories",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-816e-af04-d25f821a9d84",
+        "type": "dual_property",
+        "synced_property_name": "Types"
+      }
+    },
+    "Costs Relation": {
+      "id": "%3Aq%60%5B",
+      "name": "Costs Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Types"
+      }
+    },
+    "Total Cost": {
+      "id": "%5Bpx%3E",
+      "name": "Total Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": ":q`[",
+        "function": "sum"
+      }
+    },
+    "Last edited time": {
+      "id": "g%3AOP",
+      "name": "Last edited time",
+      "type": "last_edited_time"
+    },
+    "Dates": {
+      "id": "kPuq",
+      "name": "Dates",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Date",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "a[|`",
+        "relation_property_id": ":q`[",
+        "function": "show_original"
+      }
+    },
+    "Pinned Relation": {
+      "id": "o~pC",
+      "name": "Pinned Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "a2d3d887-0ccc-4c3e-a67d-5a5a00750c5a",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

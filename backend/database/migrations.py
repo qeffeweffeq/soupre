@@ -37,9 +37,11 @@ def migrate_db(engine) -> None:
         ("scrapejob", "types_id",                  "INTEGER REFERENCES types(id)"),
         ("scrapejob", "workspace_id",              "INTEGER REFERENCES workspace(id)"),
         ("page",      "workspace_id",              "INTEGER REFERENCES workspace(id)"),
+        ("tag",       "workspace_id",              "INTEGER REFERENCES workspace(id)"),
+        ("tag",       "section",                   "TEXT"),
     ]
     with engine.connect() as conn:
-        # Ensure workspace table exists
+        # Ensure workspace, tag, and pagetaglink tables exist
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS workspace (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +52,23 @@ def migrate_db(engine) -> None:
                 description TEXT,
                 notion_id TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tag (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workspace_id INTEGER REFERENCES workspace(id),
+                name TEXT NOT NULL UNIQUE,
+                slug TEXT NOT NULL UNIQUE,
+                section TEXT,
+                notion_id TEXT
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pagetaglink (
+                page_id INTEGER REFERENCES page(id),
+                tag_id INTEGER REFERENCES tag(id),
+                PRIMARY KEY (page_id, tag_id)
             )
         """))
         conn.commit()

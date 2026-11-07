@@ -1,0 +1,269 @@
+{
+  "id": "135c7930-1516-80bd-a01a-caf39772ec29",
+  "title": "Website",
+  "url": "https://app.notion.com/p/135c7930151680bda01acaf39772ec29",
+  "parent": {
+    "type": "block_id",
+    "block_id": "62bcb9b4-0609-4e36-90b2-35e418c7c050"
+  },
+  "properties": {
+    "MT Max Length": {
+      "id": "%3CHr_",
+      "name": "MT Max Length",
+      "type": "formula",
+      "formula": {
+        "expression": "if(length(prop(\"Meta Title\")) <= 0, \"\", if(length(prop(\"Meta Title\")) > 60, \"🟠 +\"+(length(prop(\"Meta Title\")) - 60), \"🟢 Ok\"))"
+      }
+    },
+    "Market": {
+      "id": "DSRm",
+      "name": "Market",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80a0-953c-e4d667789c9b",
+        "type": "dual_property",
+        "synced_property_name": "Web Contents Relation"
+      }
+    },
+    "Meta Description": {
+      "id": "HCaE",
+      "name": "Meta Description",
+      "type": "rich_text"
+    },
+    "Page Child": {
+      "id": "HqH%3D",
+      "name": "Page Child",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "dual_property",
+        "synced_property_name": "Page Parent"
+      }
+    },
+    "Menu List": {
+      "id": "Ik%3Ed",
+      "name": "Menu List",
+      "type": "rich_text"
+    },
+    "Page URL": {
+      "id": "K%3CjG",
+      "name": "Page URL",
+      "type": "relation",
+      "relation": {
+        "database_id": "94ef0233-fa38-4dc7-80d3-f9d37d03aaed",
+        "type": "dual_property",
+        "synced_property_name": "WEB Relation"
+      }
+    },
+    "MD Max Length": {
+      "id": "L%3EW%5C",
+      "name": "MD Max Length",
+      "type": "formula",
+      "formula": {
+        "expression": "if(length(prop(\"Meta Description\")) <= 0, \"\", if(length(prop(\"Meta Description\")) > 160, \"🟠 +\"+(length(prop(\"Meta Description\")) - 160), \"🟢 Ok\"))"
+      }
+    },
+    "Meta Title": {
+      "id": "Omyw",
+      "name": "Meta Title",
+      "type": "formula",
+      "formula": {
+        "expression": "if(contains(prop(\"Slug\"), \"homepage\"), if(!empty(prop(\"Title\")), \"Palace Lido Hotel & Suites – \" + prop(\"Title\"), \"\"), if(!empty(prop(\"Title\")), prop(\"Title\")+ \" – Palace Lido Hotel & Suites\", \"\"))"
+      }
+    },
+    "Ranking": {
+      "id": "PG~d",
+      "name": "Ranking",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Ranking",
+        "relation_property_name": "Page URL",
+        "rollup_property_id": "KSdw",
+        "relation_property_id": "K<jG",
+        "function": "show_original"
+      }
+    },
+    "Tags": {
+      "id": "Q%5E%5Da",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "2db0bbd3-cccc-43b0-a394-dffbb37d05e5",
+        "type": "dual_property",
+        "synced_property_name": "Web Contents Relation"
+      }
+    },
+    "Keyphrase": {
+      "id": "Rywv",
+      "name": "Keyphrase",
+      "type": "rich_text"
+    },
+    "MT Length": {
+      "id": "U%40ov",
+      "name": "MT Length",
+      "type": "formula",
+      "formula": {
+        "expression": "length(prop(\"Meta Title\"))"
+      }
+    },
+    "MD Length": {
+      "id": "VOaC",
+      "name": "MD Length",
+      "type": "formula",
+      "formula": {
+        "expression": "length(prop(\"Meta Description\"))"
+      }
+    },
+    "Breadcrumb Title": {
+      "id": "XOTv",
+      "name": "Breadcrumb Title",
+      "type": "rich_text"
+    },
+    "URL": {
+      "id": "%5CPF%3F",
+      "name": "URL",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Friendly URL",
+        "relation_property_name": "Page URL",
+        "rollup_property_id": "rRWo",
+        "relation_property_id": "K<jG",
+        "function": "show_original"
+      }
+    },
+    "Menu Item": {
+      "id": "_pzh",
+      "name": "Menu Item",
+      "type": "rich_text"
+    },
+    "Slug": {
+      "id": "cC%7Cq",
+      "name": "Slug",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Page Slug",
+        "relation_property_name": "Page URL",
+        "rollup_property_id": "}:;Z",
+        "relation_property_id": "K<jG",
+        "function": "show_original"
+      }
+    },
+    "Status": {
+      "id": "jy%3Df",
+      "name": "Status",
+      "type": "status",
+      "options": [
+        {
+          "id": "88b6c731-3a5c-4709-9df1-7e99d249c8eb",
+          "name": "Not started",
+          "color": "default",
+          "description": null
+        },
+        {
+          "id": "7de84d8c-16e8-419d-9158-d9f68db8993c",
+          "name": "In progress",
+          "color": "yellow",
+          "description": null
+        },
+        {
+          "id": "epA:",
+          "name": "review",
+          "color": "pink",
+          "description": null
+        },
+        {
+          "id": "mm:J",
+          "name": "Publish",
+          "color": "blue",
+          "description": null
+        },
+        {
+          "id": "67a840a1-e38d-4449-81fb-b37106727495",
+          "name": "Online",
+          "color": "green",
+          "description": null
+        }
+      ],
+      "groups": [
+        {
+          "id": "df2758fa-12aa-4b81-9109-9823cc4b54f7",
+          "name": "To-do",
+          "color": "gray",
+          "option_ids": [
+            "88b6c731-3a5c-4709-9df1-7e99d249c8eb"
+          ]
+        },
+        {
+          "id": "7d58ecb8-a3e1-468c-9ca0-43e8ff6c6f5c",
+          "name": "In progress",
+          "color": "blue",
+          "option_ids": [
+            "epA:",
+            "7de84d8c-16e8-419d-9158-d9f68db8993c"
+          ]
+        },
+        {
+          "id": "76328158-684f-46cf-9e6f-b63b125dd1b0",
+          "name": "Complete",
+          "color": "green",
+          "option_ids": [
+            "mm:J",
+            "67a840a1-e38d-4449-81fb-b37106727495"
+          ]
+        }
+      ]
+    },
+    "Page Parent": {
+      "id": "rDm%3C",
+      "name": "Page Parent",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "dual_property",
+        "synced_property_name": "Page Child"
+      }
+    },
+    "Excerpt": {
+      "id": "vQDv",
+      "name": "Excerpt",
+      "type": "rich_text"
+    },
+    "Media": {
+      "id": "wlo%5B",
+      "name": "Media",
+      "type": "relation",
+      "relation": {
+        "database_id": "fa29eb81-8ac4-4c64-858f-018a70844124",
+        "type": "dual_property",
+        "synced_property_name": "WEB Contents"
+      }
+    },
+    "Post Type": {
+      "id": "xjE%5D",
+      "name": "Post Type",
+      "type": "select",
+      "options": [
+        {
+          "name": "Pages",
+          "id": "0a1d7b6e-c1de-4de2-9353-bc974005d349",
+          "color": "default"
+        },
+        {
+          "name": "Experiences",
+          "id": "10949204-e7c2-42b8-8b7a-d49be2c617e2",
+          "color": "default"
+        },
+        {
+          "name": "Rooms & Suites",
+          "id": "a9507270-2481-45b9-8cef-6646130f5f8b",
+          "color": "default"
+        }
+      ]
+    },
+    "Title": {
+      "id": "title",
+      "name": "Title",
+      "type": "title"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "id": "16f63158-bfa0-8162-a414-d31933111ce3",
+  "title": "Events",
+  "url": "https://app.notion.com/p/16f63158bfa08162a414d31933111ce3",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-80d8-9fad-f1cb7b5a9a2d"
+  },
+  "properties": {
+    "Cost": {
+      "id": "DvAF",
+      "name": "Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "All Costs",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "sYyR",
+        "function": "sum"
+      }
+    },
+    "Date": {
+      "id": "cy%5Bd",
+      "name": "Date",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Date",
+        "relation_property_name": "All Costs",
+        "rollup_property_id": "a[|`",
+        "relation_property_id": "sYyR",
+        "function": "earliest_date"
+      }
+    },
+    "All Costs": {
+      "id": "sYyR",
+      "name": "All Costs",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Events"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

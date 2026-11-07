@@ -1,0 +1,110 @@
+[
+  {
+    "id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+    "title": "Services",
+    "url": "https://app.notion.com/p/11ac79301516807eb685d3fee70ae00d",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  },
+  {
+    "id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+    "title": "Tasks",
+    "url": "https://app.notion.com/p/ff00c9ec0fea4dee80fa41f98fb90843",
+    "parent": {
+      "type": "block_id",
+      "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+    }
+  },
+  {
+    "id": "698e1856-1639-446f-a079-133039fcee99",
+    "title": "Projects",
+    "url": "https://app.notion.com/p/698e18561639446fa079133039fcee99",
+    "parent": {
+      "type": "block_id",
+      "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+    }
+  },
+  {
+    "id": "82c85401-8ace-4dce-ac71-cd0869c56d08",
+    "title": "Clients",
+    "url": "https://app.notion.com/p/82c854018ace4dceac71cd0869c56d08",
+    "parent": {
+      "type": "block_id",
+      "block_id": "15af8c3b-a9f4-4eff-8273-cf3604e1ab38"
+    }
+  },
+  {
+    "id": "43750c98-df82-4272-983e-9bcc8865f95a",
+    "title": "Personas",
+    "url": "https://app.notion.com/p/43750c98df824272983e9bcc8865f95a",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  },
+  {
+    "id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
+    "title": "Services",
+    "url": "https://app.notion.com/p/349c793015168084ab11e8be6b8cbb63",
+    "parent": {
+      "type": "block_id",
+      "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+    }
+  },
+  {
+    "id": "5d385941-868a-4ab5-9f53-036221133911",
+    "title": "Prompt Templates",
+    "url": "https://app.notion.com/p/5d385941868a4ab59f53036221133911",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  },
+  {
+    "id": "370c7930-1516-8093-9efd-ecaffbe41e9a",
+    "title": "RegEx",
+    "url": "https://app.notion.com/p/370c7930151680939efdecaffbe41e9a",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  },
+  {
+    "id": "349c7930-1516-8016-81e9-c090de61013f",
+    "title": "Plans",
+    "url": "https://app.notion.com/p/349c79301516801681e9c090de61013f",
+    "parent": {
+      "type": "block_id",
+      "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+    }
+  },
+  {
+    "id": "349c7930-1516-80cb-953d-de340b29691b",
+    "title": "Types",
+    "url": "https://app.notion.com/p/349c7930151680cb953dde340b29691b",
+    "parent": {
+      "type": "block_id",
+      "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+    }
+  },
+  {
+    "id": "107c7930-1516-8029-ad49-c7fe2997070c",
+    "title": "Documents, Proposals & Reports",
+    "url": "https://app.notion.com/p/107c793015168029ad49c7fe2997070c",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  },
+  {
+    "id": "e546796f-824f-4079-adc5-c04d4953d39e",
+    "title": "Notes",
+    "url": "https://app.notion.com/p/e546796f824f4079adc5c04d4953d39e",
+    "parent": {
+      "type": "block_id",
+      "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
+    }
+  }
+]

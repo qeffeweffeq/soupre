@@ -1,0 +1,69 @@
+{
+  "id": "e82e6761-dcc4-4050-a5ca-02fcdb688936",
+  "title": "Profiles",
+  "url": "https://app.notion.com/p/e82e6761dcc44050a5ca02fcdb688936",
+  "parent": {
+    "type": "block_id",
+    "block_id": "62bcb9b4-0609-4e36-90b2-35e418c7c050"
+  },
+  "properties": {
+    "Tags": {
+      "id": "%3FQdS",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "2db0bbd3-cccc-43b0-a394-dffbb37d05e5",
+        "type": "dual_property",
+        "synced_property_name": "Profiles"
+      }
+    },
+    "Copy": {
+      "id": "D%3EV%40",
+      "name": "Copy",
+      "type": "rich_text"
+    },
+    "Markets": {
+      "id": "FkXx",
+      "name": "Markets",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80a0-953c-e4d667789c9b",
+        "type": "dual_property",
+        "synced_property_name": "Profile"
+      }
+    },
+    "Archive": {
+      "id": "Hq%3Dm",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Length": {
+      "id": "IflR",
+      "name": "Length",
+      "type": "formula",
+      "formula": {
+        "expression": "length(prop(\"Copy\"))"
+      }
+    },
+    "Channels": {
+      "id": "%7C_z%3A",
+      "name": "Channels",
+      "type": "relation",
+      "relation": {
+        "database_id": "3717f6c7-2fc1-4393-84dd-462294d8172b",
+        "type": "dual_property",
+        "synced_property_name": "Proflies"
+      }
+    },
+    "Approved": {
+      "id": "%7DCOT",
+      "name": "Approved",
+      "type": "checkbox"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

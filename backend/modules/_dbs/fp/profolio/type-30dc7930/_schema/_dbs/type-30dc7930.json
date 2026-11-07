@@ -1,0 +1,46 @@
+{
+  "id": "30dc7930-1516-8107-84ca-f2dbe2c886e9",
+  "title": "Type",
+  "url": "https://app.notion.com/p/30dc79301516810784caf2dbe2c886e9",
+  "parent": {
+    "type": "page_id",
+    "page_id": "30dc7930-1516-8152-b11c-f4f0c8bc284d"
+  },
+  "properties": {
+    "Benchmarks": {
+      "id": "%3Cl%5Cb",
+      "name": "Benchmarks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Benchmarks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "FGR]",
+        "function": "count"
+      }
+    },
+    "Meta": {
+      "id": "CWaA",
+      "name": "Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "\"👀  \" + prop(\"Benchmarks\")"
+      }
+    },
+    "Benchmarks Relation": {
+      "id": "FGR%5D",
+      "name": "Benchmarks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "30dc7930-1516-8159-b637-d355e5e1ffa9",
+        "type": "dual_property",
+        "synced_property_name": "Type"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "1e4c7930-1516-8018-91f2-e595b2e4acb6",
+  "title": "Tags",
+  "url": "https://app.notion.com/p/1e4c79301516801891f2e595b2e4acb6",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1e4c7930-1516-800a-95f1-d31b39f5cc21"
+  },
+  "properties": {
+    "Items Count": {
+      "id": "C%3BTm",
+      "name": "Items Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Items Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "s<RF",
+        "function": "count"
+      }
+    },
+    "Items Relation": {
+      "id": "s%3CRF",
+      "name": "Items Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "1e4c7930-1516-8017-96f4-f3b45212d497",
+        "type": "dual_property",
+        "synced_property_name": "Tags"
+      }
+    },
+    "Tag": {
+      "id": "title",
+      "name": "Tag",
+      "type": "title"
+    }
+  }
+}

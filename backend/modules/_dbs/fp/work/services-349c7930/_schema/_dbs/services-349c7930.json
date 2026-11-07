@@ -1,0 +1,129 @@
+{
+  "id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
+  "title": "Services",
+  "url": "https://app.notion.com/p/349c793015168084ab11e8be6b8cbb63",
+  "parent": {
+    "type": "block_id",
+    "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+  },
+  "properties": {
+    "Description": {
+      "id": "%3CBy%3F",
+      "name": "Description",
+      "type": "rich_text"
+    },
+    "Provider ": {
+      "id": "%40SzG",
+      "name": "Provider ",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "type": "dual_property",
+        "synced_property_name": "Web Services"
+      }
+    },
+    "Frequency": {
+      "id": "Bel%7C",
+      "name": "Frequency",
+      "type": "select",
+      "options": [
+        {
+          "name": "Monthly",
+          "id": "918c3705-c10c-4e61-9aaf-231637ed43e8",
+          "color": "default"
+        },
+        {
+          "name": "Annually",
+          "id": "b7fa1eb3-1a58-4bef-aedb-46f0fb43a466",
+          "color": "default"
+        }
+      ]
+    },
+    "Annual Price": {
+      "id": "Fm%3Db",
+      "name": "Annual Price",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Frequency\") == \"Monthly\", prop(\"Final Price\") * 12, prop(\"Final Price\"))"
+      }
+    },
+    "Quota #2": {
+      "id": "PFAK",
+      "name": "Quota #2",
+      "type": "rich_text"
+    },
+    "Final Price": {
+      "id": "SV%3CV",
+      "name": "Final Price",
+      "type": "formula",
+      "formula": {
+        "expression": "if(and(prop(\"Cost\") > 0, prop(\"Markup\")> 0), prop(\"Cost\") * (1 + prop(\"Markup\")), 0)"
+      }
+    },
+    "Quota #1": {
+      "id": "%5Bn%5EY",
+      "name": "Quota #1",
+      "type": "rich_text"
+    },
+    "Plan": {
+      "id": "_%5Bch",
+      "name": "Plan",
+      "type": "relation",
+      "relation": {
+        "database_id": "349c7930-1516-8016-81e9-c090de61013f",
+        "type": "dual_property",
+        "synced_property_name": "Web Services"
+      }
+    },
+    "Quota Type #2": {
+      "id": "dDMN",
+      "name": "Quota Type #2",
+      "type": "rich_text"
+    },
+    "Cost": {
+      "id": "eLln",
+      "name": "Cost",
+      "type": "number"
+    },
+    "Markup": {
+      "id": "enIK",
+      "name": "Markup",
+      "type": "number"
+    },
+    "Quota Type #1": {
+      "id": "eyM%5D",
+      "name": "Quota Type #1",
+      "type": "rich_text"
+    },
+    "URL": {
+      "id": "iskJ",
+      "name": "URL",
+      "type": "url"
+    },
+    "Quota #3": {
+      "id": "pSO%5D",
+      "name": "Quota #3",
+      "type": "rich_text"
+    },
+    "Type": {
+      "id": "uv%3AZ",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "349c7930-1516-80cb-953d-de340b29691b",
+        "type": "dual_property",
+        "synced_property_name": "Web Services"
+      }
+    },
+    "Quota Type #3": {
+      "id": "%7CcNz",
+      "name": "Quota Type #3",
+      "type": "rich_text"
+    },
+    "Service": {
+      "id": "title",
+      "name": "Service",
+      "type": "title"
+    }
+  }
+}

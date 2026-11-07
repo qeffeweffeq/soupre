@@ -1,0 +1,309 @@
+{
+  "id": "fa29eb81-8ac4-4c64-858f-018a70844124",
+  "title": "Media",
+  "url": "https://app.notion.com/p/fa29eb818ac44c64858f018a70844124",
+  "parent": {
+    "type": "block_id",
+    "block_id": "135c7930-1516-8027-9972-f48fc47ab98b"
+  },
+  "properties": {
+    "Tags": {
+      "id": "%3Be%3Fp",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "2db0bbd3-cccc-43b0-a394-dffbb37d05e5",
+        "type": "dual_property",
+        "synced_property_name": "Media Contents Relation"
+      }
+    },
+    "Final Dir": {
+      "id": "%3DL_W",
+      "name": "Final Dir",
+      "type": "relation",
+      "relation": {
+        "database_id": "14d44388-b391-48ba-9478-28b0f2cfb87c",
+        "type": "dual_property",
+        "synced_property_name": "Final Dir Contents"
+      }
+    },
+    "Source": {
+      "id": "%3ESDS",
+      "name": "Source",
+      "type": "relation",
+      "relation": {
+        "database_id": "0393624c-7481-4a37-8515-b50d8ccd9ac3",
+        "type": "dual_property",
+        "synced_property_name": "Contents Relation"
+      }
+    },
+    "Duration [sec]": {
+      "id": "%3F%40%40Q",
+      "name": "Duration [sec]",
+      "type": "number"
+    },
+    "Alt IT": {
+      "id": "%3FaXg",
+      "name": "Alt IT",
+      "type": "rich_text"
+    },
+    "URL #2": {
+      "id": "CXz%5C",
+      "name": "URL #2",
+      "type": "url"
+    },
+    "Alt EN": {
+      "id": "DbYM",
+      "name": "Alt EN",
+      "type": "rich_text"
+    },
+    "WEB Contents": {
+      "id": "DqNC",
+      "name": "WEB Contents",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "dual_property",
+        "synced_property_name": "Media"
+      }
+    },
+    "Rank": {
+      "id": "HU%5E%3E",
+      "name": "Rank",
+      "type": "number"
+    },
+    "Clip Filename": {
+      "id": "I%5BFh",
+      "name": "Clip Filename",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"Title\")), \"\", upper(replaceAll(replaceAll(replaceAll(replaceAll(prop(\"Title\"), \"—\", \" \"), \"–\", \" \"), \" \", \"-\"), \"[^a-zA-Z0-9-]\", \"\")))"
+      }
+    },
+    "Groups": {
+      "id": "IetD",
+      "name": "Groups",
+      "type": "relation",
+      "relation": {
+        "database_id": "2cb878d8-c2ec-4ffe-b416-1878e28a3f33",
+        "type": "dual_property",
+        "synced_property_name": "Media Relation"
+      }
+    },
+    "Note": {
+      "id": "I~gJ",
+      "name": "Note",
+      "type": "rich_text"
+    },
+    "Campaigns": {
+      "id": "KOb_",
+      "name": "Campaigns",
+      "type": "relation",
+      "relation": {
+        "database_id": "0362f305-f70e-4331-b15f-30d77e9226dc",
+        "type": "dual_property",
+        "synced_property_name": "Media Relation"
+      }
+    },
+    "Web Filename": {
+      "id": "M%3BBZ",
+      "name": "Web Filename",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"Title\")), \"\", replaceAll(replaceAll(lower(replaceAll(prop(\"Title\"), \"[^a-zA-Z0-9]+\", \"-\")), \"^-\", \"\"), \"-$\", \"\"))"
+      }
+    },
+    "Alt DE": {
+      "id": "MUK%3B",
+      "name": "Alt DE",
+      "type": "rich_text"
+    },
+    "Authors": {
+      "id": "NOM%7C",
+      "name": "Authors",
+      "type": "relation",
+      "relation": {
+        "database_id": "befe71c1-421d-4abf-9b1f-64f91089e631",
+        "type": "dual_property",
+        "synced_property_name": "Contents Relation"
+      }
+    },
+    "Path": {
+      "id": "Nssv",
+      "name": "Path",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Path",
+        "relation_property_name": "Subdir",
+        "rollup_property_id": "`IzB",
+        "relation_property_id": "dMCn",
+        "function": "show_original"
+      }
+    },
+    "Media": {
+      "id": "OvDD",
+      "name": "Media",
+      "type": "files"
+    },
+    "Title": {
+      "id": "S%3B%3B%5D",
+      "name": "Title",
+      "type": "rich_text"
+    },
+    "Created time": {
+      "id": "V%3DMp",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Type": {
+      "id": "X%5Dhj",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "aebefc59-fe26-4377-aa7d-220a881aac40",
+        "type": "dual_property",
+        "synced_property_name": "Contents Relation"
+      }
+    },
+    "Pinned": {
+      "id": "%5BG%7Ct",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Ads": {
+      "id": "%5D%7BRs",
+      "name": "Ads",
+      "type": "relation",
+      "relation": {
+        "database_id": "f5fa8a2f-810b-47a3-b381-e4c7e6d68b3d",
+        "type": "dual_property",
+        "synced_property_name": "Media"
+      }
+    },
+    "Title Old": {
+      "id": "%5E~jc",
+      "name": "Title Old",
+      "type": "rich_text"
+    },
+    "Related Contents": {
+      "id": "cB%3Fm",
+      "name": "Related Contents",
+      "type": "relation",
+      "relation": {
+        "database_id": "fa29eb81-8ac4-4c64-858f-018a70844124",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Subdir": {
+      "id": "dMCn",
+      "name": "Subdir",
+      "type": "relation",
+      "relation": {
+        "database_id": "14d44388-b391-48ba-9478-28b0f2cfb87c",
+        "type": "dual_property",
+        "synced_property_name": "Subdir Contents"
+      }
+    },
+    "Master": {
+      "id": "dzP%3E",
+      "name": "Master",
+      "type": "checkbox"
+    },
+    "File Path": {
+      "id": "i%3F%3Ec",
+      "name": "File Path",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(join(map(prop(\"Path\"), format(current)), \",\")), if(!empty(join(map(prop(\"Subdir\"), format(current)), \", \")), if(empty(join(map(prop(\"Final Dir\"), format(current)), \", \")), ((join(map(prop(\"Subdir\"), format(current)), \", \") + \"/\") + prop(\"Content\")), ((((join(map(prop(\"Subdir\"), format(current)), \", \") + \"/\") + join(map(prop(\"Final Dir\"), format(current)), \", \")) + \"/\") + prop(\"Content\"))), ((join(map(prop(\"Subdir\"), format(current)), \", \") + \"/\") + prop(\"Content\"))), if(!empty(join(map(prop(\"Final Dir\"), format(current)), \", \")), ((((join(map(prop(\"Path\"), format(current)), \",\") + \"/\") + join(map(prop(\"Final Dir\"), format(current)), \", \")) + \"/\") + prop(\"Content\")), ((join(map(prop(\"Path\"), format(current)), \",\") + \"/\") + prop(\"Content\"))))"
+      }
+    },
+    "Image Reference": {
+      "id": "mN%3Ao",
+      "name": "Image Reference",
+      "type": "select",
+      "options": [
+        {
+          "name": "Aerial top-down view (drones)",
+          "id": "cf52e370-8aeb-4003-aff7-fb12240aa753",
+          "color": "pink"
+        },
+        {
+          "name": "Ground-level view (umbrellas and sea)",
+          "id": "079c8e20-d3dc-4e45-bee7-08843d2b1cac",
+          "color": "yellow"
+        },
+        {
+          "name": "Woman with cocktail looking at the sea",
+          "id": "e43e43d2-af6c-4a19-937a-f38cd8216053",
+          "color": "default"
+        },
+        {
+          "name": "Close-up of beach towel on sunbed",
+          "id": "88d65aa8-a47c-43a5-b0fb-220d96ba6fd5",
+          "color": "purple"
+        },
+        {
+          "name": "Towel with woman in the background",
+          "id": "df5f1449-3468-4db9-8746-0e4d089d040c",
+          "color": "orange"
+        },
+        {
+          "name": "Room Interior",
+          "id": "d5b0f0d5-9849-4407-9f0b-93b58449e8dd",
+          "color": "red"
+        },
+        {
+          "name": "Restaurant Interior",
+          "id": "97467dd6-e47f-43d3-bcce-f4fedba2edd6",
+          "color": "brown"
+        },
+        {
+          "name": "Aerial Beach & Hotel Exterior",
+          "id": "8a712545-32f6-4a4d-b53d-17b7e9d15c39",
+          "color": "blue"
+        },
+        {
+          "name": "Private Beach View from Room",
+          "id": "cf35f5fa-2bdc-4e26-8dbc-4e4b357ea5c8",
+          "color": "green"
+        },
+        {
+          "name": "Dawn Aerial Tilt",
+          "id": "1e207504-9593-4493-b300-37147359a09b",
+          "color": "gray"
+        }
+      ]
+    },
+    "URL #1": {
+      "id": "n%3FGJ",
+      "name": "URL #1",
+      "type": "url"
+    },
+    "URL #3": {
+      "id": "spk%3D",
+      "name": "URL #3",
+      "type": "url"
+    },
+    "Extra": {
+      "id": "xXG%5B",
+      "name": "Extra",
+      "type": "checkbox"
+    },
+    "Status": {
+      "id": "~ZlW",
+      "name": "Status",
+      "type": "relation",
+      "relation": {
+        "database_id": "04fcdad8-a970-47c3-91db-76eb4380ccff",
+        "type": "dual_property",
+        "synced_property_name": "Contents Relation"
+      }
+    },
+    "Content": {
+      "id": "title",
+      "name": "Content",
+      "type": "title"
+    }
+  }
+}

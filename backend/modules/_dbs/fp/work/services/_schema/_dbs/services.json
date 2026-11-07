@@ -1,128 +1,145 @@
 {
-  "id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
+  "id": "11ac7930-1516-807e-b685-d3fee70ae00d",
   "title": "Services",
-  "url": "https://app.notion.com/p/349c793015168084ab11e8be6b8cbb63",
+  "url": "https://app.notion.com/p/11ac79301516807eb685d3fee70ae00d",
   "parent": {
     "type": "block_id",
-    "block_id": "349c7930-1516-80d6-aeff-df7459b9a404"
+    "block_id": "ea3a36ac-b2ee-43d8-89e0-0642bd65b60f"
   },
   "properties": {
+    "URL #1": {
+      "id": "%3Ch%3AL",
+      "name": "URL #1",
+      "type": "url"
+    },
+    "Tags": {
+      "id": "%40dLV",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "11ac7930-1516-8066-8be3-f104b1285a9a",
+        "type": "dual_property",
+        "synced_property_name": "WebApps Relation"
+      }
+    },
+    "Domains": {
+      "id": "C%5Doa",
+      "name": "Domains",
+      "type": "relation",
+      "relation": {
+        "database_id": "ae18b834-2eea-46b0-a494-9f56e9ecb355",
+        "type": "dual_property",
+        "synced_property_name": "Provider"
+      }
+    },
+    "Created time": {
+      "id": "HFft",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Added": {
+      "id": "O%3AQ%7B",
+      "name": "Added",
+      "type": "date"
+    },
+    "Pin": {
+      "id": "OhnR",
+      "name": "Pin",
+      "type": "checkbox"
+    },
+    "URL #3": {
+      "id": "Q%7DDZ",
+      "name": "URL #3",
+      "type": "url"
+    },
     "Description": {
-      "id": "%3CBy%3F",
+      "id": "TL%3Ah",
       "name": "Description",
       "type": "rich_text"
     },
-    "Provider ": {
-      "id": "%40SzG",
-      "name": "Provider ",
+    "Web Services": {
+      "id": "UNaK",
+      "name": "Web Services",
       "type": "relation",
       "relation": {
-        "database_id": "11ac7930-1516-807e-b685-d3fee70ae00d",
+        "database_id": "349c7930-1516-8084-ab11-e8be6b8cbb63",
         "type": "dual_property",
-        "synced_property_name": "Web Services"
+        "synced_property_name": "Provider "
       }
-    },
-    "Frequency": {
-      "id": "Bel%7C",
-      "name": "Frequency",
-      "type": "select",
-      "options": [
-        {
-          "name": "Monthly",
-          "id": "918c3705-c10c-4e61-9aaf-231637ed43e8",
-          "color": "default"
-        },
-        {
-          "name": "Annually",
-          "id": "b7fa1eb3-1a58-4bef-aedb-46f0fb43a466",
-          "color": "default"
-        }
-      ]
-    },
-    "Annual Price": {
-      "id": "Fm%3Db",
-      "name": "Annual Price",
-      "type": "formula",
-      "formula": {
-        "expression": "if(prop(\"Frequency\") == \"Monthly\", prop(\"Final Price\") * 12, prop(\"Final Price\"))"
-      }
-    },
-    "Quota #2": {
-      "id": "PFAK",
-      "name": "Quota #2",
-      "type": "rich_text"
-    },
-    "Final Price": {
-      "id": "SV%3CV",
-      "name": "Final Price",
-      "type": "formula",
-      "formula": {
-        "expression": "if(and(prop(\"Cost\") > 0, prop(\"Markup\")> 0), prop(\"Cost\") * (1 + prop(\"Markup\")), 0)"
-      }
-    },
-    "Quota #1": {
-      "id": "%5Bn%5EY",
-      "name": "Quota #1",
-      "type": "rich_text"
-    },
-    "Plan": {
-      "id": "_%5Bch",
-      "name": "Plan",
-      "type": "relation",
-      "relation": {
-        "database_id": "349c7930-1516-8016-81e9-c090de61013f",
-        "type": "dual_property",
-        "synced_property_name": "Web Services"
-      }
-    },
-    "Quota Type #2": {
-      "id": "dDMN",
-      "name": "Quota Type #2",
-      "type": "rich_text"
-    },
-    "Cost": {
-      "id": "eLln",
-      "name": "Cost",
-      "type": "number"
-    },
-    "Markup": {
-      "id": "enIK",
-      "name": "Markup",
-      "type": "number"
-    },
-    "Quota Type #1": {
-      "id": "eyM%5D",
-      "name": "Quota Type #1",
-      "type": "rich_text"
     },
     "URL": {
-      "id": "iskJ",
+      "id": "WeAu",
       "name": "URL",
       "type": "url"
     },
-    "Quota #3": {
-      "id": "pSO%5D",
-      "name": "Quota #3",
-      "type": "rich_text"
+    "TBP-U": {
+      "id": "%5BLpP",
+      "name": "TBP-U",
+      "type": "checkbox"
     },
-    "Type": {
-      "id": "uv%3AZ",
-      "name": "Type",
+    "Roles": {
+      "id": "%5Bbfu",
+      "name": "Roles",
       "type": "relation",
       "relation": {
-        "database_id": "349c7930-1516-80cb-953d-de340b29691b",
+        "database_id": "d74d19f8-6945-4eb0-8d40-e879f3b1d571",
         "type": "dual_property",
-        "synced_property_name": "Web Services"
+        "synced_property_name": "Services Relation"
       }
     },
-    "Quota Type #3": {
-      "id": "%7CcNz",
-      "name": "Quota Type #3",
-      "type": "rich_text"
+    "Tasks": {
+      "id": "_xHG",
+      "name": "Tasks",
+      "type": "relation",
+      "relation": {
+        "database_id": "ff00c9ec-0fea-4dee-80fa-41f98fb90843",
+        "type": "dual_property",
+        "synced_property_name": "Services 1"
+      }
     },
-    "Service": {
+    "Prompts": {
+      "id": "bL%3Eu",
+      "name": "Prompts",
+      "type": "relation",
+      "relation": {
+        "database_id": "5d385941-868a-4ab5-9f53-036221133911",
+        "type": "dual_property",
+        "synced_property_name": "Services"
+      }
+    },
+    "Types": {
+      "id": "jcZ%7D",
+      "name": "Types",
+      "type": "relation",
+      "relation": {
+        "database_id": "373c7930-1516-80df-9342-f3510c8bed9f",
+        "type": "dual_property",
+        "synced_property_name": "Services"
+      }
+    },
+    "Location": {
+      "id": "lCn%40",
+      "name": "Location",
+      "type": "relation",
+      "relation": {
+        "database_id": "de559f9d-395c-4246-a896-ffb4bfec12c2",
+        "type": "dual_property",
+        "synced_property_name": "Provider"
+      }
+    },
+    "URL #2": {
+      "id": "revK",
+      "name": "URL #2",
+      "type": "url"
+    },
+    "Archive": {
+      "id": "rwWR",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "Name": {
       "id": "title",
-      "name": "Service",
+      "name": "Name",
       "type": "title"
     }
   }

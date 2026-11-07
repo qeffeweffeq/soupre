@@ -15,6 +15,7 @@ class Workspace(SQLModel, table=True):
     categories: List["Category"] = Relationship(back_populates="workspace")
     jobs: List["ScrapeJob"] = Relationship(back_populates="workspace")
     pages: List["Page"] = Relationship(back_populates="workspace")
+    tags: List["Tag"] = Relationship(back_populates="workspace")
 
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -46,10 +47,13 @@ class PageTagLink(SQLModel, table=True):
 
 class Tag(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: Optional[int] = Field(default=None, foreign_key="workspace.id", index=True)
     name: str = Field(unique=True, index=True)
     slug: str = Field(unique=True, index=True)
+    section: Optional[str] = Field(default=None, index=True)  # "services" | "goods" | "general"
     notion_id: Optional[str] = None
 
+    workspace: Optional[Workspace] = Relationship(back_populates="tags")
     pages: List["Page"] = Relationship(back_populates="tags", link_model=PageTagLink)
 
 class Genre(SQLModel, table=True):

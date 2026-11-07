@@ -57,13 +57,22 @@ class TypesUpdate(BaseModel):
 class TagCreate(BaseModel):
     name: str
     slug: Optional[str] = None
+    workspace_id: Optional[int] = None
+    section: Optional[str] = None
     notion_id: Optional[str] = None
 
 
 class TagUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
+    workspace_id: Optional[int] = None
+    section: Optional[str] = None
     notion_id: Optional[str] = None
+
+
+class BulkTagAssignRequest(BaseModel):
+    page_ids: List[int]
+    tag_ids: List[int]
 
 
 class GenreCreate(BaseModel):

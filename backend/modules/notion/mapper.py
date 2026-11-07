@@ -209,8 +209,130 @@ def map_services_payload(
     return props
 
 
+def build_notion_payload(
+    item: Any,
+    target_db_id: Optional[str] = None,
+    category_notion_id: Optional[str] = None,
+    type_notion_id: Optional[str] = None,
+    tag_notion_ids: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """
+    Dynamically build a Notion page property payload adapted to the target database's
+    properties schema (from no-db-man), automatically mapping Title, URL, Tags,
+    Categories/Roles, Types, Description, Price, and related fields.
+    """
+    from modules.notion.databases import get_database_meta
+
+    meta = get_database_meta(target_db_id) if target_db_id else None
+    props_keys = [p.lower() for p in meta.properties] if meta and meta.properties else []
+
+    # If no metadata or unknown target, fall back to standard mappers based on workspace
+    if not meta or not meta.properties:
+        ws = getattr(item, "workspace", None)
+        ws_slug = getattr(ws, "slug", "") if ws else ""
+        if isinstance(item, dict):
+            ws_slug = item.get("workspace_slug") or ws_slug
+        if ws_slug in ("qfwfq", "goods"):
+            return map_goods_payload(item, category_notion_id, type_notion_id, tag_notion_ids)
+        return map_services_payload(item, category_notion_id, type_notion_id, tag_notion_ids)
+
+    url = _extract_field(item, "url", "clean_url")
+    domain = _extract_field(item, "domain") or extract_domain(url)
+    title_raw = _extract_field(item, "title", "name") or domain or "Untitled"
+    clean_title = clean_notion_title(title_raw, max_len=100)
+
+    props: dict[str, Any] = {}
+
+    # 1. Title property
+    title_key = "Name"
+    if "obj" in props_keys and "name" not in props_keys:
+        title_key = "Obj"
+    elif "title" in props_keys and "name" not in props_keys:
+        title_key = "Title"
+    props[title_key] = {"title": [{"text": {"content": clean_title}}]}
+
+    # 2. URL property
+    if url:
+        if "url 1" in props_keys:
+            props["Url 1"] = {"url": url}
+        elif "url" in props_keys:
+            props["URL"] = {"url": url}
+        elif "page url" in props_keys:
+            props["Page URL"] = {"url": url}
+        elif "source" in props_keys:
+            props["Source"] = {"url": url}
+        elif "web services" in props_keys:
+            props["Web Services"] = {"url": url}
+
+    # 3. Buy Now / Order URL
+    buy_now_val = _extract_field(item, "buy_now", "order_url")
+    if buy_now_val:
+        if "buy now" in props_keys:
+            if isinstance(buy_now_val, str) and (buy_now_val.startswith("http://") or buy_now_val.startswith("https://")):
+                props["Buy Now"] = {"url": buy_now_val}
+            elif isinstance(buy_now_val, bool):
+                props["Buy Now"] = {"checkbox": buy_now_val}
+        if "order url" in props_keys and isinstance(buy_now_val, str):
+            props["Order URL"] = {"url": buy_now_val}
+
+    # 4. Categories / Roles
+    cat_id = category_notion_id or _extract_field(item, "category_notion_id", "notion_id")
+    if cat_id:
+        if "roles" in props_keys:
+            props["Roles"] = {"relation": [{"id": cat_id}]}
+        elif "categories" in props_keys:
+            props["Categories"] = {"relation": [{"id": cat_id}]}
+        elif "category" in props_keys:
+            props["Category"] = {"relation": [{"id": cat_id}]}
+
+    # 5. Type / Types
+    t_id = type_notion_id or _extract_field(item, "type_notion_id")
+    if t_id:
+        if "types" in props_keys:
+            props["Types"] = {"relation": [{"id": t_id}]}
+        elif "type" in props_keys:
+            props["Type"] = {"relation": [{"id": t_id}]}
+
+    # 6. Tags
+    tags = tag_notion_ids or _extract_field(item, "tag_notion_ids") or []
+    if isinstance(tags, str):
+        tags = [tags]
+    tag_relations = [{"id": tid} for tid in tags if tid]
+    if tag_relations:
+        if "tags" in props_keys:
+            props["Tags"] = {"relation": tag_relations}
+        elif "tag" in props_keys:
+            props["Tag"] = {"relation": tag_relations}
+
+    # 7. Description / Notes / Summary
+    desc = _extract_description(item)
+    if desc:
+        if "description" in props_keys:
+            props["Description"] = {"rich_text": [{"text": {"content": desc[:2000]}}]}
+        elif "notes" in props_keys:
+            props["Notes"] = {"rich_text": [{"text": {"content": desc[:2000]}}]}
+        elif "summary" in props_keys:
+            props["Summary"] = {"rich_text": [{"text": {"content": desc[:2000]}}]}
+
+    # 8. Domains
+    if domain and "domains" in props_keys:
+        props["Domains"] = {"rich_text": [{"text": {"content": domain[:2000]}}]}
+
+    # 9. Price
+    price = _extract_field(item, "price")
+    if price is not None and str(price).strip() != "" and "price" in props_keys:
+        try:
+            num = float(price)
+            props["Price"] = {"number": num}
+        except (ValueError, TypeError):
+            props["Price"] = {"rich_text": [{"text": {"content": str(price)[:2000]}}]}
+
+    return props
+
+
 class NotionContentMapper:
     """Wrapper class providing unified access to content mappers."""
     clean_notion_title = staticmethod(clean_notion_title)
     map_goods_payload = staticmethod(map_goods_payload)
     map_services_payload = staticmethod(map_services_payload)
+    build_notion_payload = staticmethod(build_notion_payload)

@@ -70,6 +70,18 @@
       "name": "Created time",
       "type": "created_time"
     },
+    "Domains": {
+      "id": "TmyB",
+      "name": "Domains",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Domains Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "u@d_",
+        "function": "count"
+      }
+    },
     "Symbol": {
       "id": "%5C%5DRF",
       "name": "Symbol",
@@ -207,6 +219,16 @@
         "database_id": "349c7930-1516-8016-81e9-c090de61013f",
         "type": "dual_property",
         "synced_property_name": "Clients"
+      }
+    },
+    "Domains Relation": {
+      "id": "u%40d_",
+      "name": "Domains Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "ae18b834-2eea-46b0-a494-9f56e9ecb355",
+        "type": "dual_property",
+        "synced_property_name": "Client"
       }
     },
     "Final Plan Cost": {

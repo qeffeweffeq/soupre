@@ -21,8 +21,12 @@ from modules.notion.client import (
     ROLES_DB_ID,
     FP_TYPES_DB_ID,
     FP_TAGS_DB_ID,
+    FP_CREATIVES_TAGS_DB_ID,
+    FP_PALACE_LIDO_TAGS_DB_ID,
     GOODS_DB_ID,
     QFWFQ_TYPE_DB_ID,
+    QFWFQ_TAGS_DB_ID,
+    QFWFQ_PALACE_LIDO_TAGS_DB_ID,
 )
 
 logger = logging.getLogger(__name__)
@@ -159,25 +163,26 @@ def sync_remote_notion(session: Session) -> dict[str, Any]:
         except Exception as e:
             logger.warning(f"Error querying FP Types DB: {e}")
 
-        # 3. Query Tags DB
-        try:
-            tags_res = fp_client.databases.query(database_id=FP_TAGS_DB_ID, page_size=100)
-            for page in tags_res.get("results", []):
-                title = _extract_page_title(page)
-                page_id = page.get("id")
-                if title and page_id:
-                    slug = slugify(title)
-                    tag_obj = session.exec(
-                        select(Tag).where(
-                            (Tag.slug == slug) | (Tag.name.ilike(title))
-                        )
-                    ).first()
-                    if tag_obj:
-                        tag_obj.notion_id = page_id
-                        session.add(tag_obj)
-                        tags_updated += 1
-        except Exception as e:
-            logger.warning(f"Error querying FP Tags DB: {e}")
+        # 3. Query Tags DBs (FP Work Tags, Creatives Tags, Palace Lido Tags)
+        for tag_db_id in (FP_TAGS_DB_ID, FP_CREATIVES_TAGS_DB_ID, FP_PALACE_LIDO_TAGS_DB_ID):
+            try:
+                tags_res = fp_client.databases.query(database_id=tag_db_id, page_size=100)
+                for page in tags_res.get("results", []):
+                    title = _extract_page_title(page)
+                    page_id = page.get("id")
+                    if title and page_id:
+                        slug = slugify(title)
+                        tag_obj = session.exec(
+                            select(Tag).where(
+                                (Tag.slug == slug) | (Tag.name.ilike(title))
+                            )
+                        ).first()
+                        if tag_obj:
+                            tag_obj.notion_id = page_id
+                            session.add(tag_obj)
+                            tags_updated += 1
+            except Exception as e:
+                logger.warning(f"Error querying FP Tags DB {tag_db_id}: {e}")
 
     # ── QFWFQ Workspace Queries ───────────────────────────────────────────
     if qfwfq_client:
@@ -221,6 +226,27 @@ def sync_remote_notion(session: Session) -> dict[str, Any]:
                         types_updated += 1
         except Exception as e:
             logger.warning(f"Error querying QFWFQ Types DB: {e}")
+
+        # 3. Query Qfwfq Tags DBs
+        for q_tag_db_id in (QFWFQ_TAGS_DB_ID, QFWFQ_PALACE_LIDO_TAGS_DB_ID):
+            try:
+                qtags_res = qfwfq_client.databases.query(database_id=q_tag_db_id, page_size=100)
+                for page in qtags_res.get("results", []):
+                    title = _extract_page_title(page)
+                    page_id = page.get("id")
+                    if title and page_id:
+                        slug = slugify(title)
+                        tag_obj = session.exec(
+                            select(Tag).where(
+                                (Tag.slug == slug) | (Tag.name.ilike(title))
+                            )
+                        ).first()
+                        if tag_obj:
+                            tag_obj.notion_id = page_id
+                            session.add(tag_obj)
+                            tags_updated += 1
+            except Exception as e:
+                logger.warning(f"Error querying QFWFQ Tags DB {q_tag_db_id}: {e}")
 
     session.commit()
 

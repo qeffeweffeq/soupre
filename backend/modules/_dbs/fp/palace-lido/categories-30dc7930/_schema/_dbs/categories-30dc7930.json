@@ -1,0 +1,38 @@
+{
+  "id": "30dc7930-1516-8154-86b8-dd65b8d877bd",
+  "title": "Categories",
+  "url": "https://app.notion.com/p/30dc79301516815486b8dd65b8d877bd",
+  "parent": {
+    "type": "block_id",
+    "block_id": "30dc7930-1516-8176-86c1-dd20962a9816"
+  },
+  "properties": {
+    "Contents": {
+      "id": "E%5CnM",
+      "name": "Contents",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Content",
+        "relation_property_name": "Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Sh<F",
+        "function": "count"
+      }
+    },
+    "Contents Relation": {
+      "id": "Sh%3CF",
+      "name": "Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "6bdabb53-d224-4a02-b91b-6f0bf4b8588d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}
