@@ -1,0 +1,46 @@
+{
+  "id": "30dc7930-1516-81cd-87ea-fe12367c8e84",
+  "title": "Color Scheme",
+  "url": "https://app.notion.com/p/30dc7930151681cd87eafe12367c8e84",
+  "parent": {
+    "type": "block_id",
+    "block_id": "30dc7930-1516-81a0-8685-e457f1c2dad0"
+  },
+  "properties": {
+    "RGB": {
+      "id": "ADGw",
+      "name": "RGB",
+      "type": "rich_text"
+    },
+    "VAR": {
+      "id": "EUMT",
+      "name": "VAR",
+      "type": "rich_text"
+    },
+    "Pantone": {
+      "id": "dorn",
+      "name": "Pantone",
+      "type": "rich_text"
+    },
+    "HEX": {
+      "id": "ed%3Ba",
+      "name": "HEX",
+      "type": "rich_text"
+    },
+    "CMYK": {
+      "id": "l%3E%7DK",
+      "name": "CMYK",
+      "type": "rich_text"
+    },
+    "HEX ALT": {
+      "id": "vDj%40",
+      "name": "HEX ALT",
+      "type": "rich_text"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

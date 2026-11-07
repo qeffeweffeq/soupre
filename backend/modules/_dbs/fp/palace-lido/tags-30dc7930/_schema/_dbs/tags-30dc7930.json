@@ -1,0 +1,325 @@
+{
+  "id": "30dc7930-1516-81fe-af33-d26fa33824bb",
+  "title": "Tags",
+  "url": "https://app.notion.com/p/30dc7930151681feaf33d26fa33824bb",
+  "parent": {
+    "type": "block_id",
+    "block_id": "30dc7930-1516-8176-86c1-dd20962a9816"
+  },
+  "properties": {
+    "Ads Notes Relation": {
+      "id": "%3BE%3Eq",
+      "name": "Ads Notes Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "8b5109b5-d650-42a5-a84a-31e0a393eaa7",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Web Contents Meta": {
+      "id": "%3Cieh",
+      "name": "Web Contents Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Web Contents Count\") > 0, \"🌐 Web Contents → \" + format(prop(\"Web Contents Count\")), \"\")"
+      }
+    },
+    "Pinned": {
+      "id": "DeWk",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Status": {
+      "id": "HpbO",
+      "name": "Status",
+      "type": "formula",
+      "formula": {
+        "expression": "if(\n  prop(\"Removed\"),\n  \"❌ Removed\",\n  if(\n    prop(\"Pinned\"),\n    if(\n      prop(\"WIP\"),\n      \"🔥 Pro-Active\",\n      \"📌 Pinned\"\n    ),\n    if(\n      prop(\"WIP\"),\n      \"🚧 WIP\",\n      \"🟢 Active\"\n    )\n  )\n)\n"
+      }
+    },
+    "Groups Relation": {
+      "id": "Hq%5DG",
+      "name": "Groups Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "2cb878d8-c2ec-4ffe-b416-1878e28a3f33",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Web Contents Count": {
+      "id": "I~Ng",
+      "name": "Web Contents Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Title",
+        "relation_property_name": "Web Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "hMIc",
+        "function": "count"
+      }
+    },
+    "Glob Keywords Count": {
+      "id": "JL%7Bl",
+      "name": "Glob Keywords Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Glob Keywords Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "NSc@",
+        "function": "count"
+      }
+    },
+    "Ads Contents Meta": {
+      "id": "J~%5C%5B",
+      "name": "Ads Contents Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Ads Contents Count\") > 0, \"🖋️ Ad Contents → \" + format(prop(\"Ads Contents Count\")), \"\")"
+      }
+    },
+    "Glob Keywords Relation": {
+      "id": "NSc%40",
+      "name": "Glob Keywords Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "270aabfa-9126-459d-93e9-cb8d894347fd",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Groups Count": {
+      "id": "N%7B%3A%40",
+      "name": "Groups Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Campaign",
+        "relation_property_name": "Campaigns Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "XFEw",
+        "function": "count"
+      }
+    },
+    "Audiences Relation": {
+      "id": "O_TA",
+      "name": "Audiences Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "254c7930-1516-8031-8476-f25826bc2e6d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Notes Count": {
+      "id": "PpAO",
+      "name": "Notes Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Name",
+        "relation_property_name": "Ads Notes Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": ";E>q",
+        "function": "count"
+      }
+    },
+    "Ads Contents Relation": {
+      "id": "Rue%5C",
+      "name": "Ads Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "6bdabb53-d224-4a02-b91b-6f0bf4b8588d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Media Contents Relation": {
+      "id": "SmZo",
+      "name": "Media Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "fa29eb81-8ac4-4c64-858f-018a70844124",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Campaigns Relation": {
+      "id": "XFEw",
+      "name": "Campaigns Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "0362f305-f70e-4331-b15f-30d77e9226dc",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Campaigns Meta": {
+      "id": "XmJ%7D",
+      "name": "Campaigns Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Campaigns Count\") > 0, \"📢 Campaigns → \" + format(prop(\"Campaigns Count\")), \"\")"
+      }
+    },
+    "PED Contents Meta": {
+      "id": "Y%5EaN",
+      "name": "PED Contents Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Media Contents Count\") > 0, \"🌅 Media → \" + format(prop(\"Media Contents Count\")), \"\")"
+      }
+    },
+    "Groups Meta": {
+      "id": "%5BZN%40",
+      "name": "Groups Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Groups Count\") > 0, \"🎲 Groups → \" + format(prop(\"Groups Count\")), \"\")"
+      }
+    },
+    "Audiences Meta": {
+      "id": "%5B~UT",
+      "name": "Audiences Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Audiences Count\") > 0, \"👥 Audiences → \" + format(prop(\"Audiences Count\")), \"\")"
+      }
+    },
+    "Ads Contents Count": {
+      "id": "%60DIt",
+      "name": "Ads Contents Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Content",
+        "relation_property_name": "Ads Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Rue\\",
+        "function": "count"
+      }
+    },
+    "Ads Relation": {
+      "id": "d%3Aac",
+      "name": "Ads Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "f5fa8a2f-810b-47a3-b381-e4c7e6d68b3d",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Notes Meta": {
+      "id": "gIN%3D",
+      "name": "Notes Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Notes Count\") > 0, \"📝 Notes → \" + format(prop(\"Notes Count\")), \"\")"
+      }
+    },
+    "Web Contents Relation": {
+      "id": "hMIc",
+      "name": "Web Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Media Contents Count": {
+      "id": "hSha",
+      "name": "Media Contents Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Content",
+        "relation_property_name": "Media Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "SmZo",
+        "function": "count"
+      }
+    },
+    "Ads Meta": {
+      "id": "keoc",
+      "name": "Ads Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Ads Count\") > 0, \"📰 Ads → \" + format(prop(\"Ads Count\")), \"\")"
+      }
+    },
+    "Glob Keywords Meta": {
+      "id": "lnC%3B",
+      "name": "Glob Keywords Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Glob Keywords Count\") > 0, \"🔑 Keywords → \" + format(prop(\"Glob Keywords Count\")), \"\")"
+      }
+    },
+    "Audiences Count": {
+      "id": "rkxr",
+      "name": "Audiences Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Audience",
+        "relation_property_name": "Audiences Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "O_TA",
+        "function": "count"
+      }
+    },
+    "Ads Count": {
+      "id": "w%3D_%3A",
+      "name": "Ads Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Ad",
+        "relation_property_name": "Ads Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "d:ac",
+        "function": "count"
+      }
+    },
+    "Removed": {
+      "id": "wfQH",
+      "name": "Removed",
+      "type": "checkbox"
+    },
+    "WIP": {
+      "id": "w%7BIx",
+      "name": "WIP",
+      "type": "checkbox"
+    },
+    "Campaigns Count": {
+      "id": "yDVw",
+      "name": "Campaigns Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Group",
+        "relation_property_name": "Groups Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Hq]G",
+        "function": "count"
+      }
+    },
+    "Relations Counter Listed Meta": {
+      "id": "z%3D%5Ba",
+      "name": "Relations Counter Listed Meta",
+      "type": "formula",
+      "formula": {
+        "expression": "let(\n  full_list,\n  (if({{notion:block_property:I~Ng:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"🌐 Web Contents → \" + format({{notion:block_property:I~Ng:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:hSha:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"🌈 PEDs → \" + format({{notion:block_property:hSha:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:yDVw:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"📢 Campaigns → \" + format({{notion:block_property:yDVw:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:N%7B%3A%40:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"🎲 Groups → \" + format({{notion:block_property:N%7B%3A%40:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:w%3D_%3A:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"📰 Ads → \" + format({{notion:block_property:w%3D_%3A:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:%60DIt:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"🖋️ Ad Contents → \" + format({{notion:block_property:%60DIt:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:PpAO:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"📝 Notes → \" + format({{notion:block_property:PpAO:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:JL%7Bl:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"🔑 Keywords → \" + format({{notion:block_property:JL%7Bl:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")) +\n  (if({{notion:block_property:rkxr:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}} > 0, \"👥 Audiences → \" + format({{notion:block_property:rkxr:00000000-0000-0000-0000-000000000000:e61e9c0e-c30d-4be1-85fc-b13f40d3820a}}) + \" | \", \"\")),\n\n  replace(full_list, \" \\\\| $\", \"\")\n)"
+      }
+    },
+    "Relations Counter": {
+      "id": "~%5Ez%5C",
+      "name": "Relations Counter",
+      "type": "formula",
+      "formula": {
+        "expression": "let(\n  full_list,\n  (if(!empty(prop(\"Web Contents Meta\")), prop(\"Web Contents Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"PED Contents Meta\")), prop(\"PED Contents Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Campaigns Meta\")), prop(\"Campaigns Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Groups Meta\")), prop(\"Groups Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Ads Meta\")), prop(\"Ads Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Ads Contents Meta\")), prop(\"Ads Contents Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Notes Meta\")), prop(\"Notes Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Glob Keywords Meta\")), prop(\"Glob Keywords Meta\") + \"\\n\", \"\")) +\n  (if(!empty(prop(\"Audiences Meta\")), prop(\"Audiences Meta\") + \"\\n\", \"\")),\n\n  replace(full_list, \"\\\\n$\", \"\")\n)"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

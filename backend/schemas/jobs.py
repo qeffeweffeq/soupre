@@ -28,6 +28,8 @@ class BatchPreviewItem(BaseModel):
     predicted_category_name: Optional[str] = None
     predicted_types_id: Optional[int] = None
     predicted_types_name: Optional[str] = None
+    tag_ids: List[int] = []
+    predicted_tags: List[str] = []
     selected: bool = True
 
 
@@ -45,6 +47,7 @@ class BatchCuratedItem(BaseModel):
     notion_id: Optional[str] = None
     category_id: Optional[int] = None
     types_id: Optional[int] = None
+    tag_ids: List[int] = []
     content_type: Optional[str] = None
 
 

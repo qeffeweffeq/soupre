@@ -253,3 +253,4 @@ def infer_tags(
 
     sorted_tags = sorted(scored_tags.items(), key=lambda x: x[1], reverse=True)
     return [t[0] for t in sorted_tags[:3]]
+

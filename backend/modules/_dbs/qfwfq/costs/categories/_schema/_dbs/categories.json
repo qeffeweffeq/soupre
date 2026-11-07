@@ -1,0 +1,65 @@
+{
+  "id": "16f63158-bfa0-816e-af04-d25f821a9d84",
+  "title": "Categories",
+  "url": "https://app.notion.com/p/16f63158bfa0816eaf04d25f821a9d84",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8089-9def-f42f589db084"
+  },
+  "properties": {
+    "Types": {
+      "id": "%3Ec%5DV",
+      "name": "Types",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8136-896e-f9602ddca411",
+        "type": "dual_property",
+        "synced_property_name": "Categories"
+      }
+    },
+    "Dates": {
+      "id": "%40cEg",
+      "name": "Dates",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Date",
+        "relation_property_name": "All Costs",
+        "rollup_property_id": "a[|`",
+        "relation_property_id": "PCJT",
+        "function": "show_original"
+      }
+    },
+    "All Costs": {
+      "id": "PCJT",
+      "name": "All Costs",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Categories"
+      }
+    },
+    "Last edited time": {
+      "id": "tvpe",
+      "name": "Last edited time",
+      "type": "last_edited_time"
+    },
+    "Total Cost": {
+      "id": "uM%3A%3A",
+      "name": "Total Cost",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "All Costs",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "PCJT",
+        "function": "sum"
+      }
+    },
+    "Categories": {
+      "id": "title",
+      "name": "Categories",
+      "type": "title"
+    }
+  }
+}

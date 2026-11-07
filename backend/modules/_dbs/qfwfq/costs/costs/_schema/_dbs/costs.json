@@ -1,0 +1,185 @@
+{
+  "id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+  "title": "Costs",
+  "url": "https://app.notion.com/p/16f63158bfa08143af07fc85b37160c8",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8030-9f7e-c574d797671e"
+  },
+  "properties": {
+    "2021": {
+      "id": "%3FpVa",
+      "name": "2021",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(if(year(prop(\"Date\")) == 2021, prop(\"Total\"), 0))"
+      }
+    },
+    "2022": {
+      "id": "l%7DKq",
+      "name": "2022",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(if(year(prop(\"Date\")) == 2022, prop(\"Total\"), 0))"
+      }
+    },
+    "2023": {
+      "id": "%3C%7CMu",
+      "name": "2023",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(if(year(prop(\"Date\")) == 2023, prop(\"Total\"), 0))"
+      }
+    },
+    "2024": {
+      "id": "%5CikB",
+      "name": "2024",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(if(year(prop(\"Date\")) == 2024, prop(\"Total\"), 0))"
+      }
+    },
+    "Types": {
+      "id": "%3C%5E%7C%5E",
+      "name": "Types",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8136-896e-f9602ddca411",
+        "type": "dual_property",
+        "synced_property_name": "Costs Relation"
+      }
+    },
+    "Total": {
+      "id": "BL%7Cc",
+      "name": "Total",
+      "type": "formula",
+      "formula": {
+        "expression": "if(\n  join(map(prop(\"For\"), format(current)), \", \") == \"Couple\", \n  round((prop(\"Cost\") / 2) * 100) / 100, \n  prop(\"Cost\")\n)"
+      }
+    },
+    "Tags": {
+      "id": "EQRx",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-819b-a7ea-e4823cc42c68",
+        "type": "dual_property",
+        "synced_property_name": "Costs Relation"
+      }
+    },
+    "Events": {
+      "id": "R%3AOm",
+      "name": "Events",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8162-a414-d31933111ce3",
+        "type": "dual_property",
+        "synced_property_name": "All Costs"
+      }
+    },
+    "Created time": {
+      "id": "Utkl",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "Self": {
+      "id": "Y~gg",
+      "name": "Self",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-81fc-bdf7-fe495fe5d7b0",
+        "type": "dual_property",
+        "synced_property_name": "Self"
+      }
+    },
+    "Date": {
+      "id": "a%5B%7C%60",
+      "name": "Date",
+      "type": "date"
+    },
+    "Categories": {
+      "id": "b%5DQh",
+      "name": "Categories",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-816e-af04-d25f821a9d84",
+        "type": "dual_property",
+        "synced_property_name": "All Costs"
+      }
+    },
+    "Shop": {
+      "id": "bxk%7D",
+      "name": "Shop",
+      "type": "relation",
+      "relation": {
+        "database_id": "15863158-bfa0-800a-8e34-e6462c16d17a",
+        "type": "dual_property",
+        "synced_property_name": "Costs Relation"
+      }
+    },
+    "Master Category": {
+      "id": "fdT%7B",
+      "name": "Master Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "40a63158-bfa0-81fb-8298-cd2dcba285c6",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "By": {
+      "id": "hd%7CE",
+      "name": "By",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-81fc-bdf7-fe495fe5d7b0",
+        "type": "dual_property",
+        "synced_property_name": "Total"
+      }
+    },
+    "Cost": {
+      "id": "jQ%60O",
+      "name": "Cost",
+      "type": "number"
+    },
+    "For": {
+      "id": "pNGs",
+      "name": "For",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-81fc-bdf7-fe495fe5d7b0",
+        "type": "dual_property",
+        "synced_property_name": "For"
+      }
+    },
+    "This Year": {
+      "id": "pTHg",
+      "name": "This Year",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(if(year(prop(\"Date\")) == year(now()), prop(\"Total\"), 0))"
+      }
+    },
+    "Last 30 Days": {
+      "id": "rEOp",
+      "name": "Last 30 Days",
+      "type": "formula",
+      "formula": {
+        "expression": "sum(\n  if(\n    dateBetween(now(), prop(\"Date\"), \"days\") >= 0 and \n    dateBetween(now(), prop(\"Date\"), \"days\") <= 29, \n    prop(\"Total\"), \n    0\n  )\n)"
+      }
+    },
+    "Meta For / By": {
+      "id": "wPxH",
+      "name": "Meta For / By",
+      "type": "formula",
+      "formula": {
+        "expression": "if(join(map({{notion:block_property:Y~gg:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, format(current)), \", \") != \"\", (\"Self \" + if(join(map({{notion:block_property:Y~gg:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, format(current)), \", \") == \"Checca\", \"🧘‍♀️ Checca\", \"🚴‍♂️ Fabio\")), (\"For \" + if(join(map({{notion:block_property:pNGs:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, format(current)), \", \") == \"Couple\", \"👫 Couple\", if(join(map({{notion:block_property:pNGs:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, format(current)), \", \") == \"Checca\", \"🧘‍♀️ Checca\", \"🚴‍♂️ Fabio\")) + \" By \" + if(join(map({{notion:block_property:hd%7CE:00000000-0000-0000-0000-000000000000:8b45cc10-73cf-4b3d-b2c5-576ec323d6ba}}, format(current)), \", \") == \"Checca\", \"🧘‍♀️ Checca\", \"🚴‍♂️ Fabio\")))"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

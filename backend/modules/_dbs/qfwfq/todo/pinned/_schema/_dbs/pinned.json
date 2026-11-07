@@ -1,0 +1,86 @@
+{
+  "id": "a2d3d887-0ccc-4c3e-a67d-5a5a00750c5a",
+  "title": "Pinned",
+  "url": "https://app.notion.com/p/a2d3d8870ccc4c3ea67d5a5a00750c5a",
+  "parent": {
+    "type": "block_id",
+    "block_id": "0d4a11da-834d-4551-a626-4929c50d1b4b"
+  },
+  "properties": {
+    "Created time": {
+      "id": "%3C%3Awg",
+      "name": "Created time",
+      "type": "created_time"
+    },
+    "URL": {
+      "id": "C%3DAA",
+      "name": "URL",
+      "type": "url"
+    },
+    "Type": {
+      "id": "HDky",
+      "name": "Type",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8136-896e-f9602ddca411",
+        "type": "dual_property",
+        "synced_property_name": "Pinned Relation"
+      }
+    },
+    "Archive": {
+      "id": "ONIY",
+      "name": "Archive",
+      "type": "checkbox"
+    },
+    "URL #2": {
+      "id": "Tj%40%5E",
+      "name": "URL #2",
+      "type": "url"
+    },
+    "Master Category": {
+      "id": "UTHE",
+      "name": "Master Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "40a63158-bfa0-81fb-8298-cd2dcba285c6",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Done": {
+      "id": "%5BX%7CS",
+      "name": "Done",
+      "type": "checkbox"
+    },
+    "Category": {
+      "id": "%5CmTY",
+      "name": "Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "72724efa-475e-483b-80a5-492ccfc207b2",
+        "type": "dual_property",
+        "synced_property_name": "Pinned Relation"
+      }
+    },
+    "Date": {
+      "id": "%5D%3EiK",
+      "name": "Date",
+      "type": "date"
+    },
+    "Notes": {
+      "id": "%5D%40_h",
+      "name": "Notes",
+      "type": "rich_text"
+    },
+    "Pinned": {
+      "id": "tllt",
+      "name": "Pinned",
+      "type": "checkbox"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

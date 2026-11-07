@@ -1,0 +1,328 @@
+{
+  "id": "16f63158-bfa0-81fc-bdf7-fe495fe5d7b0",
+  "title": "Users",
+  "url": "https://app.notion.com/p/16f63158bfa081fcbdf7fe495fe5d7b0",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8058-9230-fc72fec5a65a"
+  },
+  "properties": {
+    "CY Self": {
+      "id": "%3BkBb",
+      "name": "CY Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "This Year",
+        "relation_property_name": "Self",
+        "rollup_property_id": "pTHg",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "Diff. Couple": {
+      "id": "%3E%3B%3FO",
+      "name": "Diff. Couple",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Spent Couple\") - prop(\"Spent Couple Inverted\")"
+      }
+    },
+    "24 Self": {
+      "id": "%3FIFk",
+      "name": "24 Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2024",
+        "relation_property_name": "Self",
+        "rollup_property_id": "\\ikB",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "Formula": {
+      "id": "ASKk",
+      "name": "Formula",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"CY By\")"
+      }
+    },
+    "Self Spent": {
+      "id": "CVe%7B",
+      "name": "Self Spent",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "Self",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "24 Total": {
+      "id": "EF%5EX",
+      "name": "24 Total",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2024",
+        "relation_property_name": "Total",
+        "rollup_property_id": "\\ikB",
+        "relation_property_id": "U<WT",
+        "function": "sum"
+      }
+    },
+    "CY For": {
+      "id": "EenZ",
+      "name": "CY For",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "This Year",
+        "relation_property_name": "For",
+        "rollup_property_id": "pTHg",
+        "relation_property_id": "T:pl",
+        "function": "sum"
+      }
+    },
+    "23 Self": {
+      "id": "FB%3BJ",
+      "name": "23 Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2023",
+        "relation_property_name": "Self",
+        "rollup_property_id": "<|Mu",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "22 Self": {
+      "id": "I%7B%5C~",
+      "name": "22 Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2022",
+        "relation_property_name": "Self",
+        "rollup_property_id": "l}Kq",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "Spent For": {
+      "id": "K%3FS%5B",
+      "name": "Spent For",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "For",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "T:pl",
+        "function": "sum"
+      }
+    },
+    "Stats": {
+      "id": "KIVR",
+      "name": "Stats",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Meta CY Self\") + \"\\n\" +\nprop(\"Meta 30D Self\") + \"\\n\" +\n\"—\" "
+      }
+    },
+    "23 For": {
+      "id": "McWv",
+      "name": "23 For",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2023",
+        "relation_property_name": "For",
+        "rollup_property_id": "<|Mu",
+        "relation_property_id": "T:pl",
+        "function": "sum"
+      }
+    },
+    "For": {
+      "id": "T%3Apl",
+      "name": "For",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "For"
+      }
+    },
+    "Total": {
+      "id": "U%3CWT",
+      "name": "Total",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "By"
+      }
+    },
+    "Meta 30D Self": {
+      "id": "Usou",
+      "name": "Meta 30D Self",
+      "type": "formula",
+      "formula": {
+        "expression": "if(\n  !empty(prop(\"30D Self\")), \n  \"📆 30D Self → \" + \n  if(\n    prop(\"30D Self\") >= 1000000, \n    /* Case: Millions */\n    \"€ \" + \n    format(floor(prop(\"30D Self\") / 1000000)) + \".\" + \n    padStart(format(floor(mod(prop(\"30D Self\"), 1000000) / 1000)), 3, \"0\") + \".\" + \n    padStart(format(floor(mod(prop(\"30D Self\"), 1000))), 3, \"0\") + \",\" + \n    padStart(format(round(mod(prop(\"30D Self\"), 1) * 100)), 2, \"0\"), \n    if(\n      prop(\"30D Self\") >= 1000, \n      /* Case: Thousands */\n      \"€ \" + \n      format(floor(prop(\"30D Self\") / 1000)) + \".\" + \n      padStart(format(floor(mod(prop(\"30D Self\"), 1000))), 3, \"0\") + \",\" + \n      padStart(format(round(mod(prop(\"30D Self\"), 1) * 100)), 2, \"0\"), \n      /* Case: Hundreds/Units */\n      \"€ \" + \n      format(floor(prop(\"30D Self\"))) + \",\" + \n      padStart(format(round(mod(prop(\"30D Self\"), 1) * 100)), 2, \"0\")\n    )\n  ), \n  \"\"\n)"
+      }
+    },
+    "CY By": {
+      "id": "VL%7Bg",
+      "name": "CY By",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "This Year",
+        "relation_property_name": "Total",
+        "rollup_property_id": "pTHg",
+        "relation_property_id": "U<WT",
+        "function": "sum"
+      }
+    },
+    "30D Self": {
+      "id": "%5BKq~",
+      "name": "30D Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Last 30 Days",
+        "relation_property_name": "Self",
+        "rollup_property_id": "rEOp",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "Meta CY Self": {
+      "id": "%5DFV%7C",
+      "name": "Meta CY Self",
+      "type": "formula",
+      "formula": {
+        "expression": "lets(\n  /* Define the variable once */\n  val, prop(\"CY Self\"),\n  \n  if(\n    !empty(val),\n    \"🗓️ CY Self → \" + \n    if(\n      val >= 1000000,\n      \"€ \" + format(floor(val / 1000000)) + \".\" + \n      padStart(format(floor(mod(val, 1000000) / 1000)), 3, \"0\") + \".\" + \n      padStart(format(floor(mod(val, 1000))), 3, \"0\") + \",\" + \n      padStart(format(round(mod(val, 1) * 100)), 2, \"0\"),\n      if(\n        val >= 1000,\n        \"€ \" + format(floor(val / 1000)) + \".\" + \n        padStart(format(floor(mod(val, 1000))), 3, \"0\") + \",\" + \n        padStart(format(round(mod(val, 1) * 100)), 2, \"0\"),\n        \"€ \" + format(floor(val)) + \",\" + \n        padStart(format(round(mod(val, 1) * 100)), 2, \"0\")\n      )\n    ),\n    \"\"\n  )\n)"
+      }
+    },
+    "24 For": {
+      "id": "b%5D%40T",
+      "name": "24 For",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2024",
+        "relation_property_name": "For",
+        "rollup_property_id": "\\ikB",
+        "relation_property_id": "T:pl",
+        "function": "sum"
+      }
+    },
+    "By | For Diff.": {
+      "id": "cjVq",
+      "name": "By | For Diff.",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"User\") != \"Couple\", prop(\"Spent By\") - prop(\"Spent For\"), 0)"
+      }
+    },
+    "21 Self": {
+      "id": "c%7C%3BQ",
+      "name": "21 Self",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "2021",
+        "relation_property_name": "Self",
+        "rollup_property_id": "?pVa",
+        "relation_property_id": "vGru",
+        "function": "sum"
+      }
+    },
+    "Spent Couple": {
+      "id": "fKML",
+      "name": "Spent Couple",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"By | For Diff.\")), \"\", round((prop(\"By | For Diff.\") / 2) * 100) / 100)"
+      }
+    },
+    "Spent By": {
+      "id": "hj%3D%60",
+      "name": "Spent By",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "Total",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "U<WT",
+        "function": "sum"
+      }
+    },
+    "Total Recap": {
+      "id": "nuhZ",
+      "name": "Total Recap",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-81fc-bdf7-fe495fe5d7b0",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
+    "Total Time": {
+      "id": "p%5ESn",
+      "name": "Total Time",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Date",
+        "relation_property_name": "Total",
+        "rollup_property_id": "a[|`",
+        "relation_property_id": "U<WT",
+        "function": "date_range"
+      }
+    },
+    "30D For": {
+      "id": "uMOs",
+      "name": "30D For",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Last 30 Days",
+        "relation_property_name": "For",
+        "rollup_property_id": "rEOp",
+        "relation_property_id": "T:pl",
+        "function": "sum"
+      }
+    },
+    "Self": {
+      "id": "vGru",
+      "name": "Self",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Self"
+      }
+    },
+    "Spent Couple Inverted": {
+      "id": "%7DTci",
+      "name": "Spent Couple Inverted",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Spent Couple",
+        "relation_property_name": "Total Recap",
+        "rollup_property_id": "fKML",
+        "relation_property_id": "nuhZ",
+        "function": "sum"
+      }
+    },
+    "30D By": {
+      "id": "~YQB",
+      "name": "30D By",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Last 30 Days",
+        "relation_property_name": "Total",
+        "rollup_property_id": "rEOp",
+        "relation_property_id": "U<WT",
+        "function": "sum"
+      }
+    },
+    "User": {
+      "id": "title",
+      "name": "User",
+      "type": "title"
+    }
+  }
+}

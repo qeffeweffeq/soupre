@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
-from database.models import ScrapeJob, Page, Category, Types, Workspace
+from database.models import ScrapeJob, Page, Category, Types, Workspace, Tag, PageTagLink
 from database.session import get_session, engine as default_engine
 from schemas.jobs import (
     JobTaxonomyUpdate,
@@ -154,16 +154,19 @@ async def batch_upload_urls(
             urls=[],
         )
 
-    # Fetch categories, types, and workspaces for smart taxonomy prediction
+    # Fetch categories, types, tags, and workspaces for smart taxonomy prediction
     categories = session.exec(select(Category)).all()
     types_list = session.exec(select(Types)).all()
     workspaces = session.exec(select(Workspace)).all()
+    tags = session.exec(select(Tag)).all()
     ws_by_id = {w.id: w for w in workspaces}
 
     cat_by_name = {c.name.lower(): c for c in categories}
     cat_by_slug = {c.slug.lower(): c for c in categories}
     type_by_name = {t.name.lower(): t for t in types_list}
     type_by_slug = {t.slug.lower(): t for t in types_list}
+    tag_by_name = {t.name.lower(): t for t in tags}
+    tag_by_slug = {t.slug.lower(): t for t in tags}
 
     FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|pleats|accessories|boutique|cucinelli|prada|aspesi|ikea|usm|haller|fur|leather|scarf|hat|bag|bags)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
@@ -267,6 +270,48 @@ async def batch_upload_urls(
             notion_id = matched_ws.notion_id
             notion_db_name = "Goods" if matched_ws.slug == "qfwfq" else "Services"
 
+        # Smart tag predictions
+        pred_tag_ids: List[int] = []
+        pred_tag_names: List[str] = []
+
+        keyword_heuristics = [
+            (re.compile(r"\b(sunglasses|occhiali|eyewear)\b", re.I), "Sunglasses"),
+            (re.compile(r"\b(jeans|denim)\b", re.I), "Jeans"),
+            (re.compile(r"\b(beach\s*hotel|beach)\b", re.I), "Beach Hotel"),
+            (re.compile(r"\b(resort\w*)\b", re.I), "Beach Resort"),
+            (re.compile(r"\b(hotel\w*|suites?|stay|hospitality)\b", re.I), "Hotel"),
+            (re.compile(r"\b(ai|artificial intelligence|llm|copilot|gpt)\b", re.I), "AI"),
+            (re.compile(r"\b(3d|threejs|webgl|cgi|render\w*|blender)\b", re.I), "3D"),
+            (re.compile(r"\b(audio|sound|podcast|music)\b", re.I), "Audio"),
+            (re.compile(r"\b(luxury|luss\w+)\b", re.I), "Luxury"),
+            (re.compile(r"\b(car|automotive|auto|motors)\b", re.I), "Car"),
+            (re.compile(r"\b(vinted|secondhand|preloved)\b", re.I), "Vinted"),
+            (re.compile(r"\b(photo|photography|film)\b", re.I), "Photo"),
+            (re.compile(r"\b(sneakers?|shoes?)\b", re.I), "K Classic Sneakers"),
+        ]
+
+        for pattern, tag_name in keyword_heuristics:
+            if pattern.search(full_str):
+                cand_slug = re.sub(r"[^a-z0-9]+", "-", tag_name.lower()).strip("-")
+                t = tag_by_slug.get(cand_slug) or tag_by_name.get(tag_name.lower())
+                if t:
+                    if t.id is not None and t.id not in pred_tag_ids:
+                        pred_tag_ids.append(t.id)
+                    if t.name not in pred_tag_names:
+                        pred_tag_names.append(t.name)
+                else:
+                    if tag_name not in pred_tag_names:
+                        pred_tag_names.append(tag_name)
+
+        tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+        for tok in tokens:
+            t = tag_by_slug.get(tok) or tag_by_name.get(tok)
+            if t:
+                if t.id is not None and t.id not in pred_tag_ids:
+                    pred_tag_ids.append(t.id)
+                if t.name not in pred_tag_names:
+                    pred_tag_names.append(t.name)
+
         items.append(
             BatchPreviewItem(
                 id=f"url-{idx + 1}",
@@ -287,6 +332,8 @@ async def batch_upload_urls(
                 predicted_category_name=matched_cat.name if matched_cat else None,
                 predicted_types_id=matched_type.id if matched_type else None,
                 predicted_types_name=matched_type.name if matched_type else None,
+                tag_ids=pred_tag_ids,
+                predicted_tags=pred_tag_names,
                 selected=True,
             )
         )
@@ -348,6 +395,22 @@ def batch_execute_jobs(
             session.commit()
             session.refresh(existing)
 
+            # Link tags to existing pages for this job
+            if item.tag_ids:
+                pages = list(existing.pages) if existing.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                for p in pages:
+                    for tid in item.tag_ids:
+                        link_exists = session.exec(
+                            select(PageTagLink).where(
+                                (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageTagLink(page_id=p.id, tag_id=tid))
+                session.commit()
+
             background_tasks.add_task(
                 _dispatch_run_job,
                 existing.id,
@@ -377,6 +440,39 @@ def batch_execute_jobs(
             session.refresh(job)
 
             jobs_by_norm[normalized_input] = job
+
+            # Link tags to existing or pending pages for this job
+            if item.tag_ids:
+                target_job = existing if existing else job
+                pages = list(target_job.pages) if target_job.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                if not pages and payload.scrape_mode == "single":
+                    new_page = Page(
+                        job_id=target_job.id,
+                        url=target_url,
+                        clean_url=item.clean_url or target_url,
+                        title="Untitled",
+                        status="pending",
+                        workspace_id=item_ws_id,
+                        category_id=item.category_id,
+                        types_id=item.types_id,
+                    )
+                    session.add(new_page)
+                    session.commit()
+                    session.refresh(new_page)
+                    pages = [new_page]
+
+                for p in pages:
+                    for tid in item.tag_ids:
+                        link_exists = session.exec(
+                            select(PageTagLink).where(
+                                (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageTagLink(page_id=p.id, tag_id=tid))
+                session.commit()
 
             background_tasks.add_task(
                 _dispatch_run_job,
@@ -442,6 +538,22 @@ def create_job(
             session.add(existing)
             session.commit()
             session.refresh(existing)
+
+            # Link tags to existing pages for this job
+            if item.tag_ids:
+                pages = list(existing.pages) if existing.pages else []
+                if not pages:
+                    pages = session.exec(select(Page).where((Page.url == target_url) | (Page.clean_url == target_url))).all()
+                for p in pages:
+                    for tid in item.tag_ids:
+                        link_exists = session.exec(
+                            select(PageTagLink).where(
+                                (PageTagLink.page_id == p.id) & (PageTagLink.tag_id == tid)
+                            )
+                        ).first()
+                        if not link_exists:
+                            session.add(PageTagLink(page_id=p.id, tag_id=tid))
+                session.commit()
 
             background_tasks.add_task(
                 _dispatch_run_job,

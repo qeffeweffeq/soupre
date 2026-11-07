@@ -136,40 +136,61 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
 
     counts = {"categories": 0, "types": 0, "tags": 0, "genres": 0}
 
-    # 1. Collect raw taxonomy values from json files
-    services_tax_path = dbs_dir / "fp/work/services/_schema/_dbs/_taxonomies.json"
-    creatives_tax_path = dbs_dir / "fp/profolio/creatives/_schema/_dbs/_taxonomies.json"
-    shops_tax_path = dbs_dir / "qfwfq/goods/shops/_schema/_dbs/_taxonomies.json"
-    goods_items_tax_path = dbs_dir / "qfwfq/goods/items/_schema/_dbs/_taxonomies.json"
+    # 1. Collect candidate directories for _taxonomies.json
+    candidate_dirs = [dbs_dir]
+    no_db_man_dbs = Path("/Users/admin/webapps/no-db-man/modules/_dbs")
+    if no_db_man_dbs.is_dir() and no_db_man_dbs.resolve() != dbs_dir.resolve():
+        candidate_dirs.append(no_db_man_dbs)
 
     raw_types: list[str] = []
-    raw_tags: list[str] = []
     raw_genres: list[str] = []
+    # Store tuples: (tag_name, ws_slug, section)
+    tag_entries: list[tuple[str, str | None, str | None]] = []
 
-    if services_tax_path.is_file():
-        with open(services_tax_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            raw_types.extend(data.get("Types", []))
-            raw_tags.extend(data.get("Tags", []))
+    seen_tax_files = set()
+    for c_dir in candidate_dirs:
+        if not c_dir.exists():
+            continue
+        for tax_path in sorted(c_dir.rglob("_taxonomies.json")):
+            resolved_p = tax_path.resolve()
+            if resolved_p in seen_tax_files:
+                continue
+            seen_tax_files.add(resolved_p)
 
-    if creatives_tax_path.is_file():
-        with open(creatives_tax_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            raw_types.extend(data.get("Type", []))
-            raw_genres.extend(data.get("Fields", []))
-            raw_tags.extend(data.get("Tags", []))
+            parts = [p.lower() for p in tax_path.parts]
+            is_fp = "fp" in parts
+            is_qfwfq = "qfwfq" in parts
+            ws_slug = "fp" if is_fp else ("qfwfq" if is_qfwfq else None)
+            sec = "services" if is_fp else ("goods" if is_qfwfq else "general")
 
-    if shops_tax_path.is_file():
-        with open(shops_tax_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            raw_types.extend(data.get("Type", []))
-            raw_tags.extend(data.get("Tags", []))
+            try:
+                with open(tax_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if not isinstance(data, dict):
+                        continue
 
-    if goods_items_tax_path.is_file():
-        with open(goods_items_tax_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            raw_types.extend(data.get("Type", []))
-            raw_tags.extend(data.get("Tags", []))
+                    for t_key in ("Types", "Type", "types", "type"):
+                        t_vals = data.get(t_key, [])
+                        if isinstance(t_vals, list):
+                            raw_types.extend([str(v) for v in t_vals if v])
+
+                    for g_key in ("Fields", "fields", "Genres", "genres"):
+                        g_vals = data.get(g_key, [])
+                        if isinstance(g_vals, list):
+                            raw_genres.extend([str(v) for v in g_vals if v])
+
+                    for tag_key in ("Tags", "Tag", "tags", "tag"):
+                        tag_vals = data.get(tag_key, [])
+                        if isinstance(tag_vals, list):
+                            for v in tag_vals:
+                                if isinstance(v, str) and v.strip():
+                                    tag_entries.append((v.strip(), ws_slug, sec))
+                        elif isinstance(tag_vals, dict):
+                            for v in tag_vals.keys():
+                                if isinstance(v, str) and v.strip():
+                                    tag_entries.append((v.strip(), ws_slug, sec))
+            except Exception as e:
+                log.debug(f"Failed parsing {tax_path}: {e}")
 
     # 2. Ensure Canonical Workspaces
     canonical_workspaces = [
@@ -273,7 +294,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
 
     # 4. Seed Tags
     seen_tag_slugs = set()
-    for tag_name in raw_tags:
+    for tag_name, ws_slug, sec in tag_entries:
         tag_name = tag_name.strip()
         if not tag_name:
             continue
@@ -282,12 +303,28 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
             continue
         seen_tag_slugs.add(tag_slug)
 
+        ws_id = fp_id if ws_slug == "fp" else (qfwfq_id if ws_slug == "qfwfq" else None)
         existing = session.exec(select(Tag).where(Tag.slug == tag_slug)).first()
         if not existing:
-            tag_obj = Tag(name=tag_name, slug=tag_slug)
+            tag_obj = Tag(
+                name=tag_name,
+                slug=tag_slug,
+                workspace_id=ws_id,
+                section=sec,
+            )
             session.add(tag_obj)
             session.flush()
             counts["tags"] += 1
+        else:
+            updated = False
+            if existing.workspace_id is None and ws_id is not None:
+                existing.workspace_id = ws_id
+                updated = True
+            if existing.section is None and sec is not None:
+                existing.section = sec
+                updated = True
+            if updated:
+                session.add(existing)
 
     # 5. Seed Genre
     seen_genre_slugs = set()

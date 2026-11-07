@@ -25,7 +25,9 @@ from modules.notion.client import (
 from modules.notion.mapper import (
     map_goods_payload,
     map_services_payload,
+    build_notion_payload,
 )
+from modules.notion.databases import list_available_databases
 from modules.notion.streamer import (
     check_url_exists,
     stream_batch_to_notion,
@@ -69,6 +71,22 @@ def get_notion_status():
             "fp": FP_DATABASES,
             "qfwfq": QFWFQ_DATABASES,
         },
+    }
+
+
+@router.get("/databases")
+def get_available_databases(
+    workspace: Optional[str] = Query(default=None),
+):
+    """
+    List all available destination databases across no-db-man schemas,
+    with their supported fields, icons, and taxonomy relations.
+    Grouped or filtered by workspace.
+    """
+    dbs = list_available_databases(workspace=workspace)
+    return {
+        "count": len(dbs),
+        "databases": dbs,
     }
 
 

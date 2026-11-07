@@ -42,10 +42,10 @@ def _get_web_url(page: dict) -> str | None:
     url = web_prop.get("url")
     if not url:
         return None
-
+        
     if not url.startswith(("http://", "https://")):
         url = "http://" + url
-
+        
     parsed = urlparse(url)
     if parsed.netloc:
         return f"{parsed.scheme}://{parsed.netloc}/"
@@ -257,11 +257,11 @@ def run(
             display_name = "(untitled)" if is_untitled else cleaned_name
             log.info(f"{prefix} 🔍  Scraping {display_name[:40]:<40} │ {web_url}")
             scraped = scrape_website(
-                web_url,
-                browser,
+                web_url, 
+                browser, 
                 cleaned_name="" if is_untitled else cleaned_name
             )
-
+            
             if scraped and not scraped.get("is_parked") and not scraped.get("is_blank") and not scraped.get("dead_link") and scraped.get("status_code") not in (403, 404, 503):
                 # Update cleaned_name/short_about from page_title if untitled or missing
                 if scraped.get("page_title"):
@@ -279,31 +279,31 @@ def run(
                 )
                 body_text = scraped.get("body_text", "")
                 linkedin_url = scraped.get("linkedin")
-
+                
                 type_inferred = infer_type(primary_text, body_text=body_text, linkedin_url=linkedin_url)
                 fields_inferred = infer_fields(primary_text, body_text=body_text)
-
+                
                 tags_map = relation_maps.get("tags", {})
                 tags_inferred = infer_tags(primary_text, available_tags=tags_map, body_text=body_text)
-
+                
                 # Scan primary text first for JEV taxonomies, fallback to full text
                 jev_fields = extract_taxonomies_from_text("creatives", "Fields", primary_text)
                 if not jev_fields and body_text:
                     jev_fields = extract_taxonomies_from_text("creatives", "Fields", body_text[:5000])
-
+                    
                 jev_tags = extract_taxonomies_from_text("creatives", "Tags", primary_text)
                 if not jev_tags and body_text:
                     # Allow body matches for non-system/status tags
                     system_tags = {"changed", "other", "closed", "not loading", "403", "503"}
                     body_jev_tags = extract_taxonomies_from_text("creatives", "Tags", body_text[:5000])
                     jev_tags = [t for t in body_jev_tags if t.lower() not in system_tags]
-
+                
                 jev_types = extract_taxonomies_from_text("creatives", "Type", primary_text)
                 if not type_inferred and jev_types:
                     type_inferred = "Solo" if "Solo" in jev_types else jev_types[0]
-
+                    
                 scraped["fields_inferred"] = list(dict.fromkeys(fields_inferred + jev_fields))[:4]
-
+                
                 # Combine tags ensuring case-insensitive deduplication
                 combined_tags: list[str] = []
                 seen_tag_lowers: set[str] = set()
@@ -435,7 +435,7 @@ def run(
 def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
     """Run the deduplication job on the Creatives database."""
     log.info("\n── Starting Deduplication Job ───────────────────────")
-
+    
     # 1. Query all pages
     pages = []
     cursor = None
@@ -443,13 +443,13 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
         kwargs = {"database_id": db_id, "page_size": 100}
         if cursor:
             kwargs["start_cursor"] = cursor
-
+            
         try:
             resp = query_database(client, db_id=kwargs.get("database_id"), **kwargs) if client else {"results": [], "has_more": False}
         except Exception as exc:
             log.error(f"Failed to query database: {exc}")
             return
-
+            
         if client:
             pages.extend(resp.get("results", []))
             cursor = resp.get("next_cursor")
@@ -458,9 +458,9 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
         else:
             log.info("Dry-run with no client provided. Skipping query.")
             break
-
+            
     log.info(f"Fetched {len(pages)} pages.")
-
+    
     # 2. Group by normalized URL
     from collections import defaultdict
     groups = defaultdict(list)
@@ -468,16 +468,16 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
         url = _get_web_url(p)
         if url:
             groups[url].append(p)
-
+            
     # 3. Find duplicates
     duplicates = {url: group for url, group in groups.items() if len(group) > 1}
     log.info(f"Found {len(duplicates)} URLs with duplicates.")
-
+    
     stats = {"master_set": 0, "duplicated_set": 0, "failed": 0}
-
+    
     for url, group in duplicates.items():
         log.info(f"\nProcessing group for: {url} ({len(group)} pages)")
-
+        
         # Score each page to find the best master
         def _score_page(p):
             props = p.get("properties", {})
@@ -488,35 +488,35 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
             if props.get("Email", {}).get("email"): score += 1
             if props.get("Tags", {}).get("relation"): score += 1
             if props.get("Fields", {}).get("relation"): score += 1
-
+            
             cover = p.get("cover")
             if cover: score += 1
             return score
-
+            
         scored = [(p, _score_page(p)) for p in group]
         # Sort by score descending, then by created time ascending (older is better tie-breaker)
         scored.sort(key=lambda x: (-x[1], x[0].get("created_time", "")))
-
+        
         master_page = scored[0][0]
         duplicate_pages = [s[0] for s in scored[1:]]
-
+        
         master_name = _get_page_name(master_page)
         log.info(f"  → Master selected: {master_name} (Score: {scored[0][1]})")
-
+        
         # Update Notion
         if dry_run:
             for dp in duplicate_pages:
                 dp_name = _get_page_name(dp)
                 log.info(f"  → Would mark as Duplicated: {dp_name}")
             continue
-
+            
         # Build merge properties for master
         master_props = {"Master": {"checkbox": True}}
         for prop_name, prop_data in master_page.get("properties", {}).items():
             prop_type = prop_data.get("type")
             if not prop_type or prop_type in ("checkbox", "formula", "rollup", "created_time", "last_edited_time", "created_by", "last_edited_by"):
                 continue
-
+                
             is_empty = False
             if prop_type in ("rich_text", "title"):
                 is_empty = not prop_data.get(prop_type)
@@ -524,13 +524,13 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
                 is_empty = prop_data.get(prop_type) is None
             elif prop_type == "relation":
                 is_empty = not prop_data.get("relation")
-
+                
             if is_empty:
                 for dp in duplicate_pages:
                     dp_prop = dp.get("properties", {}).get(prop_name)
                     if not dp_prop or dp_prop.get("type") != prop_type:
                         continue
-
+                        
                     dp_empty = True
                     if prop_type in ("rich_text", "title"):
                         dp_empty = not dp_prop.get(prop_type)
@@ -538,7 +538,7 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
                         dp_empty = dp_prop.get(prop_type) is None
                     elif prop_type == "relation":
                         dp_empty = not dp_prop.get("relation")
-
+                        
                     if not dp_empty:
                         master_props[prop_name] = {prop_type: dp_prop[prop_type]}
                         log.info(f"  → Merging missing '{prop_name}' from duplicate into master.")
@@ -554,7 +554,7 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
         except Exception as exc:
             log.error(f"  ❌ Failed to update Master: {exc}")
             stats["failed"] += 1
-
+            
         # Update duplicates
         for dp in duplicate_pages:
             dp_name = _get_page_name(dp)
@@ -568,10 +568,10 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
             except Exception as exc:
                 log.error(f"  ❌ Failed to update Duplicated: {exc}")
                 stats["failed"] += 1
-
+                
         import time
         time.sleep(0.5)
-
+        
     log.info(f"\n{'─' * 55}")
     log.info(f"✅  {stats['master_set']} Master checkboxes set")
     log.info(f"✅  {stats['duplicated_set']} Duplicated checkboxes set")
@@ -580,7 +580,7 @@ def _run_deduplication(client, db_id: str, dry_run: bool) -> None:
 def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
     """Map duplicates to masters, archive them if fully subsumed, and link them."""
     log.info("\n── Starting Duplicate Cleanup Job ────────────────────")
-
+    
     # 1. Query pages
     pages = []
     cursor = None
@@ -588,13 +588,13 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
         kwargs = {"database_id": db_id, "page_size": 100}
         if cursor:
             kwargs["start_cursor"] = cursor
-
+            
         try:
             resp = query_database(client, db_id=kwargs.get("database_id"), **kwargs) if client else {"results": [], "has_more": False}
         except Exception as exc:
             log.error(f"Failed to query database: {exc}")
             return
-
+            
         if client:
             pages.extend(resp.get("results", []))
             cursor = resp.get("next_cursor")
@@ -603,9 +603,9 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
         else:
             log.info("Dry-run with no client provided. Skipping query.")
             break
-
+            
     log.info(f"Fetched {len(pages)} pages.")
-
+    
     # 2. Group by normalized URL
     from collections import defaultdict
     groups = defaultdict(list)
@@ -613,15 +613,15 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
         url = _get_web_url(p)
         if url:
             groups[url].append(p)
-
+            
     duplicates = {url: group for url, group in groups.items() if len(group) > 1}
     log.info(f"Found {len(duplicates)} URLs with duplicates.")
-
+    
     stats = {"archived": 0, "linked_master": 0, "linked_duplicates": 0, "failed": 0}
-
+    
     for url, group in duplicates.items():
         log.info(f"\nProcessing group for: {url} ({len(group)} pages)")
-
+        
         # Identify Master: either it has Master=True, or fallback to older
         masters = [p for p in group if p.get("properties", {}).get("Master", {}).get("checkbox")]
         if masters:
@@ -640,30 +640,30 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                 if props.get("Tags", {}).get("relation"): score += 1
                 if props.get("Fields", {}).get("relation"): score += 1
                 return score
-
+                
             scored = [(p, _score_page(p)) for p in group]
             scored.sort(key=lambda x: (-x[1], x[0].get("created_time", "")))
             master_page = scored[0][0]
             duplicate_pages = [s[0] for s in scored[1:]]
-
+            
         master_name = _get_page_name(master_page)
         log.info(f"  → Identified Master: {master_name} ({master_page['id']})")
-
+        
         master_props = master_page.get("properties", {})
-
+        
         any_archived = False
         for dp in duplicate_pages:
             dp_name = _get_page_name(dp)
             dp_id = dp["id"]
             dp_props = dp.get("properties", {})
-
+            
             # Check if all non-empty properties in dp are subsumed by master
             is_subsumed = True
             for prop_name, dp_prop in dp_props.items():
                 prop_type = dp_prop.get("type")
                 if not prop_type or prop_type in ("checkbox", "formula", "rollup", "created_time", "last_edited_time", "created_by", "last_edited_by", "title"):
                     continue
-
+                    
                 # Is dp_prop empty?
                 dp_empty = True
                 if prop_type in ("rich_text", "title"):
@@ -672,21 +672,21 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                     dp_empty = dp_prop.get(prop_type) is None
                 elif prop_type == "relation":
                     dp_empty = not dp_prop.get("relation")
-
+                    
                 if not dp_empty:
                     # Check master
                     mp_prop = master_props.get(prop_name)
                     if not mp_prop or mp_prop.get("type") != prop_type:
                         is_subsumed = False
                         break
-
+                        
                     # Compare content (basic structural equality or subsets)
                     if prop_type in ("number", "url", "email", "phone_number"):
                         if mp_prop.get(prop_type) != dp_prop.get(prop_type):
                             is_subsumed = False
                             break
                     elif prop_type in ("rich_text", "title"):
-                        # Just check if master has *any* rich_text.
+                        # Just check if master has *any* rich_text. 
                         # In a stricter sense, we should check substring, but usually if master has About it's better
                         if not mp_prop.get(prop_type):
                             is_subsumed = False
@@ -702,7 +702,7 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                         if mp_prop.get("date") is None:
                             is_subsumed = False
                             break
-
+                            
             # Process duplicate based on subsumption
             if is_subsumed:
                 log.info(f"  → Duplicate {dp_name} is fully subsumed by Master. Will archive.")
@@ -712,7 +712,7 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                         client.pages.update(page_id=dp_id, archived=True)
                         stats["archived"] += 1
                         any_archived = True
-
+                        
                         # Also attempt to set custom Archive checkbox if it exists just in case
                         # (Doing this in a separate call or same call? Same call is fine but archived=True removes it from view)
                     except Exception as exc:
@@ -720,7 +720,7 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                         stats["failed"] += 1
             else:
                 log.info(f"  → Duplicate {dp_name} has unique data not in Master. Linking only.")
-
+            
             # Optionally link them (best effort on Duplicate page, assuming 'Master Page' relation or similar)
             # We try to update Duplicate with Master ID if a relation property named 'Master' or 'Master Page' exists
             if not dry_run and not is_subsumed: # if archived, no need to link
@@ -731,7 +731,7 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                         if meta.get("type") == "relation" and name.lower() in ("master", "master page"):
                             relation_prop_name = name
                             break
-
+                            
                     if relation_prop_name:
                         client.pages.update(
                             page_id=dp_id,
@@ -740,28 +740,28 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                         stats["linked_duplicates"] += 1
                 except Exception as exc:
                     log.error(f"  ❌ Failed to link Master -> Duplicate: {exc}")
-
+                    
         # Update Master (link relation, and unflag Master checkbox if any duplicate was removed)
         if not dry_run:
             try:
                 master_update_props = {}
-
+                
                 # If we archived any duplicates, unflag Master on the retained creative
                 if any_archived:
                     master_update_props["Master"] = {"checkbox": False}
-
+                
                 relation_prop_name = None
                 for name, meta in master_props.items():
                     if meta.get("type") == "relation" and name.lower() in ("duplicates", "duplicate pages"):
                         relation_prop_name = name
                         break
-
+                        
                 if relation_prop_name:
                     # Collect IDs of duplicates that were NOT archived (or all if you want to keep history)
                     # Let's link all of them just in case
                     dup_ids = [{"id": dp["id"]} for dp in duplicate_pages]
                     master_update_props[relation_prop_name] = {"relation": dup_ids}
-
+                    
                 if master_update_props:
                     client.pages.update(
                         page_id=master_page["id"],
@@ -770,7 +770,7 @@ def _run_cleanup_duplicates(client, db_id: str, dry_run: bool) -> None:
                     stats["linked_master"] += 1
             except Exception as exc:
                 log.error(f"  ❌ Failed to update Master page: {exc}")
-
+                
         import time
         time.sleep(0.5)
 

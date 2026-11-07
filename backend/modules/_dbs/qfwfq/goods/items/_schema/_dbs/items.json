@@ -22,6 +22,16 @@
         "synced_property_name": "Items Relation"
       }
     },
+    "Master Category": {
+      "id": "%3Ez~b",
+      "name": "Master Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "40a63158-bfa0-81fb-8298-cd2dcba285c6",
+        "type": "single_property",
+        "synced_property_name": null
+      }
+    },
     "Attachments": {
       "id": "%3FCyk",
       "name": "Attachments",

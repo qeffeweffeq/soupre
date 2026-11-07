@@ -1,0 +1,255 @@
+{
+  "id": "00d5e883-0910-43bb-9f54-7ea2e796f5cf",
+  "title": "SGD / PL Invoicing & Payments",
+  "url": "https://app.notion.com/p/00d5e883091043bb9f547ea2e796f5cf",
+  "parent": {
+    "type": "block_id",
+    "block_id": "17ec7930-1516-80ec-b1c0-c620c6ef734d"
+  },
+  "properties": {
+    "Year": {
+      "id": "%3C%5B_Q",
+      "name": "Year",
+      "type": "multi_select",
+      "options": [
+        {
+          "name": "20",
+          "id": "00a3ccea-c0ce-4243-821f-060581a0c09a",
+          "color": "default"
+        },
+        {
+          "name": "21",
+          "id": "d35a15d3-57fe-4f9f-b881-e0510e08798e",
+          "color": "default"
+        },
+        {
+          "name": "22",
+          "id": "4f889a0b-d3ac-49fd-b5dc-a2edff0f92a4",
+          "color": "default"
+        },
+        {
+          "name": "23",
+          "id": "a2d93ca3-64a6-44f9-b53e-d46f50991261",
+          "color": "default"
+        },
+        {
+          "name": "24",
+          "id": "d6d38d24-6c9c-4cdf-b9f1-1355415cb214",
+          "color": "default"
+        },
+        {
+          "name": "25",
+          "id": "6bcd1160-3627-4572-a9d3-f96b4407fcde",
+          "color": "default"
+        },
+        {
+          "name": "26",
+          "id": "a76dfa0c-9fc9-4bdb-b25d-0c23d6744e57",
+          "color": "default"
+        },
+        {
+          "name": "27",
+          "id": "2837a06d-0845-44cf-8482-937cab5a0daf",
+          "color": "default"
+        }
+      ]
+    },
+    "Parent item": {
+      "id": "%3DBHo",
+      "name": "Parent item",
+      "type": "relation",
+      "relation": {
+        "database_id": "00d5e883-0910-43bb-9f54-7ea2e796f5cf",
+        "type": "dual_property",
+        "synced_property_name": "Sub-item"
+      }
+    },
+    "Proforma PDF Drive": {
+      "id": "%3DNad",
+      "name": "Proforma PDF Drive",
+      "type": "url"
+    },
+    "Net Fee Credit Card": {
+      "id": "%3FNmg",
+      "name": "Net Fee Credit Card",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Credit Card\"),prop(\"Gross\")* prop(\"Fee Credit Card\") / 100, 0)\t"
+      }
+    },
+    "Delay": {
+      "id": "FxyU",
+      "name": "Delay",
+      "type": "formula",
+      "formula": {
+        "expression": "if(empty(prop(\"Payment\")) and prop(\"Deadline\") > today(), \"\", if(empty(prop(\"Payment\")), dateBetween(today(), prop(\"Deadline\"), \"days\"), dateBetween(prop(\"Payment\"), prop(\"Deadline\"), \"days\")))"
+      }
+    },
+    "Invoice": {
+      "id": "M%7BKr",
+      "name": "Invoice",
+      "type": "number"
+    },
+    "Net Total": {
+      "id": "Ws%3Dm",
+      "name": "Net Total",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Net\") + prop(\"Net Fee Credit Card\")"
+      }
+    },
+    "Proforma Nr.": {
+      "id": "Xrkt",
+      "name": "Proforma Nr.",
+      "type": "number"
+    },
+    "Credit Card": {
+      "id": "%5DxfD",
+      "name": "Credit Card",
+      "type": "checkbox"
+    },
+    "Invoice Cloud": {
+      "id": "a%7DP%5B",
+      "name": "Invoice Cloud",
+      "type": "url"
+    },
+    "Fee Credit Card": {
+      "id": "ci%7Bl",
+      "name": "Fee Credit Card",
+      "type": "number"
+    },
+    "Status": {
+      "id": "eFAL",
+      "name": "Status",
+      "type": "status",
+      "options": [
+        {
+          "id": "a5de03d3-4f5a-4501-bb07-c00fbbaa0d88",
+          "name": "Not started",
+          "color": "default",
+          "description": null
+        },
+        {
+          "id": "e59f48b5-3dfb-4c02-8f96-aad44e5a5b6b",
+          "name": "In progress",
+          "color": "blue",
+          "description": null
+        },
+        {
+          "id": "5845f5e3-97aa-445d-8218-b15c963bf9c0",
+          "name": "Done",
+          "color": "green",
+          "description": null
+        }
+      ],
+      "groups": [
+        {
+          "id": "7f2cd470-fabc-4292-a413-c41cf04ad901",
+          "name": "To-do",
+          "color": "gray",
+          "option_ids": [
+            "a5de03d3-4f5a-4501-bb07-c00fbbaa0d88"
+          ]
+        },
+        {
+          "id": "6a399f51-dcfb-47cd-93ea-3514a9989982",
+          "name": "In progress",
+          "color": "blue",
+          "option_ids": [
+            "e59f48b5-3dfb-4c02-8f96-aad44e5a5b6b"
+          ]
+        },
+        {
+          "id": "ea8e1636-13dc-4dd8-84b2-4f0a3807ec03",
+          "name": "Complete",
+          "color": "green",
+          "option_ids": [
+            "5845f5e3-97aa-445d-8218-b15c963bf9c0"
+          ]
+        }
+      ]
+    },
+    "Transfer": {
+      "id": "fGEQ",
+      "name": "Transfer",
+      "type": "checkbox"
+    },
+    "Payment link": {
+      "id": "gowK",
+      "name": "Payment link",
+      "type": "url"
+    },
+    "Gross": {
+      "id": "gx%7B%60",
+      "name": "Gross",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Net\")* 1.22"
+      }
+    },
+    "Gross Total": {
+      "id": "hfA%7B",
+      "name": "Gross Total",
+      "type": "formula",
+      "formula": {
+        "expression": "prop(\"Gross\") + prop(\"Gross Fee Credit Card\")"
+      }
+    },
+    "Sub-item": {
+      "id": "i%3BbF",
+      "name": "Sub-item",
+      "type": "relation",
+      "relation": {
+        "database_id": "00d5e883-0910-43bb-9f54-7ea2e796f5cf",
+        "type": "dual_property",
+        "synced_property_name": "Parent item"
+      }
+    },
+    "Gross Fee Credit Card": {
+      "id": "jij%3F",
+      "name": "Gross Fee Credit Card",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Credit Card\"), (prop(\"Gross\")* prop(\"Fee Credit Card\") / 100) * 1.22, 0)"
+      }
+    },
+    "Proforma Cloud": {
+      "id": "kbzw",
+      "name": "Proforma Cloud",
+      "type": "url"
+    },
+    "Invoice Nr.": {
+      "id": "omSi",
+      "name": "Invoice Nr.",
+      "type": "number"
+    },
+    "Payment": {
+      "id": "rCbS",
+      "name": "Payment",
+      "type": "date"
+    },
+    "Delay Count": {
+      "id": "sNzW",
+      "name": "Delay Count",
+      "type": "formula",
+      "formula": {
+        "expression": "if(prop(\"Delay\") > 30, \"🔴 \" + prop(\"Delay\") + \" Days\", if(prop(\"Delay\") > 1 and prop(\"Delay\") < 30, \"🟠 \" + prop(\"Delay\") + \" Days\", \"🟢 \" + prop(\"Delay\") + \" Days\"))"
+      }
+    },
+    "Deadline": {
+      "id": "vxtt",
+      "name": "Deadline",
+      "type": "date"
+    },
+    "Net": {
+      "id": "zqb%7B",
+      "name": "Net",
+      "type": "number"
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "id": "16f63158-bfa0-819b-a7ea-e4823cc42c68",
+  "title": "Tags",
+  "url": "https://app.notion.com/p/16f63158bfa0819ba7eae4823cc42c68",
+  "parent": {
+    "type": "block_id",
+    "block_id": "1dd63158-bfa0-8097-b136-e25bd096266d"
+  },
+  "properties": {
+    "Costs": {
+      "id": "PGAy",
+      "name": "Costs",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Total",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "BL|c",
+        "relation_property_id": "YyHT",
+        "function": "sum"
+      }
+    },
+    "Costs Relation": {
+      "id": "YyHT",
+      "name": "Costs Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Tags"
+      }
+    },
+    "Meta Items": {
+      "id": "frVN",
+      "name": "Meta Items",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🧾 → € \" + format(round(prop(\"Costs\") * 100) / 100)"
+      }
+    },
+    "Date": {
+      "id": "%7Cs%5EK",
+      "name": "Date",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Date",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "a[|`",
+        "relation_property_id": "YyHT",
+        "function": "earliest_date"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

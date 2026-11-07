@@ -1,0 +1,46 @@
+{
+  "id": "270aabfa-9126-459d-93e9-cb8d894347fd",
+  "title": "Global Keywords",
+  "url": "https://app.notion.com/p/270aabfa9126459d93e9cb8d894347fd",
+  "parent": {
+    "type": "block_id",
+    "block_id": "62bcb9b4-0609-4e36-90b2-35e418c7c050"
+  },
+  "properties": {
+    "Sub-item": {
+      "id": "Ugrr",
+      "name": "Sub-item",
+      "type": "relation",
+      "relation": {
+        "database_id": "270aabfa-9126-459d-93e9-cb8d894347fd",
+        "type": "dual_property",
+        "synced_property_name": "Parent item"
+      }
+    },
+    "Parent item": {
+      "id": "Wzmp",
+      "name": "Parent item",
+      "type": "relation",
+      "relation": {
+        "database_id": "270aabfa-9126-459d-93e9-cb8d894347fd",
+        "type": "dual_property",
+        "synced_property_name": "Sub-item"
+      }
+    },
+    "Tags": {
+      "id": "%7DBBK",
+      "name": "Tags",
+      "type": "relation",
+      "relation": {
+        "database_id": "2db0bbd3-cccc-43b0-a394-dffbb37d05e5",
+        "type": "dual_property",
+        "synced_property_name": "Glob Keywords Relation"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

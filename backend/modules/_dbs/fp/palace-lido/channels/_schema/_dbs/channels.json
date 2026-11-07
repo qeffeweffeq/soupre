@@ -1,0 +1,124 @@
+{
+  "id": "3717f6c7-2fc1-4393-84dd-462294d8172b",
+  "title": "Channels",
+  "url": "https://app.notion.com/p/3717f6c72fc1439384dd462294d8172b",
+  "parent": {
+    "type": "block_id",
+    "block_id": "d1809713-1e17-4e42-bece-bcc1ff88a10f"
+  },
+  "properties": {
+    "Campaigns Relation": {
+      "id": "%3AkGm",
+      "name": "Campaigns Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "0362f305-f70e-4331-b15f-30d77e9226dc",
+        "type": "dual_property",
+        "synced_property_name": "Channels"
+      }
+    },
+    "Ads Relation": {
+      "id": "DCrK",
+      "name": "Ads Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "f5fa8a2f-810b-47a3-b381-e4c7e6d68b3d",
+        "type": "dual_property",
+        "synced_property_name": "Channels"
+      }
+    },
+    "Ad Groups": {
+      "id": "E%7Bz%7C",
+      "name": "Ad Groups",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Group",
+        "relation_property_name": "Ad Groups Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "mTEr",
+        "function": "count"
+      }
+    },
+    "Audiences Relation": {
+      "id": "Q%60w%5B",
+      "name": "Audiences Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "254c7930-1516-8031-8476-f25826bc2e6d",
+        "type": "dual_property",
+        "synced_property_name": "Channel"
+      }
+    },
+    "Proflies": {
+      "id": "S%3AGX",
+      "name": "Proflies",
+      "type": "relation",
+      "relation": {
+        "database_id": "e82e6761-dcc4-4050-a5ca-02fcdb688936",
+        "type": "dual_property",
+        "synced_property_name": "Channels"
+      }
+    },
+    "Campaigns": {
+      "id": "eFkG",
+      "name": "Campaigns",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Campaign",
+        "relation_property_name": "Campaigns Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": ":kGm",
+        "function": "count"
+      }
+    },
+    "Ads ": {
+      "id": "kt%3AJ",
+      "name": "Ads ",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Group",
+        "relation_property_name": "Ad Groups Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "mTEr",
+        "function": "count"
+      }
+    },
+    "Ad Groups Relation": {
+      "id": "mTEr",
+      "name": "Ad Groups Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "2cb878d8-c2ec-4ffe-b416-1878e28a3f33",
+        "type": "dual_property",
+        "synced_property_name": "Channels"
+      }
+    },
+    "Segments Relation": {
+      "id": "nelI",
+      "name": "Segments Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "254c7930-1516-80c7-a27d-daeece4c9a0b",
+        "type": "dual_property",
+        "synced_property_name": "Channel"
+      }
+    },
+    "Audiences": {
+      "id": "vGXi",
+      "name": "Audiences",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Audience",
+        "relation_property_name": "Audiences Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Q`w[",
+        "function": "count"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}

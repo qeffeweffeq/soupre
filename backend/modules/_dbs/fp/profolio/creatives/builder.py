@@ -30,22 +30,22 @@ def _has_only_url_filled(page: dict) -> bool:
     props = page.get("properties", {})
     if not props.get("Web", {}).get("url"):
         return False
-
+        
     for prop_name, prop_data in props.items():
         if prop_name in ("Name", "Web", "TBP-U", "Archive", "Autofilled", "Not Autofilled", "Duplicated", "Master", "Pin", "Rank"):
             continue
-
+            
         prop_type = prop_data.get("type")
         if not prop_type or prop_type in ("checkbox", "formula", "rollup", "created_time", "last_edited_time", "created_by", "last_edited_by"):
             continue
-
+            
         if prop_type in ("rich_text", "title"):
             if prop_data.get(prop_type): return False
         elif prop_type in ("number", "url", "email", "phone_number", "date"):
             if prop_data.get(prop_type) is not None: return False
         elif prop_type == "relation":
             if prop_data.get("relation"): return False
-
+            
     return True
 
 
@@ -74,7 +74,7 @@ def build_update_payload(
     # Generic Autofill: Find any other empty date fields and populate them based on creation time
     from modules.utils.dates import populate_empty_date_fields, calculate_dynamic_date
     populate_empty_date_fields(page, properties)
-
+    
     # Autofill Year if empty
     if is_empty_property(page, "Year", "multi_select"):
         # Use computed date if it exists, otherwise fallback to now
@@ -86,7 +86,7 @@ def build_update_payload(
     # -- Rating logic based on Notes ------------------------------------
     notes_prop = page.get("properties", {}).get("Notes", {}).get("rich_text", [])
     existing_notes = "".join(t.get("plain_text", "") or t.get("text", {}).get("content", "") for t in notes_prop)
-
+    
     a_matches = re.findall(r'A+', existing_notes)
     if a_matches:
         max_a = max(len(m) for m in a_matches)
@@ -106,7 +106,7 @@ def build_update_payload(
         properties["Archive"] = {"checkbox": True}
         properties["TBP-U"] = {"checkbox": False}
         properties["Not Autofilled"] = {"checkbox": True}
-
+        
         # Add the 'Closed' tag for all these conditions except 404
         if scraped.get("status_code") != 404:
             closed_tag_id = relation_maps.get("tags", {}).get("closed")
@@ -117,7 +117,7 @@ def build_update_payload(
                 if not any(t.get("id") == closed_tag_id for t in existing_tags):
                     existing_tags.append({"id": closed_tag_id})
                     properties["Tags"] = {"relation": existing_tags}
-
+                
         if scraped.get("status_code") in (503, 403):
             status_tag_str = str(scraped.get("status_code"))
             tag_id = relation_maps.get("tags", {}).get(status_tag_str)
@@ -126,7 +126,7 @@ def build_update_payload(
                 if not any(t.get("id") == tag_id for t in existing_tags):
                     existing_tags.append({"id": tag_id})
                     properties["Tags"] = {"relation": existing_tags}
-
+                    
         result["properties"] = properties
         return result
 
@@ -142,10 +142,10 @@ def build_update_payload(
         norm_final = normalize_url(final_url)
         if norm_orig and norm_final and norm_orig != norm_final:
             properties["Web"] = {"url": final_url}
-
+            
             notes_prop = page.get("properties", {}).get("Notes", {}).get("rich_text", [])
             existing_notes = "".join(t.get("plain_text", "") or t.get("text", {}).get("content", "") for t in notes_prop)
-
+            
             new_notes = f"{existing_notes} | {original_url}" if existing_notes else original_url
             properties["Notes"] = {
                 "rich_text": [{"text": {"content": new_notes}}]

@@ -1,10 +1,10 @@
 {
-  "id": "192d46da-672a-4819-a241-b7a0fa598238",
+  "id": "30dc7930-1516-8170-b12b-d1144f8e27c9",
   "title": "Type",
-  "url": "https://app.notion.com/p/192d46da672a4819a241b7a0fa598238",
+  "url": "https://app.notion.com/p/30dc793015168170b12bd1144f8e27c9",
   "parent": {
     "type": "page_id",
-    "page_id": "23e05500-b14e-4c5d-ac82-ce239de0823a"
+    "page_id": "30dc7930-1516-816d-afad-e08ae56b26c0"
   },
   "properties": {
     "Benchmarks": {
@@ -32,7 +32,7 @@
       "name": "Benchmarks Relation",
       "type": "relation",
       "relation": {
-        "database_id": "558686d9-a76a-48d8-a232-819a9f71b3e1",
+        "database_id": "30dc7930-1516-81f9-8f14-edad60f25fee",
         "type": "dual_property",
         "synced_property_name": "Type"
       }

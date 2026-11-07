@@ -7,6 +7,18 @@
     "block_id": "1dd63158-bfa0-8059-b503-f0f678afd7a4"
   },
   "properties": {
+    "Costs Total": {
+      "id": "%3AC%7C%7C",
+      "name": "Costs Total",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "x|nU",
+        "function": "sum"
+      }
+    },
     "Description": {
       "id": "%3B%3CDh",
       "name": "Description",
@@ -64,6 +76,18 @@
       "name": "Pinned",
       "type": "checkbox"
     },
+    "Costs Count": {
+      "id": "NHxD",
+      "name": "Costs Count",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Cost",
+        "relation_property_name": "Costs Relation",
+        "rollup_property_id": "jQ`O",
+        "relation_property_id": "x|nU",
+        "function": "count"
+      }
+    },
     "URL #2": {
       "id": "N_ML",
       "name": "URL #2",
@@ -83,6 +107,16 @@
       "id": "%5D_W%3C",
       "name": "Note",
       "type": "rich_text"
+    },
+    "Master Category": {
+      "id": "aPdj",
+      "name": "Master Category",
+      "type": "relation",
+      "relation": {
+        "database_id": "40a63158-bfa0-81fb-8298-cd2dcba285c6",
+        "type": "single_property",
+        "synced_property_name": null
+      }
     },
     "Categories": {
       "id": "cSl%40",
@@ -120,6 +154,16 @@
       "id": "xBM%3D",
       "name": "WTF",
       "type": "checkbox"
+    },
+    "Costs Relation": {
+      "id": "x%7CnU",
+      "name": "Costs Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "16f63158-bfa0-8143-af07-fc85b37160c8",
+        "type": "dual_property",
+        "synced_property_name": "Shop"
+      }
     },
     "Location": {
       "id": "%7CKMy",

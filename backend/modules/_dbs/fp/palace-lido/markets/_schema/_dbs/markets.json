@@ -1,0 +1,258 @@
+{
+  "id": "135c7930-1516-80a0-953c-e4d667789c9b",
+  "title": "Markets",
+  "url": "https://app.notion.com/p/135c7930151680a0953ce4d667789c9b",
+  "parent": {
+    "type": "block_id",
+    "block_id": "d1809713-1e17-4e42-bece-bcc1ff88a10f"
+  },
+  "properties": {
+    "Web Contents Relation": {
+      "id": "%3D%60%40l",
+      "name": "Web Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "135c7930-1516-80bd-a01a-caf39772ec29",
+        "type": "dual_property",
+        "synced_property_name": "Market"
+      }
+    },
+    "Meta Web": {
+      "id": "%3EdIm",
+      "name": "Meta Web",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🌐 Contents → \" + prop(\"Web Contents\")"
+      }
+    },
+    "Ads Contents ": {
+      "id": "%3FXcP",
+      "name": "Ads Contents ",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Content",
+        "relation_property_name": "Ads Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "?]ot",
+        "function": "count"
+      }
+    },
+    "Ads Contents Relation": {
+      "id": "%3F%5Dot",
+      "name": "Ads Contents Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "6bdabb53-d224-4a02-b91b-6f0bf4b8588d",
+        "type": "dual_property",
+        "synced_property_name": "Market"
+      }
+    },
+    "Links Relation": {
+      "id": "%40Mx%3D",
+      "name": "Links Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "94ef0233-fa38-4dc7-80d3-f9d37d03aaed",
+        "type": "dual_property",
+        "synced_property_name": "Market"
+      }
+    },
+    "Audiences": {
+      "id": "BYLj",
+      "name": "Audiences",
+      "type": "relation",
+      "relation": {
+        "database_id": "254c7930-1516-8031-8476-f25826bc2e6d",
+        "type": "dual_property",
+        "synced_property_name": "Markets"
+      }
+    },
+    "Ads Relation": {
+      "id": "E%7Ccm",
+      "name": "Ads Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "f5fa8a2f-810b-47a3-b381-e4c7e6d68b3d",
+        "type": "dual_property",
+        "synced_property_name": "Markets"
+      }
+    },
+    "Sitelinks Relation": {
+      "id": "Fw%3Cm",
+      "name": "Sitelinks Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "10aaf09c-1e80-40fc-b71f-548e86fc4122",
+        "type": "dual_property",
+        "synced_property_name": "Audience"
+      }
+    },
+    "Groups Relation": {
+      "id": "HRlt",
+      "name": "Groups Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "2cb878d8-c2ec-4ffe-b416-1878e28a3f33",
+        "type": "dual_property",
+        "synced_property_name": "Markets"
+      }
+    },
+    "Group": {
+      "id": "Ht%3D%3F",
+      "name": "Group",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Group",
+        "relation_property_name": "Groups Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "HRlt",
+        "function": "count"
+      }
+    },
+    "Meta Ads": {
+      "id": "I~Yb",
+      "name": "Meta Ads",
+      "type": "formula",
+      "formula": {
+        "expression": "\"📢 Contents → \" + prop(\"Ads Contents \")"
+      }
+    },
+    "Locations": {
+      "id": "K%40Wz",
+      "name": "Locations",
+      "type": "relation",
+      "relation": {
+        "database_id": "17dc7930-1516-8010-ba12-cef965205d8f",
+        "type": "dual_property",
+        "synced_property_name": "Markets Relation"
+      }
+    },
+    "Keywords": {
+      "id": "OqBO",
+      "name": "Keywords",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Keyword",
+        "relation_property_name": "Keywords Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "coo;",
+        "function": "count"
+      }
+    },
+    "Web Contents": {
+      "id": "XL_K",
+      "name": "Web Contents",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Title",
+        "relation_property_name": "Web Contents Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "=`@l",
+        "function": "count"
+      }
+    },
+    "Active Campaigns": {
+      "id": "%5DDx%7C",
+      "name": "Active Campaigns",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Enabled",
+        "relation_property_name": "Campaigns Relation",
+        "rollup_property_id": "^\\>f",
+        "relation_property_id": "zhRB",
+        "function": "checked"
+      }
+    },
+    "Keywords Relation": {
+      "id": "coo%3B",
+      "name": "Keywords Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "1d6fc0b6-0ccd-4f8d-8800-b6eec034cade",
+        "type": "dual_property",
+        "synced_property_name": "Audience"
+      }
+    },
+    "Campaigns": {
+      "id": "d~Fs",
+      "name": "Campaigns",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Campaign",
+        "relation_property_name": "Campaigns Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "zhRB",
+        "function": "count"
+      }
+    },
+    "Links": {
+      "id": "guE%3A",
+      "name": "Links",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Page Name",
+        "relation_property_name": "Links Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "@Mx=",
+        "function": "count"
+      }
+    },
+    "Ads": {
+      "id": "maY%3B",
+      "name": "Ads",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Ad",
+        "relation_property_name": "Ads Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "E|cm",
+        "function": "count"
+      }
+    },
+    "Profile": {
+      "id": "wMw%40",
+      "name": "Profile",
+      "type": "relation",
+      "relation": {
+        "database_id": "e82e6761-dcc4-4050-a5ca-02fcdb688936",
+        "type": "dual_property",
+        "synced_property_name": "Markets"
+      }
+    },
+    "Campaigns Relation": {
+      "id": "zhRB",
+      "name": "Campaigns Relation",
+      "type": "relation",
+      "relation": {
+        "database_id": "0362f305-f70e-4331-b15f-30d77e9226dc",
+        "type": "dual_property",
+        "synced_property_name": "Markets"
+      }
+    },
+    "Meta URLS": {
+      "id": "zxKN",
+      "name": "Meta URLS",
+      "type": "formula",
+      "formula": {
+        "expression": "\"🔗 Links → \" + prop(\"Links\")"
+      }
+    },
+    "Sitelinks": {
+      "id": "~YYl",
+      "name": "Sitelinks",
+      "type": "rollup",
+      "rollup": {
+        "rollup_property_name": "Sitelink",
+        "relation_property_name": "Sitelinks Relation",
+        "rollup_property_id": "title",
+        "relation_property_id": "Fw<m",
+        "function": "count"
+      }
+    },
+    "Name": {
+      "id": "title",
+      "name": "Name",
+      "type": "title"
+    }
+  }
+}
