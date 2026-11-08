@@ -209,6 +209,7 @@ def seed_taxonomies(session: Session, dbs_dir: Path | None = None) -> dict[str, 
         ("FP", "fp", "⚡", "mauve", "Services, creative direction, portfolio & tasks"),
         ("Qfwfq", "qfwfq", "🪐", "teal", "Goods, shops, items & commerce"),
         ("Full-Site", "full-site", "🌐", "sapphire", "Internal workspace for full-site scraping and content analysis (not linked to Notion)"),
+        ("FFFF", "ffff", "🎨", "pink", "Creative inspiration, design benchmarks & visual archives (not linked to Notion)"),
     ]
     for w_name, w_slug, w_icon, w_color, w_desc in canonical_workspaces:
         existing_w = session.exec(select(Workspace).where(Workspace.slug == w_slug)).first()

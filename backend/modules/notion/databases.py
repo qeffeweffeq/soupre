@@ -384,11 +384,11 @@ def list_available_databases(workspace: Optional[str] = None) -> list[dict[str, 
     """
     Returns metadata for all available databases in no-db-man schemas.
     Filtered by workspace slug ('fp', 'qfwfq') if provided.
-    Strictly returns empty list for 'full-site' workspace (isolated).
+    Strictly returns empty list for 'full-site' and 'ffff' workspaces (isolated).
     """
     if workspace:
         ws_norm = workspace.strip().lower()
-        if ws_norm in ("full-site", "fullsite"):
+        if ws_norm in ("full-site", "fullsite", "ffff"):
             return []
 
     databases = discover_databases_from_disk()

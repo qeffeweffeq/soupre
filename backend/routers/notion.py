@@ -65,6 +65,7 @@ def get_notion_status():
             "fp": fp_configured,
             "qfwfq": qfwfq_configured,
             "full-site": False,  # Permanently unlinked & isolated
+            "ffff": False,       # Permanently unlinked & isolated
         },
         "tokens_found": [k for k in tokens.keys() if "TOKEN" in k],
         "databases": {
@@ -131,10 +132,10 @@ def sync_single_page(
         raise HTTPException(status_code=404, detail="Page not found")
 
     ws_slug = page.workspace.slug if page.workspace else "fp"
-    if ws_slug in ("full-site", "fullsite"):
+    if ws_slug in ("full-site", "fullsite", "ffff"):
         raise HTTPException(
             status_code=400,
-            detail="Pages in the Full-Site workspace cannot be synced to Notion (strictly isolated).",
+            detail=f"Pages in the '{ws_slug}' workspace cannot be synced to Notion (strictly isolated).",
         )
 
     cat_notion_id = page.category.notion_id if page.category else None

@@ -182,8 +182,8 @@ async def stream_batch_to_notion(
 
         ws_slug = _resolve_item_workspace_slug(item, session)
 
-        # ── 1. Strict Full-Site Isolation ─────────────────────────────────
-        if ws_slug in ("full-site", "fullsite"):
+        # ── 1. Strict Full-Site & FFFF Isolation ──────────────────────────
+        if ws_slug in ("full-site", "fullsite", "ffff"):
             skipped_count += 1
             event = {
                 "index": idx,
@@ -192,7 +192,7 @@ async def stream_batch_to_notion(
                 "name": title,
                 "workspace": ws_slug,
                 "status": "skipped",
-                "reason": "Full-Site workspace is isolated from Notion",
+                "reason": f"Workspace '{ws_slug}' is internal and isolated from Notion",
                 "notion_page_id": None,
                 "notion_url": None,
                 "error": None,

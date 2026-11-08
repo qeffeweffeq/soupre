@@ -143,6 +143,19 @@ BUILTIN_TAXONOMY_RULES: List[TaxonomyInstructionRule] = [
         apply_tag_names=["Renovation", "Ristrutturazione"],
         priority=10,
     ),
+    TaxonomyInstructionRule(
+        id="ffff-design-brands-routing",
+        name="FFFF: Design Brands Workspace Routing",
+        description="Auto-route Pentagram, Behance, and It's Nice That to dedicated FFFF workspace (isolated from Notion).",
+        workspace_slug="ffff",
+        url_patterns=[
+            r"pentagram\.com",
+            r"behance\.(?:net|com)",
+            r"itsnicethat\.com",
+            r"its-nice-that",
+        ],
+        priority=1,
+    ),
 ]
 
 

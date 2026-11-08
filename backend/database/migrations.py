@@ -168,11 +168,12 @@ def migrate_db(engine) -> None:
                 )
         conn.commit()
 
-        # Seed canonical workspaces: fp, qfwfq, and full-site
+        # Seed canonical workspaces: fp, qfwfq, full-site, and ffff
         canonical_workspaces = [
             ("FP", "fp", "⚡", "mauve", "Services, creative direction, portfolio & tasks"),
             ("Qfwfq", "qfwfq", "🪐", "teal", "Goods, shops, items & commerce"),
             ("Full-Site", "full-site", "🌐", "sapphire", "Internal workspace for full-site scraping and content analysis (not linked to Notion)"),
+            ("FFFF", "ffff", "🎨", "pink", "Creative inspiration, design benchmarks & visual archives (not linked to Notion)"),
         ]
         for w_name, w_slug, w_icon, w_color, w_desc in canonical_workspaces:
             existing_w = conn.execute(

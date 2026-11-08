@@ -127,10 +127,10 @@ def discover_tokens(extra_paths: Optional[list[Path]] = None) -> dict[str, str]:
 def get_workspace_token(workspace: str, extra_paths: Optional[list[Path]] = None) -> Optional[str]:
     """
     Resolve the Notion token for a given workspace slug.
-    Strictly returns None for 'full-site' workspace.
+    Strictly returns None for 'full-site' and 'ffff' workspaces.
     """
     ws = (workspace or "").strip().lower()
-    if ws in ("full-site", "fullsite", ""):
+    if ws in ("full-site", "fullsite", "ffff", ""):
         return None
 
     tokens = discover_tokens(extra_paths=extra_paths)
@@ -148,10 +148,10 @@ def get_workspace_token(workspace: str, extra_paths: Optional[list[Path]] = None
 def get_target_db_id(workspace: str, db_type: Optional[str] = None) -> Optional[str]:
     """
     Get the default destination Notion database ID for a workspace.
-    Strictly returns None for 'full-site' workspace.
+    Strictly returns None for 'full-site' and 'ffff' workspaces.
     """
     ws = (workspace or "").strip().lower()
-    if ws in ("full-site", "fullsite", ""):
+    if ws in ("full-site", "fullsite", "ffff", ""):
         return None
 
     if ws in ("fp", "services"):

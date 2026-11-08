@@ -167,6 +167,8 @@ async def batch_upload_urls(
     tags = session.exec(select(Tag)).all()
     elements = session.exec(select(Element)).all()
     ws_by_id = {w.id: w for w in workspaces}
+    ws_by_slug = {w.slug.lower(): w for w in workspaces}
+    ffff_ws = ws_by_slug.get("ffff")
 
     cat_by_name = {c.name.lower(): c for c in categories}
     cat_by_slug = {c.slug.lower(): c for c in categories}
@@ -177,12 +179,13 @@ async def batch_upload_urls(
     elem_by_name = {e.name.lower(): e for e in elements}
     elem_by_slug = {e.slug.lower(): e for e in elements}
 
+    FFFF_BRANDS_RE = re.compile(r"(pentagram\.com|behance\.(?:net|com)|itsnicethat\.com|its-nice-that)", re.I)
     FASHION_RE = re.compile(r"\b(jeans|denim|occhiali|sunglasses|eyewear|trousers|pants|chino|chinos|apparel|clothing|shoes|sneakers|espadrillas|scarpe|stivali|sandali|mocassini|dress|skirt|jacket|coat|sweater|velvet|gabardine|cotton|tela|pleats|accessories|boutique|cucinelli|prada|aspesi|nike|gucci|zara|armani|fur|leather|scarf|hat|bag|bags|borsa|borse|shirt|shirts|camicia|maglia|pantalone|pantaloni|giacca|abito|tee|t-shirt|polo|hoodie|viscose|silk|wool|cashmere|linen|knitwear|knit|socks|paulsmith|ralphlauren)\b", re.I)
     HOME_RE = re.compile(r"\b(furniture|arredo|arredamento|mobile|mobili|tavol[io]|sedie|sedia|poltron[ae]|divan[io]|scaffal[ei]|ikea|usm|haller|vitra|cassina|flos|kartell|tiles?|piastrell[ae]|ceramica|ceramiche|marazzi|bathroom|kitchen|cucina|bagno|lighting|lampad[ae]|electricity|elettric\w*|interruttor\w*|bticino|vimar)\b", re.I)
     SHOP_RE = re.compile(r"\b(shop|store|products?|prodott[io]|item|p|articolo)\b", re.I)
     HOSPITALITY_RE = re.compile(r"\b(hotel\w*|resort\w*|suites?|camera|camere|allogg\w+|relais|spa|wellness|travel|traveller|booking|bed and breakfast|b&b)\b", re.I)
     TECH_RE = re.compile(r"\b(tech|develop\w*|code|coding|api|apis|software|saas|python|javascript|typescript|app|application|plugin|tools?|github|dev)\b", re.I)
-    DESIGN_RE = re.compile(r"\b(design|designer|branding|graphics?|typography|identity|visuals?|portfolio|studio|agency|pentagram)\b", re.I)
+    DESIGN_RE = re.compile(r"\b(design|designer|branding|graphics?|typography|identity|visuals?|portfolio|studio|agency)\b", re.I)
     CONTENT_RE = re.compile(r"\b(article|articles|blog|posts?|magazine|journal|editorial|writing|news|notizie)\b", re.I)
 
     items: List[BatchPreviewItem] = []
@@ -198,10 +201,16 @@ async def batch_upload_urls(
         path = parsed_url.path.lower()
         full_str = f"{domain} {path}".replace("/", " ").replace("-", " ").replace("_", " ").replace(".", " ")
 
+        matched_ws = None
         matched_cat = None
         matched_type = None
 
-        if FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma", "paulsmith", "paul-smith", "ralphlauren"))):
+        is_ffff = bool(FFFF_BRANDS_RE.search(domain) or FFFF_BRANDS_RE.search(clean))
+        if is_ffff and ffff_ws:
+            matched_ws = ffff_ws
+            matched_cat = None
+            matched_type = None
+        elif FASHION_RE.search(full_str) or (SHOP_RE.search(full_str) and any(b in domain for b in ("prada", "aspesi", "cucinelli", "nike", "gucci", "zara", "armani", "luisaviaroma", "paulsmith", "paul-smith", "ralphlauren"))):
             matched_cat = cat_by_name.get("street") or cat_by_slug.get("street")
             if re.search(r"\b(occhiali|sunglasses|eyewear|accessories|scarf|belt|wallet|borsa|borse|bag|bags)\b", full_str, re.I):
                 matched_type = type_by_name.get("accessories") or type_by_slug.get("accessories")
@@ -245,41 +254,41 @@ async def batch_upload_urls(
             matched_cat = cat_by_name.get("writing")
             matched_type = type_by_name.get("magazine")
 
-        # Fallback to direct token matching against database
-        if not matched_cat:
-            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
-            for tok in tokens:
-                if tok in cat_by_name:
-                    matched_cat = cat_by_name[tok]
-                    break
-                if tok in cat_by_slug:
-                    matched_cat = cat_by_slug[tok]
-                    break
+        if not is_ffff:
+            # Fallback to direct token matching against database
+            if not matched_cat:
+                tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+                for tok in tokens:
+                    if tok in cat_by_name:
+                        matched_cat = cat_by_name[tok]
+                        break
+                    if tok in cat_by_slug:
+                        matched_cat = cat_by_slug[tok]
+                        break
 
-        if not matched_type:
-            tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
-            for tok in tokens:
-                if tok in type_by_name:
-                    matched_type = type_by_name[tok]
-                    break
-                if tok in type_by_slug:
-                    matched_type = type_by_slug[tok]
-                    break
+            if not matched_type:
+                tokens = [tok.lower() for tok in re.split(r"[/_\-\.\s]+", path) if tok]
+                for tok in tokens:
+                    if tok in type_by_name:
+                        matched_type = type_by_name[tok]
+                        break
+                    if tok in type_by_slug:
+                        matched_type = type_by_slug[tok]
+                        break
 
-        if not matched_cat and matched_type and matched_type.category_id:
-            for c in categories:
-                if c.id == matched_type.category_id:
-                    matched_cat = c
-                    break
+            if not matched_cat and matched_type and matched_type.category_id:
+                for c in categories:
+                    if c.id == matched_type.category_id:
+                        matched_cat = c
+                        break
 
-        matched_ws = None
-        if matched_cat and matched_cat.workspace_id:
-            matched_ws = ws_by_id.get(matched_cat.workspace_id)
+            if matched_cat and matched_cat.workspace_id:
+                matched_ws = ws_by_id.get(matched_cat.workspace_id)
 
-        # Determine Notion DB mapping (Full-Site is strictly unlinked/disabled)
+        # Determine Notion DB mapping (Full-Site and FFFF are strictly unlinked/disabled)
         notion_id = None
         notion_db_name = None
-        if matched_ws and matched_ws.slug == "full-site":
+        if matched_ws and matched_ws.slug in ("full-site", "ffff"):
             notion_id = None
             notion_db_name = None
         elif matched_cat and matched_cat.notion_id:
@@ -332,25 +341,26 @@ async def batch_upload_urls(
                 if t.name not in pred_tag_names:
                     pred_tag_names.append(t.name)
 
-        # Smart Element predictions (matching 271 canonical GOODS elements)
+        # Smart Element predictions (matching 271 canonical GOODS elements - Goods / Qfwfq only)
         pred_elem_ids: List[int] = []
         pred_elem_names: List[str] = []
-        for tok in tokens:
-            el = elem_by_slug.get(tok) or elem_by_name.get(tok)
-            if not el and tok in ("sunglasses", "occhiali", "eyewear"):
-                el = elem_by_slug.get("sunglassess") or elem_by_name.get("sunglassess")
-            if el:
-                if el.id is not None and el.id not in pred_elem_ids:
-                    pred_elem_ids.append(el.id)
-                if el.name not in pred_elem_names:
-                    pred_elem_names.append(el.name)
-        for el in elements:
-            if " " in el.name or "-" in el.name:
-                if el.name.lower() in full_str:
+        if not is_ffff and (not matched_ws or matched_ws.slug == "qfwfq"):
+            for tok in tokens:
+                el = elem_by_slug.get(tok) or elem_by_name.get(tok)
+                if not el and tok in ("sunglasses", "occhiali", "eyewear"):
+                    el = elem_by_slug.get("sunglassess") or elem_by_name.get("sunglassess")
+                if el:
                     if el.id is not None and el.id not in pred_elem_ids:
                         pred_elem_ids.append(el.id)
                     if el.name not in pred_elem_names:
                         pred_elem_names.append(el.name)
+            for el in elements:
+                if " " in el.name or "-" in el.name:
+                    if el.name.lower() in full_str:
+                        if el.id is not None and el.id not in pred_elem_ids:
+                            pred_elem_ids.append(el.id)
+                        if el.name not in pred_elem_names:
+                            pred_elem_names.append(el.name)
 
         # Evaluate Taxonomy Instruction Rules (e.g. apply Renovation to Furniture/Electricity/Tiles)
         rule_applied_tags: List[str] = []
