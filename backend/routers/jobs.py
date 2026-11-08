@@ -43,6 +43,7 @@ from modules.rules import TaxonomyRuleContext, evaluate_taxonomy_rules
 from modules.utils.page_recovery import (
     get_job_dir,
     reset_job_retryable_pages,
+    reconcile_job_statuses,
 )
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
@@ -98,7 +99,12 @@ async def _run_job_with_logging(
                 job = session.get(ScrapeJob, job_id)
                 if job and job.status not in ("cancelled", "paused"):
                     job.status = "failed"
-                    session.commit()
+                    session.add(job)
+                pending_pages = session.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all()
+                for p in pending_pages:
+                    p.status = "failed"
+                    session.add(p)
+                session.commit()
         except Exception:
             pass
     finally:
@@ -106,10 +112,13 @@ async def _run_job_with_logging(
         await job_log_manager.close_job(job_id)
 
 
-def _dispatch_run_job(*args, **kwargs):
+async def _dispatch_run_job(*args, **kwargs):
     import main
     runner = getattr(main, "_run_job_with_logging", _run_job_with_logging)
-    return runner(*args, **kwargs)
+    res = runner(*args, **kwargs)
+    if asyncio.iscoroutine(res):
+        return await res
+    return res
 
 
 @router.post("/batch-upload", response_model=BatchPreviewResponse)
@@ -951,6 +960,7 @@ def get_jobs(
     workspace_id: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
+    reconcile_job_statuses(session)
     query = select(ScrapeJob)
     if workspace_id and workspace_id not in ("all", "__all__"):
         if workspace_id.isdigit():
@@ -965,6 +975,7 @@ def get_jobs(
 
 @router.get("/{job_id}")
 def get_job(job_id: int, session: Session = Depends(get_session)):
+    reconcile_job_statuses(session)
     job = session.get(ScrapeJob, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")

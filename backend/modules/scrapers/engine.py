@@ -930,17 +930,28 @@ async def run_scrape_job(
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
             if job and job.status not in ("cancelled", "paused", "failed"):
-                pending_count = len(session.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all())
+                pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
+                pending_count = sum(1 for p in pages if p.status == "pending")
+                completed_count = sum(1 for p in pages if p.status == "completed")
                 if pending_count == 0:
-                    job.status = "completed"
+                    job.status = "completed" if completed_count > 0 else "failed"
+                    job.scraped_pages = completed_count
+                    if not job.total_pages or job.total_pages < completed_count:
+                        job.total_pages = max(1, completed_count)
                 else:
                     job.status = "paused"
+                session.add(job)
                 session.commit()
     except Exception as e:
         logging.error(f"Job {job_id} failed: {e}")
-        from database.models import ScrapeJob
+        from database.models import ScrapeJob, Page
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
             if job and job.status not in ("cancelled", "paused"):
                 job.status = "failed"
-                session.commit()
+                session.add(job)
+            pending_pages = session.exec(select(Page).where(Page.job_id == job_id, Page.status == "pending")).all()
+            for p in pending_pages:
+                p.status = "failed"
+                session.add(p)
+            session.commit()

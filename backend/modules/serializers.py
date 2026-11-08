@@ -40,6 +40,16 @@ def serialize_job_enriched(job: ScrapeJob) -> dict:
     job_pages = job.pages or []
     data["untitled_count"] = sum(1 for p in job_pages if is_page_untitled_fast(p))
     data["failed_count"] = sum(1 for p in job_pages if p.status == "failed")
+
+    if data.get("status") == "running" and job_pages:
+        pending_count = sum(1 for p in job_pages if p.status == "pending")
+        completed_count = sum(1 for p in job_pages if p.status == "completed")
+        if pending_count == 0:
+            data["status"] = "completed" if completed_count > 0 else "failed"
+            data["scraped_pages"] = completed_count
+            if not data.get("total_pages") or (data.get("total_pages") or 0) < completed_count:
+                data["total_pages"] = max(1, completed_count)
+
     return data
 
 

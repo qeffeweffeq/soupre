@@ -32,6 +32,7 @@ from modules.utils.page_recovery import (
     reset_job_retryable_pages,
     get_job_dir,
     _get_job_dir,
+    reconcile_job_statuses,
 )
 from routers.jobs import _run_job_with_logging
 from routers import jobs_router, pages_router, taxonomies_router, notion_router
@@ -50,6 +51,7 @@ async def lifespan(app: FastAPI):
 
     with Session(engine) as session:
         seed_taxonomies(session)
+        reconcile_job_statuses(session)
 
     # Initialize job logger event loop
     loop = asyncio.get_running_loop()

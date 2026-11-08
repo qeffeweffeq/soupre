@@ -233,3 +233,33 @@ def reset_job_retryable_pages(session: Session, job: ScrapeJob) -> int:
     job.scraped_pages = completed_count
     session.add(job)
     return reset_count
+
+
+def reconcile_job_statuses(session: Session) -> int:
+    """
+    Auto-reconciles jobs whose status is 'running' but have finished processing.
+    Updates job status to 'completed' or 'failed' based on page counts.
+    """
+    running_jobs = session.exec(select(ScrapeJob).where(ScrapeJob.status == "running")).all()
+    updated = 0
+    for job in running_jobs:
+        pages = session.exec(select(Page).where(Page.job_id == job.id)).all()
+        pending_count = sum(1 for p in pages if p.status == "pending")
+        completed_count = sum(1 for p in pages if p.status == "completed")
+        failed_count = sum(1 for p in pages if p.status == "failed")
+
+        if pending_count == 0:
+            if completed_count > 0:
+                job.status = "completed"
+                job.scraped_pages = completed_count
+                if not job.total_pages or job.total_pages < completed_count:
+                    job.total_pages = max(1, completed_count)
+                session.add(job)
+                updated += 1
+            elif failed_count > 0 or len(pages) == 0:
+                job.status = "failed"
+                session.add(job)
+                updated += 1
+    if updated > 0:
+        session.commit()
+    return updated
