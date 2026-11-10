@@ -446,6 +446,53 @@ def _is_index(content: bytes) -> bool:
     return is_index
 
 
+def extract_path_scope_section(url: str) -> str:
+    """
+    Extracts the meaningful path section from a URL (stripping optional language code prefixes).
+    e.g.:
+    https://www.chgroup.eu/tombolo -> 'tombolo'
+    https://www.chgroup.eu/en/tombolo -> 'tombolo'
+    https://example.com/shop/apparel -> 'shop/apparel'
+    https://example.com/ -> ''
+    """
+    parsed = urlparse(url)
+    raw_path = parsed.path.strip("/")
+    if not raw_path:
+        return ""
+    segments = [s for s in raw_path.split("/") if s]
+    if len(segments) > 1 and len(segments[0]) in (2, 3) and (len(segments[0]) == 2 or segments[0].lower() in ('ita', 'eng', 'deu', 'fra', 'esp')):
+        return "/".join(segments[1:])
+    return raw_path
+
+
+def is_url_in_path_scope(u: str, target_section: str) -> bool:
+    """
+    Determines if a discovered URL belongs to the targeted path section.
+    Handles multilingual prefixes (e.g. /en/tombolo/...), sub-paths (/tombolo/spa/...),
+    and hyphenated slug matches (/terms-conditions-shop-tombolo).
+    """
+    if not target_section:
+        return True
+    pu = urlparse(u)
+    u_path = pu.path.strip("/")
+    if not u_path:
+        return False
+    u_segments = [s for s in u_path.split("/") if s]
+    if u_segments and (len(u_segments[0]) == 2 or u_segments[0].lower() in ('ita', 'eng', 'deu', 'fra', 'esp')):
+        u_segments = u_segments[1:]
+    if not u_segments:
+        return False
+    normalized_rel_path = "/".join(u_segments)
+    if normalized_rel_path == target_section or normalized_rel_path.startswith(f"{target_section}/"):
+        return True
+    target_slug = target_section.split("/")[-1].lower()
+    for seg in u_segments:
+        seg_lower = seg.lower()
+        if seg_lower == target_slug or seg_lower.endswith(f"-{target_slug}") or seg_lower.startswith(f"{target_slug}-"):
+            return True
+    return False
+
+
 def generate_sitemap_xml(entries: list[SitemapEntry]) -> str:
     """Generate a clean, standard XML sitemap from entries."""
     lines = [
@@ -492,6 +539,11 @@ async def discover_sitemap_urls(
     origin = f"{parsed.scheme}://{parsed.netloc}"
     allowed_domains: set[str] = {_strip_www(parsed.netloc)}
 
+    target_raw_path = parsed.path.strip("/")
+    target_section = extract_path_scope_section(base_url)
+    if target_section:
+        logger.info(f"[Sitemap] Scoping sitemap discovery to path section: '{target_section}' for {base_url}")
+
     def _filter_same_domain(entries_list: list[SitemapEntry]) -> list[SitemapEntry]:
         seen_urls: set[str] = set()
         filtered: list[SitemapEntry] = []
@@ -502,8 +554,20 @@ async def discover_sitemap_urls(
             if ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip', '.xml', '.xsl')):
                 continue
             if u not in seen_urls and _strip_www(pu.netloc) in allowed_domains:
+                if target_section and not is_url_in_path_scope(u, target_section):
+                    continue
                 seen_urls.add(u)
                 filtered.append(entry)
+
+        # Ensure base_url itself is included if matching domain and not already present
+        clean_base = base_url.split("?")[0].split("#")[0].rstrip("/")
+        clean_base_slash = f"{clean_base}/"
+        if target_section and clean_base not in seen_urls and clean_base_slash not in seen_urls:
+            pu_base = urlparse(base_url)
+            if _strip_www(pu_base.netloc) in allowed_domains:
+                filtered.insert(0, SitemapEntry(url=clean_base, content_type="pages"))
+                seen_urls.add(clean_base)
+
         return filtered
 
     # If the submitted URL itself looks like a sitemap, try it directly first
@@ -580,6 +644,16 @@ async def discover_sitemap_urls(
                             other_robots_candidates.append(cand)
 
     candidates: list[str] = list(same_domain_robots_candidates)
+
+    if target_raw_path:
+        for psc in [
+            urljoin(origin, f"/{target_raw_path}/sitemap.xml"),
+            urljoin(origin, f"/{target_raw_path}/sitemap_index.xml"),
+            urljoin(origin, f"/{target_section}-sitemap.xml"),
+            urljoin(origin, f"/sitemap-{target_section}.xml"),
+        ]:
+            if psc not in candidates:
+                candidates.append(psc)
 
     # Step 2: common fallback paths on the target origin
     for p in COMMON_PATHS:
@@ -669,7 +743,7 @@ async def discover_sitemap_urls(
     if job_dir:
         os.makedirs(job_dir, exist_ok=True)
         sitemap_dest = os.path.join(job_dir, "sitemap.xml")
-        if raw_xml and not used_is_index and raw_xml.strip().startswith(b"<?xml") and b"<url" in raw_xml:
+        if not target_section and raw_xml and not used_is_index and raw_xml.strip().startswith(b"<?xml") and b"<url" in raw_xml:
             with open(sitemap_dest, "wb") as f:
                 f.write(raw_xml)
         else:

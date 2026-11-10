@@ -71,7 +71,6 @@ def get_best_image(element):
                     if u and not u.startswith('data:'):
                         # crude width estimation from imgix URL for sorting
                         width = 1000
-                        import re
                         w_match = re.search(r'[?&]w=(\d+)', u)
                         if w_match:
                             width = int(w_match.group(1))

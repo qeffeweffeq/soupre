@@ -661,7 +661,13 @@ async def run_scrape_job(
                         pass
 
         if scrape_mode == "sitemap":
-            from .sitemap_fetcher import discover_sitemap_urls, SitemapEntry, _strip_www
+            from .sitemap_fetcher import (
+                discover_sitemap_urls,
+                SitemapEntry,
+                _strip_www,
+                extract_path_scope_section,
+                is_url_in_path_scope,
+            )
             from .fetcher import fetch_url_with_browser
 
             # Clearance cookie acquisition (take_screenshot=False) + immediate root title/icon extraction
@@ -699,6 +705,7 @@ async def run_scrape_job(
                 try:
                     root_soup = BeautifulSoup(root_html, "html.parser")
                     base_netloc = _strip_www(urlparse(target_url).netloc)
+                    target_sec = extract_path_scope_section(target_url)
                     seen_fallback: set[str] = {target_url.split("#")[0]}
                     entries.append(SitemapEntry(url=target_url.split("#")[0], content_type="pages"))
                     for a_tag in root_soup.find_all("a", href=True):
@@ -710,6 +717,8 @@ async def run_scrape_job(
                         if pu.scheme in ("http", "https") and _strip_www(pu.netloc) == base_netloc:
                             ext = pu.path.lower()
                             if not ext.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.mp4', '.avi', '.pdf', '.zip', '.xml', '.xsl', '.css', '.js')):
+                                if target_sec and not is_url_in_path_scope(full_u, target_sec):
+                                    continue
                                 if full_u not in seen_fallback:
                                     seen_fallback.add(full_u)
                                     entries.append(SitemapEntry(

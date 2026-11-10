@@ -157,3 +157,36 @@ def test_multidomain_sitemap_prioritization():
     sorted_candidates = sorted(candidates, key=candidate_priority)
     assert sorted_candidates[0] == "https://www.thesenseresort.com/sitemap_index.xml"
     assert sorted_candidates[1] == "https://www.thesenseresort.com/sitemap.xml"
+
+
+def test_extract_path_scope_section():
+    from modules.scrapers.sitemap_fetcher import extract_path_scope_section
+    assert extract_path_scope_section("https://www.chgroup.eu/tombolo") == "tombolo"
+    assert extract_path_scope_section("https://www.chgroup.eu/tombolo/") == "tombolo"
+    assert extract_path_scope_section("https://www.chgroup.eu/en/tombolo") == "tombolo"
+    assert extract_path_scope_section("https://www.chgroup.eu/it/tombolo/") == "tombolo"
+    assert extract_path_scope_section("https://example.com/shop/apparel") == "shop/apparel"
+    assert extract_path_scope_section("https://example.com/") == ""
+    assert extract_path_scope_section("https://example.com") == ""
+
+
+def test_is_url_in_path_scope():
+    from modules.scrapers.sitemap_fetcher import is_url_in_path_scope
+    # Tombolo target
+    assert is_url_in_path_scope("https://www.chgroup.eu/tombolo", "tombolo")
+    assert is_url_in_path_scope("https://www.chgroup.eu/tombolo/spiaggia/", "tombolo")
+    assert is_url_in_path_scope("https://www.chgroup.eu/en/tombolo/beach/", "tombolo")
+    assert is_url_in_path_scope("https://www.chgroup.eu/de/tombolo/strand/", "tombolo")
+    assert is_url_in_path_scope("https://www.chgroup.eu/en/terms-conditions-shop-tombolo/", "tombolo")
+    assert is_url_in_path_scope("https://www.chgroup.eu/shop-policy-tombolo/", "tombolo")
+
+    # Excluded other hotel/corporate URLs
+    assert not is_url_in_path_scope("https://www.chgroup.eu/", "tombolo")
+    assert not is_url_in_path_scope("https://www.chgroup.eu/mice-thank-you-page/", "tombolo")
+    assert not is_url_in_path_scope("https://www.chgroup.eu/grand-hotel-continental/territorio/", "tombolo")
+    assert not is_url_in_path_scope("https://www.chgroup.eu/baia-imperiale/camere/", "tombolo")
+    assert not is_url_in_path_scope("https://www.chgroup.eu/en/riva-del-sole/obblighi-informativi/", "tombolo")
+
+    # Empty target section allows all
+    assert is_url_in_path_scope("https://www.chgroup.eu/any-page", "")
+
