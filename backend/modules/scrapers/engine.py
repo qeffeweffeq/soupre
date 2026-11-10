@@ -499,13 +499,16 @@ async def scrape_page(
             page.lastmod = sitemap_lastmod
 
         job = session.get(ScrapeJob, job_id)
+        job_cat_id = job.category_id if job else None
+        job_types_id = job.types_id if job else None
+        job_ws_id = job.workspace_id if job else None
         if job:
-            if job.workspace_id and not page.workspace_id:
-                page.workspace_id = job.workspace_id
-            if job.category_id and not page.category_id:
-                page.category_id = job.category_id
-            if job.types_id and not page.types_id:
-                page.types_id = job.types_id
+            if job_ws_id and not page.workspace_id:
+                page.workspace_id = job_ws_id
+            if job_cat_id and not page.category_id:
+                page.category_id = job_cat_id
+            if job_types_id and not page.types_id:
+                page.types_id = job_types_id
 
         # Automatic dual classification (JEV & Embeddings)
         try:
@@ -581,9 +584,9 @@ async def scrape_page(
                             status="pending",
                             hreflang=alt_lang,
                             content_type=alt_ct,
-                            category_id=job.category_id if job else None,
-                            types_id=job.types_id if job else None,
-                            workspace_id=job.workspace_id if job else None,
+                            category_id=job_cat_id,
+                            types_id=job_types_id,
+                            workspace_id=job_ws_id,
                         )
                     )
                     existing_urls.add(alt_url)
@@ -672,13 +675,13 @@ async def run_scrape_job(
                     root_icon = await asyncio.to_thread(extract_best_icon, root_soup, target_url)
                     _update_job_contact_csv(job_dir, root_soup, root_icon)
                     with Session(db_engine) as s:
-                        job = s.get(ScrapeJob, job_id)
-                        if job:
+                        job_rec = s.get(ScrapeJob, job_id)
+                        if job_rec:
                             if root_title and root_title != "Untitled":
-                                job.title = root_title
+                                job_rec.title = root_title
                             if root_icon:
-                                job.icon_url = root_icon
-                            s.add(job)
+                                job_rec.icon_url = root_icon
+                            s.add(job_rec)
                             s.commit()
             except Exception as e:
                 logging.warning(f"[Job {job_id}] Clearance cookie acquisition error: {e}")
@@ -718,6 +721,11 @@ async def run_scrape_job(
                     logging.warning(f"[Job {job_id}] Homepage link fallback failed: {fb_e}")
 
             with Session(db_engine) as s:
+                current_job = s.get(ScrapeJob, job_id)
+                job_cat_id = current_job.category_id if current_job else None
+                job_types_id = current_job.types_id if current_job else None
+                job_ws_id = current_job.workspace_id if current_job else None
+
                 existing_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 pages_by_url = {p.url: p for p in existing_pages}
 
@@ -741,9 +749,9 @@ async def run_scrape_job(
                     )
 
                 if not entries and not existing_pages:
-                    job = s.get(ScrapeJob, job_id)
-                    if job:
-                        job.status = "failed"
+                    if current_job:
+                        current_job.status = "failed"
+                        s.add(current_job)
                         s.commit()
                     logging.error(f"[Job {job_id}] No sitemap found for {target_url}")
                     return
@@ -769,9 +777,9 @@ async def run_scrape_job(
                             hreflang=entry.hreflang,
                             lastmod=entry.lastmod,
                             content_type=ct,
-                            category_id=job.category_id if job else None,
-                            types_id=job.types_id if job else None,
-                            workspace_id=job.workspace_id if job else None,
+                            category_id=job_cat_id,
+                            types_id=job_types_id,
+                            workspace_id=job_ws_id,
                         )
                         s.add(p)
                         pages_by_url[u] = p
@@ -813,11 +821,11 @@ async def run_scrape_job(
                 all_pages = s.exec(select(Page).where(Page.job_id == job_id)).all()
                 completed_pages = [p for p in all_pages if p.status == "completed"]
 
-                job = s.get(ScrapeJob, job_id)
-                if job:
-                    job.total_pages = len(all_pages)
-                    job.scraped_pages = len(completed_pages)
-                    job.status = "running"
+                if current_job:
+                    current_job.total_pages = len(all_pages)
+                    current_job.scraped_pages = len(completed_pages)
+                    current_job.status = "running"
+                    s.add(current_job)
                     s.commit()
 
                 logging.info(
@@ -852,6 +860,7 @@ async def run_scrape_job(
                         job = s.get(ScrapeJob, job_id)
                         if job and job.status not in ("cancelled", "paused"):
                             job.status = "completed"
+                            s.add(job)
                             s.commit()
                     break
 

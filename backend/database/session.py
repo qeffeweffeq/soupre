@@ -16,5 +16,5 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 def get_session():
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         yield session
