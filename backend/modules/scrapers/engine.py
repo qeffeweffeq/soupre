@@ -947,7 +947,7 @@ async def run_scrape_job(
         from database.models import ScrapeJob, Page
         with Session(db_engine) as session:
             job = session.get(ScrapeJob, job_id)
-            if job and job.status not in ("cancelled", "paused", "failed"):
+            if job and job.status not in ("cancelled", "paused"):
                 pages = session.exec(select(Page).where(Page.job_id == job_id)).all()
                 pending_count = sum(1 for p in pages if p.status == "pending")
                 completed_count = sum(1 for p in pages if p.status == "completed")

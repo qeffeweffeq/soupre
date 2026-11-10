@@ -78,3 +78,33 @@ def test_reconcile_job_statuses():
         assert j3.status == "running"  # Still has pending page
 
     SQLModel.metadata.drop_all(engine)
+
+
+def test_reconcile_job_statuses_skips_active_running_jobs():
+    """Verify actively running jobs with 0 pages (during browser startup) are not prematurely marked failed."""
+    from modules.core.job_logger import job_log_manager
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        # Job 4: Newly started job, 0 pages, registered in active_jobs
+        j4 = ScrapeJob(target_url="https://example.com/active-new", status="running")
+        session.add(j4)
+        session.commit()
+        session.refresh(j4)
+
+        job_log_manager.mark_job_active(j4.id)
+        try:
+            updated = reconcile_job_statuses(session)
+            assert updated == 0
+
+            session.refresh(j4)
+            assert j4.status == "running", "Active job must remain 'running' even with 0 pages"
+        finally:
+            job_log_manager.mark_job_inactive(j4.id)
+
+    SQLModel.metadata.drop_all(engine)

@@ -75,6 +75,7 @@ async def _run_job_with_logging(
     """Wrapper that tracks job_id in contextvars and closes job log streams upon exit."""
     active_engine = _get_engine()
     token = current_job_id.set(job_id)
+    job_log_manager.mark_job_active(job_id)
     try:
         from modules.scrapers.engine import run_scrape_job
         await run_scrape_job(
@@ -108,6 +109,7 @@ async def _run_job_with_logging(
         except Exception:
             pass
     finally:
+        job_log_manager.mark_job_inactive(job_id)
         current_job_id.reset(token)
         await job_log_manager.close_job(job_id)
 
@@ -685,6 +687,7 @@ def batch_execute_jobs(
                             session.add(PageElementLink(page_id=p.id, element_id=eid))
                 session.commit()
 
+            job_log_manager.mark_job_active(existing.id)
             background_tasks.add_task(
                 _dispatch_run_job,
                 existing.id,
@@ -783,6 +786,7 @@ def batch_execute_jobs(
                             session.add(PageElementLink(page_id=p.id, element_id=eid))
                 session.commit()
 
+            job_log_manager.mark_job_active(job.id)
             background_tasks.add_task(
                 _dispatch_run_job,
                 job.id,
@@ -848,6 +852,7 @@ def create_job(
             session.commit()
             session.refresh(existing)
 
+            job_log_manager.mark_job_active(existing.id)
             background_tasks.add_task(
                 _dispatch_run_job,
                 existing.id,
@@ -870,6 +875,7 @@ def create_job(
     session.commit()
     session.refresh(job)
 
+    job_log_manager.mark_job_active(job.id)
     background_tasks.add_task(
         _dispatch_run_job,
         job.id,
@@ -1036,6 +1042,7 @@ def resume_job(
     session.refresh(job)
 
     max_pages = max(0, job.total_pages or 0)
+    job_log_manager.mark_job_active(job.id)
     background_tasks.add_task(
         _dispatch_run_job,
         job.id,
@@ -1084,6 +1091,7 @@ def rescrape_untitled_job(
     session.refresh(job)
 
     max_pages = max(0, job.total_pages or 0)
+    job_log_manager.mark_job_active(job.id)
     background_tasks.add_task(
         _dispatch_run_job,
         job.id,

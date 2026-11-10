@@ -32,6 +32,13 @@ def test_create_job_restores_existing_without_name_error(client: TestClient):
         assert data["job_id"] == existing.id
         assert data["status"] == "restored"
 
+    from modules.core.job_logger import job_log_manager
+    job_log_manager.mark_job_inactive(existing.id)
+    with Session(engine) as session:
+        session.exec(select(Page).where(Page.job_id == existing.id))
+        session.delete(session.get(ScrapeJob, existing.id))
+        session.commit()
+
 
 @pytest.mark.asyncio
 async def test_run_scrape_job_sitemap_no_detached_instance_error():
@@ -89,3 +96,10 @@ async def test_run_scrape_job_sitemap_no_detached_instance_error():
             assert p.workspace_id == 1
             assert p.category_id == 2
             assert p.types_id == 3
+
+        # Cleanup test records
+        for p in pages:
+            session.delete(p)
+        if saved_job:
+            session.delete(saved_job)
+        session.commit()

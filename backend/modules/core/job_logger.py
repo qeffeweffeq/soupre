@@ -27,7 +27,20 @@ class JobLogManager:
         )
         self._subscribers: Dict[int, Set[asyncio.Queue]] = defaultdict(set)
         self._file_paths: Dict[int, str] = {}
+        self._active_jobs: Set[int] = set()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def mark_job_active(self, job_id: int):
+        self._active_jobs.add(job_id)
+
+    def mark_job_inactive(self, job_id: int):
+        self._active_jobs.discard(job_id)
+
+    def is_job_active(self, job_id: int) -> bool:
+        return job_id in self._active_jobs
+
+    def get_active_jobs(self) -> Set[int]:
+        return set(self._active_jobs)
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         self._loop = loop
@@ -108,6 +121,7 @@ class JobLogManager:
         self._history.pop(job_id, None)
         self._subscribers.pop(job_id, None)
         self._file_paths.pop(job_id, None)
+        self._active_jobs.discard(job_id)
 
 
 job_log_manager = JobLogManager()
